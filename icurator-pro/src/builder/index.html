@@ -20,24 +20,19 @@
 
         <nav class="tabs" id="tabs">
           <button class="tab active" data-tab="brand">
-            <span class="tab-num">1</span>
-            <span class="tab-label">Marca / Design</span>
+            <span class="tab-num">1</span><span class="tab-label">Marca / Design</span>
           </button>
           <button class="tab" data-tab="leads">
-            <span class="tab-num">2</span>
-            <span class="tab-label">Captura de Leads</span>
+            <span class="tab-num">2</span><span class="tab-label">Captura de Leads</span>
           </button>
           <button class="tab" data-tab="banners">
-            <span class="tab-num">3</span>
-            <span class="tab-label">Banners</span>
+            <span class="tab-num">3</span><span class="tab-label">Banners</span>
           </button>
           <button class="tab" data-tab="content">
-            <span class="tab-num">4</span>
-            <span class="tab-label">Conteúdo / Menus</span>
+            <span class="tab-num">4</span><span class="tab-label">Conteúdo / Menus</span>
           </button>
           <button class="tab" data-tab="export">
-            <span class="tab-num">5</span>
-            <span class="tab-label">Exportar</span>
+            <span class="tab-num">5</span><span class="tab-label">Exportar</span>
           </button>
         </nav>
 
@@ -45,7 +40,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled>
             Pré-visualizar Produto
           </button>
-          <div class="version">v0.1.0 · Passo 2</div>
+          <div class="version">v0.1.0 · Passo 3</div>
         </div>
       </aside>
 
@@ -69,9 +64,7 @@
               <label>Logo / Imagem de Cabeçalho</label>
               <div class="file-row">
                 <input type="file" id="brand-logo" accept="image/*" />
-                <button type="button" class="btn btn-ghost" id="brand-logo-remove">
-                  Remover
-                </button>
+                <button type="button" class="btn btn-ghost" id="brand-logo-remove">Remover</button>
               </div>
               <div class="logo-preview-wrap">
                 <img id="brand-logo-preview" alt="Pré-visualização do logo" />
@@ -109,25 +102,96 @@
 
             <div class="form-actions">
               <span class="save-status" id="save-status"></span>
-              <button type="submit" class="btn btn-primary" id="brand-save">
-                Guardar Definições
-              </button>
+              <button type="submit" class="btn btn-primary" id="brand-save">Guardar Definições</button>
             </div>
           </form>
         </section>
 
+        <!-- PASSO 3 — Captura de Leads -->
         <section class="panel hidden" data-panel="leads">
-          <div class="placeholder">
-            <h2>Separador 2 — Captura de Leads</h2>
-            <p>A ser implementado no <strong>Passo 3</strong>.</p>
-          </div>
+          <form id="leads-form" class="form-card" autocomplete="off">
+            <div class="form-group">
+              <label class="toggle-row">
+                <input type="checkbox" id="leads-enabled" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-text">
+                  <span class="toggle-title">Ativar Bloqueio de Conteúdo (Opt-in Gate)</span>
+                  <span class="toggle-sub">
+                    Se ativado, o cliente final só verá o conteúdo depois de submeter o formulário abaixo.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="leads-heading">Título do Bloqueio</label>
+              <input type="text" id="leads-heading"
+                     placeholder="Ex: Insira o seu email para aceder ao curso" maxlength="160" />
+              <small>Mensagem grande mostrada por cima do formulário no Visualizador.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="leads-html">Código HTML do Formulário</label>
+              <textarea id="leads-html" class="code-area" rows="14"
+                        placeholder="Cole aqui o código do formulário (Mailchimp, AWeber, ActiveCampaign, etc.)"></textarea>
+              <small>O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.</small>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="leads-status"></span>
+              <button type="submit" class="btn btn-primary" id="leads-save">Guardar Definições de Leads</button>
+            </div>
+          </form>
         </section>
 
+        <!-- PASSO 3 — Banners -->
         <section class="panel hidden" data-panel="banners">
-          <div class="placeholder">
-            <h2>Separador 3 — Banners de Publicidade</h2>
-            <p>A ser implementado no <strong>Passo 3</strong>.</p>
-          </div>
+          <form id="banner-form" class="form-card" autocomplete="off">
+            <div class="form-group">
+              <label class="toggle-row">
+                <input type="checkbox" id="banner-enabled" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-text">
+                  <span class="toggle-title">Ativar Banner de Publicidade</span>
+                  <span class="toggle-sub">
+                    O banner ficará fixo no Visualizador, em todas as páginas.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>Imagem do Banner</label>
+              <div class="file-row">
+                <input type="file" id="banner-image" accept="image/*" />
+                <button type="button" class="btn btn-ghost" id="banner-image-remove">Remover</button>
+              </div>
+              <div class="logo-preview-wrap banner-preview-wrap">
+                <img id="banner-image-preview" alt="Pré-visualização do banner" />
+                <span id="banner-image-empty" class="logo-empty">Sem banner carregado</span>
+              </div>
+              <small>Recomendado: imagem horizontal (ex: 728×90 ou 970×90). Copiada para <code>dist-assets/</code>.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="banner-url">Link de Destino</label>
+              <input type="text" id="banner-url" placeholder="https://exemplo.com/o-meu-link-afiliado" />
+              <small>URL aberto no browser externo quando o cliente final clicar no banner.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="banner-position">Posição do Banner</label>
+              <select id="banner-position" class="select">
+                <option value="top">Topo da Página</option>
+                <option value="bottom" selected>Rodapé da Página</option>
+              </select>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="banner-status"></span>
+              <button type="submit" class="btn btn-primary" id="banner-save">Guardar Definições de Banners</button>
+            </div>
+          </form>
         </section>
 
         <section class="panel hidden" data-panel="content">

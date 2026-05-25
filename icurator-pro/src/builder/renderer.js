@@ -25,8 +25,41 @@ tabs.forEach((tab) => {
   });
 });
 
-/* -------- Brand form -------- */
-const form = document.getElementById('brand-form');
+/* -------- Shared helpers -------- */
+
+function makeStatus(el) {
+  let lastMsg = '';
+  return function showStatus(message, kind) {
+    lastMsg = message;
+    el.textContent = message;
+    el.className = 'save-status ' + (kind || '');
+    if (message) {
+      setTimeout(() => {
+        if (el.textContent === lastMsg) {
+          el.textContent = '';
+          el.className = 'save-status';
+        }
+      }, 3000);
+    }
+  };
+}
+
+function setImagePreview(imgEl, emptyEl, absPath) {
+  if (!absPath) {
+    imgEl.removeAttribute('src');
+    imgEl.classList.remove('visible');
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+  imgEl.src = 'file://' + absPath.replace(/\\/g, '/') + '?t=' + Date.now();
+  imgEl.classList.add('visible');
+  if (emptyEl) emptyEl.classList.add('hidden');
+}
+
+/* =========================================================
+ * BRAND FORM (Passo 2)
+ * ========================================================= */
+const brandForm = document.getElementById('brand-form');
 const titleInput = document.getElementById('brand-title');
 const logoInput = document.getElementById('brand-logo');
 const logoRemoveBtn = document.getElementById('brand-logo-remove');
@@ -42,124 +75,174 @@ const colorHexLabels = {
   background: document.getElementById('color-background-hex'),
   buttons: document.getElementById('color-buttons-hex')
 };
-const saveBtn = document.getElementById('brand-save');
-const saveStatus = document.getElementById('save-status');
+const brandSaveBtn = document.getElementById('brand-save');
+const showBrandStatus = makeStatus(document.getElementById('save-status'));
 
-// In-memory state for the brand panel
-const state = {
-  pendingLogoSourcePath: null,  // absolute path from <input type=file>, if user picked a new logo
+const brandState = {
+  pendingLogoSourcePath: null,
   pendingRemoveLogo: false,
   currentLogoRelative: null
 };
 
-function setLogoPreviewFromAbsolutePath(absPath) {
-  if (!absPath) {
-    logoPreview.removeAttribute('src');
-    logoPreview.classList.remove('visible');
-    logoEmpty.classList.remove('hidden');
-    return;
-  }
-  // Cache-bust so a replaced file refreshes.
-  logoPreview.src = 'file://' + absPath.replace(/\\/g, '/') + '?t=' + Date.now();
-  logoPreview.classList.add('visible');
-  logoEmpty.classList.add('hidden');
-}
-
-function bindColorPicker(key) {
+Object.keys(colorInputs).forEach((key) => {
   colorInputs[key].addEventListener('input', (e) => {
     colorHexLabels[key].textContent = e.target.value.toUpperCase();
   });
-}
-Object.keys(colorInputs).forEach(bindColorPicker);
+});
 
 logoInput.addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  // In Electron with nodeIntegration off, the File object still exposes `.path`.
-  state.pendingLogoSourcePath = file.path || null;
-  state.pendingRemoveLogo = false;
-
-  // Live preview from the source file before saving.
-  if (state.pendingLogoSourcePath) {
-    setLogoPreviewFromAbsolutePath(state.pendingLogoSourcePath);
-  } else {
-    const reader = new FileReader();
-    reader.onload = () => {
-      logoPreview.src = reader.result;
-      logoPreview.classList.add('visible');
-      logoEmpty.classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
+  brandState.pendingLogoSourcePath = file.path || null;
+  brandState.pendingRemoveLogo = false;
+  if (brandState.pendingLogoSourcePath) {
+    setImagePreview(logoPreview, logoEmpty, brandState.pendingLogoSourcePath);
   }
 });
 
 logoRemoveBtn.addEventListener('click', () => {
-  state.pendingLogoSourcePath = null;
-  state.pendingRemoveLogo = true;
+  brandState.pendingLogoSourcePath = null;
+  brandState.pendingRemoveLogo = true;
   logoInput.value = '';
-  setLogoPreviewFromAbsolutePath(null);
+  setImagePreview(logoPreview, logoEmpty, null);
 });
 
-function showStatus(message, kind) {
-  saveStatus.textContent = message;
-  saveStatus.className = 'save-status ' + (kind || '');
-  if (message) {
-    setTimeout(() => {
-      if (saveStatus.textContent === message) {
-        saveStatus.textContent = '';
-        saveStatus.className = 'save-status';
-      }
-    }, 3000);
-  }
-}
-
-form.addEventListener('submit', async (e) => {
+brandForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  saveBtn.disabled = true;
-  showStatus('A guardar…', '');
-
+  brandSaveBtn.disabled = true;
+  showBrandStatus('A guardar…', '');
   try {
-    const payload = {
+    const updated = await window.icurator.saveBrandConfig({
       title: titleInput.value,
       colors: {
         sidebar: colorInputs.sidebar.value,
         background: colorInputs.background.value,
         buttons: colorInputs.buttons.value
       },
-      logoSourcePath: state.pendingLogoSourcePath || undefined,
-      removeLogo: state.pendingRemoveLogo || undefined
-    };
-
-    const updated = await window.icurator.saveBrandConfig(payload);
-
-    // Reset pending state and reflect the saved logo (from dist-assets/).
-    state.pendingLogoSourcePath = null;
-    state.pendingRemoveLogo = false;
-    state.currentLogoRelative = updated.brand.logo || null;
+      logoSourcePath: brandState.pendingLogoSourcePath || undefined,
+      removeLogo: brandState.pendingRemoveLogo || undefined
+    });
+    brandState.pendingLogoSourcePath = null;
+    brandState.pendingRemoveLogo = false;
+    brandState.currentLogoRelative = updated.brand.logo || null;
     logoInput.value = '';
-
-    if (state.currentLogoRelative) {
-      const abs = await window.icurator.resolveAssetPath(state.currentLogoRelative);
-      setLogoPreviewFromAbsolutePath(abs);
-    } else {
-      setLogoPreviewFromAbsolutePath(null);
-    }
-
-    showStatus('Definições guardadas em project-config.json', 'success');
+    const abs = brandState.currentLogoRelative
+      ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative)
+      : null;
+    setImagePreview(logoPreview, logoEmpty, abs);
+    showBrandStatus('Definições guardadas em project-config.json', 'success');
   } catch (err) {
     console.error(err);
-    showStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
+    showBrandStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
   } finally {
-    saveBtn.disabled = false;
+    brandSaveBtn.disabled = false;
   }
 });
 
-/* -------- Initial load -------- */
+/* =========================================================
+ * LEADS FORM (Passo 3)
+ * ========================================================= */
+const leadsForm = document.getElementById('leads-form');
+const leadsEnabled = document.getElementById('leads-enabled');
+const leadsHeading = document.getElementById('leads-heading');
+const leadsHtml = document.getElementById('leads-html');
+const leadsSaveBtn = document.getElementById('leads-save');
+const showLeadsStatus = makeStatus(document.getElementById('leads-status'));
+
+leadsForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  leadsSaveBtn.disabled = true;
+  showLeadsStatus('A guardar…', '');
+  try {
+    await window.icurator.saveLeadsConfig({
+      enabled: leadsEnabled.checked,
+      heading: leadsHeading.value,
+      formHtml: leadsHtml.value
+    });
+    showLeadsStatus('Definições de leads guardadas.', 'success');
+  } catch (err) {
+    console.error(err);
+    showLeadsStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
+  } finally {
+    leadsSaveBtn.disabled = false;
+  }
+});
+
+/* =========================================================
+ * BANNER FORM (Passo 3)
+ * ========================================================= */
+const bannerForm = document.getElementById('banner-form');
+const bannerEnabled = document.getElementById('banner-enabled');
+const bannerImageInput = document.getElementById('banner-image');
+const bannerImageRemoveBtn = document.getElementById('banner-image-remove');
+const bannerImagePreview = document.getElementById('banner-image-preview');
+const bannerImageEmpty = document.getElementById('banner-image-empty');
+const bannerUrlInput = document.getElementById('banner-url');
+const bannerPositionSelect = document.getElementById('banner-position');
+const bannerSaveBtn = document.getElementById('banner-save');
+const showBannerStatus = makeStatus(document.getElementById('banner-status'));
+
+const bannerState = {
+  pendingImageSourcePath: null,
+  pendingRemoveImage: false,
+  currentImageRelative: null
+};
+
+bannerImageInput.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  bannerState.pendingImageSourcePath = file.path || null;
+  bannerState.pendingRemoveImage = false;
+  if (bannerState.pendingImageSourcePath) {
+    setImagePreview(bannerImagePreview, bannerImageEmpty, bannerState.pendingImageSourcePath);
+  }
+});
+
+bannerImageRemoveBtn.addEventListener('click', () => {
+  bannerState.pendingImageSourcePath = null;
+  bannerState.pendingRemoveImage = true;
+  bannerImageInput.value = '';
+  setImagePreview(bannerImagePreview, bannerImageEmpty, null);
+});
+
+bannerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  bannerSaveBtn.disabled = true;
+  showBannerStatus('A guardar…', '');
+  try {
+    const updated = await window.icurator.saveBannerConfig({
+      enabled: bannerEnabled.checked,
+      url: bannerUrlInput.value,
+      position: bannerPositionSelect.value,
+      imageSourcePath: bannerState.pendingImageSourcePath || undefined,
+      removeImage: bannerState.pendingRemoveImage || undefined
+    });
+    bannerState.pendingImageSourcePath = null;
+    bannerState.pendingRemoveImage = false;
+    bannerState.currentImageRelative = updated.marketing.banner.image || null;
+    bannerImageInput.value = '';
+    const abs = bannerState.currentImageRelative
+      ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative)
+      : null;
+    setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
+    showBannerStatus('Definições de banners guardadas.', 'success');
+  } catch (err) {
+    console.error(err);
+    showBannerStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
+  } finally {
+    bannerSaveBtn.disabled = false;
+  }
+});
+
+/* =========================================================
+ * Initial load — populate all forms from project-config.json
+ * ========================================================= */
 async function loadInitialConfig() {
   try {
     const config = await window.icurator.loadConfig();
-    const brand = config.brand || {};
 
+    // --- Brand
+    const brand = config.brand || {};
     titleInput.value = brand.title || '';
     colorInputs.sidebar.value = (brand.colors && brand.colors.sidebar) || '#111827';
     colorInputs.background.value = (brand.colors && brand.colors.background) || '#f8fafc';
@@ -167,13 +250,31 @@ async function loadInitialConfig() {
     Object.keys(colorInputs).forEach((k) => {
       colorHexLabels[k].textContent = colorInputs[k].value.toUpperCase();
     });
-
-    state.currentLogoRelative = brand.logo || null;
-    if (state.currentLogoRelative) {
-      const abs = await window.icurator.resolveAssetPath(state.currentLogoRelative);
-      setLogoPreviewFromAbsolutePath(abs);
+    brandState.currentLogoRelative = brand.logo || null;
+    if (brandState.currentLogoRelative) {
+      const abs = await window.icurator.resolveAssetPath(brandState.currentLogoRelative);
+      setImagePreview(logoPreview, logoEmpty, abs);
     } else {
-      setLogoPreviewFromAbsolutePath(null);
+      setImagePreview(logoPreview, logoEmpty, null);
+    }
+
+    // --- Marketing: Leads
+    const leads = (config.marketing && config.marketing.leads) || {};
+    leadsEnabled.checked = !!leads.enabled;
+    leadsHeading.value = leads.heading || '';
+    leadsHtml.value = leads.formHtml || '';
+
+    // --- Marketing: Banner
+    const banner = (config.marketing && config.marketing.banner) || {};
+    bannerEnabled.checked = !!banner.enabled;
+    bannerUrlInput.value = banner.url || '';
+    bannerPositionSelect.value = banner.position === 'top' ? 'top' : 'bottom';
+    bannerState.currentImageRelative = banner.image || null;
+    if (bannerState.currentImageRelative) {
+      const abs = await window.icurator.resolveAssetPath(bannerState.currentImageRelative);
+      setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
+    } else {
+      setImagePreview(bannerImagePreview, bannerImageEmpty, null);
     }
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);

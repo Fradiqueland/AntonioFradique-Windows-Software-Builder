@@ -358,3 +358,109 @@ input[type="color"] {
 .btn-ghost:hover:not(:disabled) { background: #f1f5f9; color: var(--text-dark); }
 
 .btn-block { width: 100%; }
+
+/* Textarea + select */
+textarea.code-area {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #0f172a;
+  color: #e2e8f0;
+  resize: vertical;
+  min-height: 200px;
+}
+textarea.code-area:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+select.select {
+  width: 100%;
+  max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-dark);
+  cursor: pointer;
+}
+select.select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  margin-bottom: 0 !important;
+}
+.toggle-row input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background: #cbd5e1;
+  border-radius: 999px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+.toggle-row input[type="checkbox"]:checked + .toggle-track {
+  background: var(--primary);
+}
+.toggle-row input[type="checkbox"]:checked + .toggle-track .toggle-thumb {
+  transform: translateX(20px);
+}
+.toggle-text { display: flex; flex-direction: column; gap: 2px; }
+.toggle-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.toggle-sub {
+  font-size: 12px;
+  color: var(--text-dark-muted);
+}
+
+/* Banner preview a bit wider than logo */
+.banner-preview-wrap {
+  min-height: 120px;
+}
+.banner-preview-wrap #banner-image-preview {
+  max-height: 140px;
+  max-width: 100%;
+  object-fit: contain;
+  display: none;
+  border-radius: 4px;
+}
+.banner-preview-wrap #banner-image-preview.visible { display: block; }

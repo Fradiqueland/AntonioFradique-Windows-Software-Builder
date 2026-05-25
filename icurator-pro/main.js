@@ -16,14 +16,49 @@ const DEFAULT_CONFIG = {
       background: '#f8fafc',
       buttons: '#2563eb'
     }
+  },
+  marketing: {
+    leads: {
+      enabled: false,
+      heading: 'Insira o seu email para aceder ao conteúdo',
+      formHtml: ''
+    },
+    banner: {
+      enabled: false,
+      image: null,
+      url: '',
+      position: 'bottom' // 'top' | 'bottom'
+    }
   }
 };
 
 let builderWindow = null;
 
+/* -------- FS helpers -------- */
+
 function ensureDirs() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(ASSETS_DIR)) fs.mkdirSync(ASSETS_DIR, { recursive: true });
+}
+
+function deepMerge(defaults, override) {
+  if (override === null || override === undefined) return structuredClone(defaults);
+  if (typeof defaults !== 'object' || Array.isArray(defaults)) return override;
+  const out = {};
+  for (const key of Object.keys(defaults)) {
+    if (override && Object.prototype.hasOwnProperty.call(override, key)) {
+      out[key] = deepMerge(defaults[key], override[key]);
+    } else {
+      out[key] = structuredClone(defaults[key]);
+    }
+  }
+  // Keep any extra keys the override may carry.
+  if (override && typeof override === 'object') {
+    for (const key of Object.keys(override)) {
+      if (!(key in out)) out[key] = override[key];
+    }
+  }
+  return out;
 }
 
 function readConfig() {
@@ -35,18 +70,7 @@ function readConfig() {
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
     const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_CONFIG,
-      ...parsed,
-      brand: {
-        ...DEFAULT_CONFIG.brand,
-        ...(parsed.brand || {}),
-        colors: {
-          ...DEFAULT_CONFIG.brand.colors,
-          ...((parsed.brand && parsed.brand.colors) || {})
-        }
-      }
-    };
+    return deepMerge(DEFAULT_CONFIG, parsed);
   } catch (err) {
     console.error('Failed to read config, returning defaults:', err);
     return structuredClone(DEFAULT_CONFIG);
@@ -66,8 +90,7 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
   ensureDirs();
   const ext = path.extname(sourcePath) || '';
   const base = sanitizeFilename(path.basename(sourcePath, ext)) || prefix;
-  const stamp = Date.now();
-  const finalName = `${prefix}-${stamp}-${base}${ext}`;
+  const finalName = `${prefix}-${Date.now()}-${base}${ext}`;
   const destAbs = path.join(ASSETS_DIR, finalName);
   fs.copyFileSync(sourcePath, destAbs);
   return path.posix.join('dist-assets', finalName);
@@ -80,6 +103,8 @@ function deleteAssetIfInside(relativePath) {
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
   }
 }
+
+/* -------- Window -------- */
 
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
@@ -106,19 +131,15 @@ function createBuilderWindow() {
   });
 }
 
-/* -------- IPC -------- */
+/* -------- IPC: config + brand -------- */
 
-ipcMain.handle('config:load', () => {
-  return readConfig();
-});
+ipcMain.handle('config:load', () => readConfig());
 
 ipcMain.handle('brand:save', (_event, payload) => {
   const current = readConfig();
-
   let logoRelative = current.brand.logo || null;
 
   if (payload && payload.logoSourcePath) {
-    // New logo selected — copy it into dist-assets/ and replace any previous one.
     if (!fs.existsSync(payload.logoSourcePath)) {
       throw new Error('Ficheiro de logo não encontrado: ' + payload.logoSourcePath);
     }
@@ -153,11 +174,68 @@ ipcMain.handle('asset:resolve', (_event, relativePath) => {
   return path.join(PROJECT_ROOT, relativePath);
 });
 
+/* -------- IPC: marketing (Leads + Banner) -------- */
+
+ipcMain.handle('marketing:saveLeads', (_event, payload) => {
+  const current = readConfig();
+  const updated = {
+    ...current,
+    marketing: {
+      ...current.marketing,
+      leads: {
+        enabled: !!(payload && payload.enabled),
+        heading: (payload && typeof payload.heading === 'string')
+          ? payload.heading.trim()
+          : current.marketing.leads.heading,
+        formHtml: (payload && typeof payload.formHtml === 'string')
+          ? payload.formHtml
+          : current.marketing.leads.formHtml
+      }
+    }
+  };
+  writeConfig(updated);
+  return updated;
+});
+
+ipcMain.handle('marketing:saveBanners', (_event, payload) => {
+  const current = readConfig();
+  let bannerRelative = current.marketing.banner.image || null;
+
+  if (payload && payload.imageSourcePath) {
+    if (!fs.existsSync(payload.imageSourcePath)) {
+      throw new Error('Ficheiro de banner não encontrado: ' + payload.imageSourcePath);
+    }
+    deleteAssetIfInside(bannerRelative);
+    bannerRelative = copyAssetToProject(payload.imageSourcePath, 'banner');
+  } else if (payload && payload.removeImage) {
+    deleteAssetIfInside(bannerRelative);
+    bannerRelative = null;
+  }
+
+  const positionRaw = payload && payload.position;
+  const position = positionRaw === 'top' ? 'top' : 'bottom';
+
+  const updated = {
+    ...current,
+    marketing: {
+      ...current.marketing,
+      banner: {
+        enabled: !!(payload && payload.enabled),
+        image: bannerRelative,
+        url: (payload && typeof payload.url === 'string') ? payload.url.trim() : current.marketing.banner.url,
+        position
+      }
+    }
+  };
+
+  writeConfig(updated);
+  return updated;
+});
+
 /* -------- App lifecycle -------- */
 
 app.whenReady().then(() => {
   ensureDirs();
-  // Make sure a config file always exists from the first launch.
   readConfig();
   createBuilderWindow();
 

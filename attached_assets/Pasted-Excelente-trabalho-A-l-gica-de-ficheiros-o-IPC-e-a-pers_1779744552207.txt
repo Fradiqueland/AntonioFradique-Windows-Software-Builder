@@ -1,0 +1,29 @@
+Excelente trabalho! A lógica de ficheiros, o IPC e a persistência do Passo 2 estão perfeitos e funcionam exatamente como planeado. A estruturação que fizeste dá-me muita confiança no código.
+
+Avança agora para o **PASSO 3: Separadores de Marketing (Captura de Leads e Banners)**. 
+
+Por favor, atualiza a UI e o Backend para acomodar estas novas opções no `project-config.json` (podes guardá-las dentro de um objeto `marketing: {}`). 
+
+### 1. Separador "Captura de Leads" (Squeeze Page)
+Esta funcionalidade bloqueia o acesso ao conteúdo até o utilizador submeter um formulário.
+Adiciona os seguintes controlos:
+* **Toggle/Checkbox:** "Ativar Bloqueio de Conteúdo (Opt-in Gate)".
+* **Campo de Texto (Input):** "Título do Bloqueio" (ex: *Insira o seu email para aceder ao curso*).
+* **Área de Texto (Textarea grande):** "Código HTML do Formulário". (Onde o criador cola o código do Mailchimp/ActiveCampaign). Deve usar uma fonte *monospace* para o utilizador perceber que é código.
+* **Botão:** "Guardar Definições de Leads".
+
+### 2. Separador "Banners"
+Esta funcionalidade coloca um banner fixo no Visualizador com um link de afiliado.
+Adiciona os seguintes controlos:
+* **Toggle/Checkbox:** "Ativar Banner de Publicidade".
+* **Imagem do Banner:** Upload de Ficheiro (`<input type="file" accept="image/*">`) com botão "Remover" e uma área de pré-visualização da imagem.
+* **Link de Destino:** Campo de texto (URL) para onde o banner vai reencaminhar quando clicado.
+* **Posição do Banner:** Dropdown (Select) com duas opções: "Topo da Página" ou "Rodapé da Página".
+* **Botão:** "Guardar Definições de Banners".
+
+### 3. Lógica Backend e IPC (`main.js` e `preload.js`)
+* Cria um handler no `main.js` (ex: `marketing:saveLeads` e `marketing:saveBanners`).
+* **Regra de Ficheiros:** Aplica exatamente a mesma lógica do logo ao Banner. Se o utilizador fizer upload de um banner, o `main.js` deve copiá-lo para a pasta `/dist-assets/` (ex: `banner-<timestamp>.<ext>`), apagar o banner antigo (se existir) e guardar o caminho relativo no `project-config.json`.
+* **Persistência UI:** Atualiza o `loadInitialConfig()` do frontend para que, ao abrir a app, as checkboxes, textos e imagens do separador de Leads e Banners carreguem os dados guardados.
+
+Executa apenas este Passo 3. Quando a gravação e carregamento das leads e banners estiverem a funcionar a 100%, avisa-me para avançarmos para o Passo 4 (O Gestor de Conteúdo e Menus).
