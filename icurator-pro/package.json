@@ -1,9 +1,9 @@
 {
-  "name": "icurator-pro",
+  "name": "launchbox-pro",
   "version": "0.1.0",
-  "description": "iCurator Pro — Dashboard Creator / Content Packager (Electron)",
+  "description": "LaunchBox Pro — Dashboard Creator / Content Packager (Electron)",
   "main": "main.js",
-  "author": "iCurator Pro",
+  "author": "LaunchBox Pro",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -16,14 +16,15 @@
     "electron-builder": "^25.0.0"
   },
   "build": {
-    "appId": "com.icurator.pro",
-    "productName": "iCurator Pro",
+    "appId": "com.launchbox.pro",
+    "productName": "LaunchBox Pro",
     "directories": {
       "output": "dist"
     },
     "files": [
       "main.js",
       "preload.js",
+      "preload-viewer.js",
       "src/**/*",
       "assets/**/*"
     ],

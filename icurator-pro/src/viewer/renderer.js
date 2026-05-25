@@ -248,7 +248,7 @@ async function boot() {
 
   // Brand / theme
   applyTheme(config.brand);
-  const title = (config.brand && config.brand.title) || 'iCurator Pro';
+  const title = (config.brand && config.brand.title) || 'LaunchBox Pro';
   titleEl.textContent = title;
   document.title = title;
 

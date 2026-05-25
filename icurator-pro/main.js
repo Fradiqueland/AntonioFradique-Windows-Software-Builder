@@ -25,7 +25,7 @@ const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'lau
 
 const DEFAULT_CONFIG = {
   brand: {
-    title: 'iCurator Pro',
+    title: 'LaunchBox Pro',
     logo: null,
     colors: { sidebar: '#111827', background: '#f8fafc', buttons: '#2563eb' }
   },
@@ -122,7 +122,7 @@ function createBuilderWindow() {
     height: 820,
     minWidth: 1024,
     minHeight: 680,
-    title: 'iCurator Pro — Construtor',
+    title: 'LaunchBox Pro — Construtor',
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -144,7 +144,7 @@ function createViewerWindow({ standalone = false } = {}) {
   }
 
   const config = readConfig();
-  const title = (config.brand && config.brand.title) ? config.brand.title : 'iCurator Pro';
+  const title = (config.brand && config.brand.title) ? config.brand.title : 'LaunchBox Pro';
   const bgColor = (config.brand && config.brand.colors && config.brand.colors.background) || '#f8fafc';
 
   viewerWindow = new BrowserWindow({
@@ -394,11 +394,11 @@ ipcMain.handle('export:saveIcon', (_event, payload) => {
 function generateBuildConfig(config) {
   const productName = (config.brand && config.brand.title)
     ? config.brand.title.trim()
-    : 'iCurator Pro';
+    : 'LaunchBox Pro';
   const hasIcon = !!(config.export && config.export.iconPath) && fs.existsSync(ICON_DEST_PATH);
 
   return {
-    appId: 'com.icurator.product',
+    appId: 'com.launchbox.product',
     productName,
     directories: { output: 'release' },
     files: ['main.js', 'preload.js', 'preload-viewer.js', 'src/**/*'],
