@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' https://cdn.jsdelivr.net;" />
+    <title>iCurator Pro — Construtor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">iC</div>
+          <div class="brand-text">
+            <div class="brand-title">iCurator Pro</div>
+            <div class="brand-sub">Construtor</div>
+          </div>
+        </div>
+
+        <nav class="tabs" id="tabs">
+          <button class="tab active" data-tab="brand">
+            <span class="tab-num">1</span>
+            <span class="tab-label">Marca / Design</span>
+          </button>
+          <button class="tab" data-tab="leads">
+            <span class="tab-num">2</span>
+            <span class="tab-label">Captura de Leads</span>
+          </button>
+          <button class="tab" data-tab="banners">
+            <span class="tab-num">3</span>
+            <span class="tab-label">Banners</span>
+          </button>
+          <button class="tab" data-tab="content">
+            <span class="tab-num">4</span>
+            <span class="tab-label">Conteúdo / Menus</span>
+          </button>
+          <button class="tab" data-tab="export">
+            <span class="tab-num">5</span>
+            <span class="tab-label">Exportar</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="btn btn-primary btn-block" id="preview-btn" disabled>
+            Pré-visualizar Produto
+          </button>
+          <div class="version">v0.1.0 · Passo 1</div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="content-header">
+          <h1 id="page-title">Marca / Design</h1>
+          <p id="page-subtitle">Personalize a aparência do produto final.</p>
+        </header>
+
+        <section class="panel" data-panel="brand">
+          <div class="placeholder">
+            <h2>Separador 1 — Marca / Design</h2>
+            <p>A ser implementado no <strong>Passo 2</strong>.</p>
+          </div>
+        </section>
+
+        <section class="panel hidden" data-panel="leads">
+          <div class="placeholder">
+            <h2>Separador 2 — Captura de Leads</h2>
+            <p>A ser implementado no <strong>Passo 3</strong>.</p>
+          </div>
+        </section>
+
+        <section class="panel hidden" data-panel="banners">
+          <div class="placeholder">
+            <h2>Separador 3 — Banners de Publicidade</h2>
+            <p>A ser implementado no <strong>Passo 3</strong>.</p>
+          </div>
+        </section>
+
+        <section class="panel hidden" data-panel="content">
+          <div class="placeholder">
+            <h2>Separador 4 — Conteúdo / Menus</h2>
+            <p>A ser implementado no <strong>Passo 4</strong>.</p>
+          </div>
+        </section>
+
+        <section class="panel hidden" data-panel="export">
+          <div class="placeholder">
+            <h2>Separador 5 — Exportar</h2>
+            <p>A ser implementado no <strong>Passo 6</strong>.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
