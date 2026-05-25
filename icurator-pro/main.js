@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
 };
 
 let builderWindow = null;
+let viewerWindow = null;
 
 /* -------- FS helpers -------- */
 
@@ -95,7 +96,12 @@ function deleteAssetIfInside(relativePath) {
   }
 }
 
-/* -------- Window -------- */
+function resolveRelativeAsset(relativePath) {
+  if (!relativePath) return null;
+  return path.join(PROJECT_ROOT, relativePath);
+}
+
+/* -------- Windows -------- */
 
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
@@ -119,9 +125,45 @@ function createBuilderWindow() {
   builderWindow.on('closed', () => { builderWindow = null; });
 }
 
-/* -------- IPC: config + brand -------- */
+function createViewerWindow() {
+  if (viewerWindow && !viewerWindow.isDestroyed()) {
+    viewerWindow.focus();
+    return viewerWindow;
+  }
+
+  const config = readConfig();
+  const title = (config.brand && config.brand.title) ? config.brand.title : 'iCurator Pro';
+  const bgColor = (config.brand && config.brand.colors && config.brand.colors.background) || '#f8fafc';
+
+  viewerWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    minWidth: 900,
+    minHeight: 600,
+    title: title + ' — Pré-visualização',
+    backgroundColor: bgColor,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-viewer.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: true,
+      sandbox: false
+    }
+  });
+
+  viewerWindow.setMenuBarVisibility(false);
+  viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
+  viewerWindow.on('closed', () => { viewerWindow = null; });
+  return viewerWindow;
+}
+
+/* -------- IPC: shared -------- */
 
 ipcMain.handle('config:load', () => readConfig());
+
+ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
+
+/* -------- IPC: brand -------- */
 
 ipcMain.handle('brand:save', (_event, payload) => {
   const current = readConfig();
@@ -142,8 +184,7 @@ ipcMain.handle('brand:save', (_event, payload) => {
     ...current,
     brand: {
       title: (payload && typeof payload.title === 'string' && payload.title.trim())
-        ? payload.title.trim()
-        : DEFAULT_CONFIG.brand.title,
+        ? payload.title.trim() : DEFAULT_CONFIG.brand.title,
       logo: logoRelative,
       colors: {
         sidebar: (payload && payload.colors && payload.colors.sidebar) || current.brand.colors.sidebar,
@@ -154,11 +195,6 @@ ipcMain.handle('brand:save', (_event, payload) => {
   };
   writeConfig(updated);
   return updated;
-});
-
-ipcMain.handle('asset:resolve', (_event, relativePath) => {
-  if (!relativePath) return null;
-  return path.join(PROJECT_ROOT, relativePath);
 });
 
 /* -------- IPC: marketing -------- */
@@ -214,27 +250,14 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
   return updated;
 });
 
-/* -------- IPC: content / menus (Passo 4) --------
- *
- * Each module shape persisted in project-config.json:
- *   { id: string, title: string, type: string, data: object }
- *
- * For file-backed types (pdf, launch), data looks like:
- *   { file: 'dist-assets/file-<ts>-<name>.ext', fileName: 'original.ext' }
- *
- * The renderer may send incoming modules with extra `data.sourcePath`
- * (absolute path picked via <input type="file">). When present, main.js
- * copies that file into dist-assets/, replaces any previous file for that
- * module id, and persists only the relative `file` path.
- */
+/* -------- IPC: content / menus -------- */
 
 function sanitizeModule(mod) {
   if (!mod || typeof mod !== 'object') return null;
   const type = ALL_TYPES.has(mod.type) ? mod.type : null;
   if (!type) return null;
   const id = (typeof mod.id === 'string' && mod.id.trim())
-    ? mod.id.trim()
-    : crypto.randomUUID();
+    ? mod.id.trim() : crypto.randomUUID();
   const title = (typeof mod.title === 'string' && mod.title.trim()) ? mod.title.trim() : 'Sem título';
   const data = (mod.data && typeof mod.data === 'object') ? { ...mod.data } : {};
   return { id, title, type, data };
@@ -250,39 +273,25 @@ ipcMain.handle('content:save', (_event, payload) => {
   const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
 
   const nextModules = [];
-
   for (const raw of incoming) {
     const mod = sanitizeModule(raw);
     if (!mod) continue;
-
     const prev = findModuleById(previous, mod.id);
 
     if (FILE_TYPES.has(mod.type)) {
       const sourcePath = mod.data && typeof mod.data.sourcePath === 'string' ? mod.data.sourcePath : null;
-
       if (sourcePath) {
-        if (!fs.existsSync(sourcePath)) {
-          throw new Error('Ficheiro não encontrado: ' + sourcePath);
-        }
-        // Replacing: drop the previous file for this module, if any.
+        if (!fs.existsSync(sourcePath)) throw new Error('Ficheiro não encontrado: ' + sourcePath);
         if (prev && prev.data && prev.data.file) deleteAssetIfInside(prev.data.file);
         const prefix = mod.type === 'pdf' ? 'pdf' : 'file';
         const relative = copyAssetToProject(sourcePath, prefix);
-        mod.data = {
-          file: relative,
-          fileName: path.basename(sourcePath)
-        };
+        mod.data = { file: relative, fileName: path.basename(sourcePath) };
       } else {
-        // No new file picked — keep whatever was previously stored for this module.
         const prevFile = (prev && prev.data && prev.data.file) || null;
         const prevName = (prev && prev.data && prev.data.fileName) || null;
-        mod.data = {
-          file: prevFile,
-          fileName: prevName
-        };
+        mod.data = { file: prevFile, fileName: prevName };
       }
     } else {
-      // Non-file types: normalise per type and drop any stray sourcePath.
       const d = mod.data || {};
       if (mod.type === 'youtube' || mod.type === 'webview' || mod.type === 'external') {
         mod.data = { url: typeof d.url === 'string' ? d.url.trim() : '' };
@@ -290,12 +299,9 @@ ipcMain.handle('content:save', (_event, payload) => {
         mod.data = { html: typeof d.html === 'string' ? d.html : '' };
       }
     }
-
     nextModules.push(mod);
   }
 
-  // Garbage collection: any file in the previous list that no longer
-  // appears in the new list (module deleted, or file replaced) gets removed.
   const keptFiles = new Set(
     nextModules
       .filter((m) => FILE_TYPES.has(m.type) && m.data && m.data.file)
@@ -304,14 +310,47 @@ ipcMain.handle('content:save', (_event, payload) => {
   for (const prev of previous) {
     if (!prev || !FILE_TYPES.has(prev.type)) continue;
     const prevFile = prev.data && prev.data.file;
-    if (prevFile && !keptFiles.has(prevFile)) {
-      deleteAssetIfInside(prevFile);
-    }
+    if (prevFile && !keptFiles.has(prevFile)) deleteAssetIfInside(prevFile);
   }
 
   const updated = { ...current, content: nextModules };
   writeConfig(updated);
   return updated;
+});
+
+/* -------- IPC: viewer + shell (Passo 5) -------- */
+
+ipcMain.handle('viewer:open', () => {
+  createViewerWindow();
+  return true;
+});
+
+ipcMain.handle('shell:openExternal', async (_event, url) => {
+  if (typeof url !== 'string' || !url.trim()) return false;
+  const trimmed = url.trim();
+  // Allow only http/https for external browser to keep this safe.
+  if (!/^https?:\/\//i.test(trimmed)) {
+    throw new Error('URL inválido (apenas http/https): ' + trimmed);
+  }
+  await shell.openExternal(trimmed);
+  return true;
+});
+
+ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
+  if (typeof relativePath !== 'string' || !relativePath) {
+    throw new Error('Caminho de ficheiro vazio.');
+  }
+  // Only allow launching files that live inside dist-assets/
+  const abs = path.join(PROJECT_ROOT, relativePath);
+  if (!abs.startsWith(ASSETS_DIR)) {
+    throw new Error('Caminho não permitido: ' + relativePath);
+  }
+  if (!fs.existsSync(abs)) {
+    throw new Error('Ficheiro não existe: ' + abs);
+  }
+  const errMsg = await shell.openPath(abs);
+  if (errMsg) throw new Error(errMsg);
+  return true;
 });
 
 /* -------- App lifecycle -------- */

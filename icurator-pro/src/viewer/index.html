@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: blob: file:; font-src 'self'; frame-src https: file:; child-src https: file:;" />
+    <title>Pré-visualização</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Opt-in gate overlay -->
+    <div id="optin-overlay" class="optin-overlay hidden">
+      <div class="optin-modal">
+        <h2 id="optin-heading">Insira o seu email para aceder</h2>
+        <div id="optin-form-html" class="optin-form-html"></div>
+        <div class="optin-actions">
+          <button type="button" id="optin-bypass" class="optin-bypass">
+            Fechar / Ignorar Bloqueio (teste)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top banner (renderizado dinamicamente se posição = top) -->
+    <div id="banner-top" class="banner-bar hidden"></div>
+
+    <div class="viewer-app">
+      <aside class="viewer-sidebar" id="viewer-sidebar">
+        <div class="viewer-brand">
+          <img id="viewer-logo" alt="Logo" class="hidden" />
+          <h1 id="viewer-title">iCurator Pro</h1>
+        </div>
+        <nav class="viewer-menu" id="viewer-menu"></nav>
+      </aside>
+
+      <main class="viewer-main">
+        <div id="viewer-stage" class="viewer-stage">
+          <div class="viewer-empty">
+            <h2>Bem-vindo</h2>
+            <p>Selecione uma opção no menu para começar.</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Bottom banner (renderizado dinamicamente se posição = bottom) -->
+    <div id="banner-bottom" class="banner-bar hidden"></div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

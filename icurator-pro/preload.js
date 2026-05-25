@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('icurator', {
   saveLeadsConfig: (data) => ipcRenderer.invoke('marketing:saveLeads', data),
   saveBannerConfig: (data) => ipcRenderer.invoke('marketing:saveBanners', data),
   saveContent: (data) => ipcRenderer.invoke('content:save', data),
-  resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath)
+  resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
+  openViewer: () => ipcRenderer.invoke('viewer:open')
 });

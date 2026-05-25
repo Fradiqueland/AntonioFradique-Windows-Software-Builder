@@ -1,0 +1,265 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --v-sidebar: #111827;
+  --v-bg: #f8fafc;
+  --v-button: #2563eb;
+  --v-button-text: #ffffff;
+  --v-text-light: #e5e7eb;
+  --v-text-muted: rgba(255, 255, 255, 0.65);
+  --v-text-dark: #0f172a;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  background: var(--v-bg);
+  color: var(--v-text-dark);
+  overflow: hidden;
+}
+
+.hidden { display: none !important; }
+
+/* ===== Banners fixos ===== */
+.banner-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+#banner-top { top: 0; }
+#banner-bottom { bottom: 0; }
+.banner-bar a { display: inline-block; line-height: 0; cursor: pointer; }
+.banner-bar img { max-height: 90px; max-width: 100%; display: block; }
+
+body.banner-top    .viewer-app { padding-top: 104px; }
+body.banner-bottom .viewer-app { padding-bottom: 104px; }
+
+/* ===== Layout ===== */
+.viewer-app {
+  display: flex;
+  height: 100vh;
+  transition: padding 0.15s;
+}
+
+.viewer-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--v-sidebar);
+  color: var(--v-text-light);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.viewer-brand {
+  padding: 22px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+#viewer-logo {
+  max-width: 100%;
+  max-height: 110px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+#viewer-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.viewer-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.viewer-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: none;
+  background: transparent;
+  color: var(--v-text-muted);
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.viewer-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.viewer-menu-btn.active {
+  background: var(--v-button);
+  color: var(--v-button-text);
+  font-weight: 500;
+}
+
+.viewer-menu-empty {
+  padding: 20px 14px;
+  font-size: 13px;
+  color: var(--v-text-muted);
+  text-align: center;
+}
+
+/* ===== Main / stage ===== */
+.viewer-main {
+  flex: 1;
+  background: var(--v-bg);
+  overflow: hidden;
+  display: flex;
+}
+.viewer-stage {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+}
+
+/* Stage variants */
+.viewer-stage.fill iframe,
+.viewer-stage.fill webview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.viewer-stage.html-mode {
+  padding: 32px 40px;
+  overflow: auto;
+}
+.viewer-stage.html-mode .html-host {
+  max-width: 880px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 10px;
+  padding: 28px 32px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  color: var(--v-text-dark);
+  line-height: 1.6;
+}
+.viewer-stage.html-mode .html-host img { max-width: 100%; height: auto; }
+
+.viewer-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #64748b;
+  padding: 40px;
+}
+.viewer-empty h2 { font-size: 22px; font-weight: 600; color: var(--v-text-dark); margin-bottom: 8px; }
+.viewer-empty p  { font-size: 14px; }
+
+/* ===== Opt-in overlay ===== */
+.optin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+}
+.optin-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 36px 32px 28px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  color: var(--v-text-dark);
+}
+.optin-modal h2 {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 18px;
+  line-height: 1.3;
+}
+.optin-form-html {
+  font-size: 14px;
+}
+/* Make form controls inside the user-supplied HTML look reasonable */
+.optin-form-html input[type="text"],
+.optin-form-html input[type="email"],
+.optin-form-html input[type="tel"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  margin: 6px 0;
+}
+.optin-form-html button,
+.optin-form-html input[type="submit"] {
+  background: var(--v-button);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.optin-actions {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed #cbd5e1;
+  text-align: center;
+}
+.optin-bypass {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.optin-bypass:hover { background: #f1f5f9; color: var(--v-text-dark); }
+
+/* Toast errors */
+.viewer-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #dc2626;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  max-width: 360px;
+}

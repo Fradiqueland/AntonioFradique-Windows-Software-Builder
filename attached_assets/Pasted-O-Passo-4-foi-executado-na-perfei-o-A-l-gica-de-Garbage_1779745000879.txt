@@ -1,0 +1,31 @@
+O Passo 4 foi executado na perfeição! A lógica de Garbage Collection e as trocas de ficheiros estão a funcionar de forma brilhante. A base de dados (`project-config.json`) está pronta.
+
+Vamos avançar para o **PASSO 5: O Modo Visualizador (Preview)**.
+Esta é a interface final que o cliente do curso/software irá ver. Deve ser uma experiência imersiva e refletir 100% das definições guardadas.
+
+### 1. Arquitetura da Janela de Preview
+* Quando o utilizador clica no botão "Pré-visualizar Produto" (no canto inferior da Sidebar do Construtor), o `main.js` deve abrir uma **nova** `BrowserWindow` (ex: `viewer.html`).
+* Esta nova janela precisa do seu próprio script (`viewer.js`) e do seu próprio preload (`preload-viewer.js`) para garantir o isolamento e segurança (não deve ter acesso às funções do Construtor, apenas de leitura da config e execução).
+* Ao abrir, a janela Viewer pede a configuração atual (`project-config.json`) ao `main.js`.
+
+### 2. UI Base e "Marca/Design"
+* O Layout do Viewer deve ter um Menu Lateral (Sidebar) e uma Área Principal (Main Content).
+* **Cores:** Aplica imediatamente as cores guardadas em `config.brand.colors` no CSS (background da sidebar, background principal e cor hover/ativa dos botões).
+* **Título e Logo:** Atualiza o `<title>` da janela. Coloca a imagem do Logo (se existir) no topo da Sidebar. (Lembra-te de pedir ao `main.js` para converter o caminho relativo `dist-assets/...` para um caminho absoluto `file://...` para a imagem renderizar).
+
+### 3. A Lógica de Marketing
+* **Captura de Leads (Opt-in Gate):** Se `config.marketing.leads.enabled` for `true`, cria uma *Overlay* (um modal de ecrã inteiro com `z-index` muito alto) que bloqueia totalmente a app. Mostra o título e insere o HTML do formulário. 
+    * *Atenção:* Como estamos a testar, adiciona um pequeno botão "Fechar/Ignorar Bloqueio" nesta overlay para podermos testar o resto do software sem ficarmos trancados.
+* **Banners:** Se `config.marketing.banner.enabled` for `true`, renderiza a imagem do banner (convertendo o caminho para `file://`) na Posição escolhida (Topo ou Rodapé da Área Principal). Envolve a imagem numa tag `<a>` que, ao ser clicada, usa o `shell.openExternal()` do Electron para abrir o link de afiliado no browser do PC.
+
+### 4. Menus e Área de Conteúdo (Os 6 Tipos)
+Na Sidebar do Viewer, faz um loop pelo array `config.content` e cria um botão para cada módulo. Quando o cliente clica num botão, a "Área Principal" atualiza-se com base no `type` do módulo:
+
+1. **Vídeo YouTube:** Converte inteligentemente o link fornecido (ex: `watch?v=ID` ou `youtu.be/ID`) para o formato `embed` (`youtube.com/embed/ID`). Renderiza um `<iframe>` a ocupar 100% da área principal.
+2. **HTML / Texto Rico:** Pega no código/texto guardado e faz `innerHTML` num contentor na área principal.
+3. **Ficheiro PDF Local:** Renderiza o PDF carregando o caminho absoluto (`file://...`) através de uma tag `<webview>` (preferencial) ou `<iframe>` na área principal.
+4. **Browser Interno:** Carrega o URL através de uma tag `<webview src="URL">` a ocupar a área principal (garante que ativas `webviewTag: true` na configuração desta nova `BrowserWindow`).
+5. **Browser Externo:** NÃO altera a área principal (mantém o conteúdo anterior visível). Em vez disso, chama o IPC para fazer `shell.openExternal(url)` e abrir no Chrome/Edge do PC.
+6. **Lançar Ficheiro:** NÃO altera a área principal. Chama o IPC para usar `shell.openPath(caminhoAbsolutoDoFicheiro)` para executar o `.exe`, `.zip`, etc.
+
+Executa apenas este Passo 5. Cria as janelas, o layout dinâmico, e testa se os ficheiros locais (Logo, Banner e PDFs) abrem corretamente na nova janela, bem como se os links externos e a execução de ficheiros funcionam. Avisa-me para eu testar!

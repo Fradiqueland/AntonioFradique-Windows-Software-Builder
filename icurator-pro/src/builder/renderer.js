@@ -25,6 +25,22 @@ tabs.forEach((tab) => {
   });
 });
 
+/* -------- Preview button (Passo 5) -------- */
+const previewBtn = document.getElementById('preview-btn');
+if (previewBtn) {
+  previewBtn.disabled = false;
+  previewBtn.addEventListener('click', async () => {
+    previewBtn.disabled = true;
+    try {
+      await window.icurator.openViewer();
+    } catch (err) {
+      console.error('Falha ao abrir Pré-visualização:', err);
+    } finally {
+      setTimeout(() => { previewBtn.disabled = false; }, 800);
+    }
+  });
+}
+
 /* -------- Shared helpers -------- */
 
 function makeStatus(el) {
