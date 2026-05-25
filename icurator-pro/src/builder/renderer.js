@@ -57,6 +57,36 @@ async function setLanguage(lang, { persist = true } = {}) {
   }
 }
 
+/* =========================================================
+ * Custom file input helpers
+ * Updates the `<span class="file-name" id="${input.id}-name">` next to each
+ * hidden native file input. Keeps the visible filename in sync with the
+ * user's pick and falls back to the i18n default ("No file selected" …) when
+ * the input is cleared. Also fires once on language change so that the
+ * placeholder text stays in the active language.
+ * ========================================================= */
+function setFileNameForInput(input, label) {
+  if (!input) return;
+  const span = document.getElementById(input.id + '-name');
+  if (!span) return;
+  if (label) {
+    span.textContent = label;
+    span.classList.add('has-file');
+    span.removeAttribute('data-i18n');
+  } else {
+    span.textContent = t('common.no_file_chosen');
+    span.classList.remove('has-file');
+    span.setAttribute('data-i18n', 'common.no_file_chosen');
+  }
+}
+document.addEventListener('change', (ev) => {
+  const input = ev.target;
+  if (!(input instanceof HTMLInputElement)) return;
+  if (input.type !== 'file' || !input.classList.contains('file-input-hidden')) return;
+  const file = input.files && input.files[0];
+  setFileNameForInput(input, file ? file.name : null);
+});
+
 /* -------- Tab navigation -------- */
 function refreshTabHeader(target) {
   const title = t('header.' + target + '.title');
@@ -193,6 +223,7 @@ logoRemoveBtn.addEventListener('click', () => {
   brandState.pendingLogoSourcePath = null;
   brandState.pendingRemoveLogo = true;
   logoInput.value = '';
+  setFileNameForInput(logoInput, null);
   setImagePreview(logoPreview, logoEmpty, null);
 });
 
@@ -215,6 +246,7 @@ brandForm.addEventListener('submit', async (e) => {
     brandState.pendingRemoveLogo = false;
     brandState.currentLogoRelative = updated.brand.logo || null;
     logoInput.value = '';
+    setFileNameForInput(logoInput, null);
     const abs = brandState.currentLogoRelative
       ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative) : null;
     setImagePreview(logoPreview, logoEmpty, abs);
@@ -286,6 +318,7 @@ bannerImageRemoveBtn.addEventListener('click', () => {
   bannerState.pendingImageSourcePath = null;
   bannerState.pendingRemoveImage = true;
   bannerImageInput.value = '';
+  setFileNameForInput(bannerImageInput, null);
   setImagePreview(bannerImagePreview, bannerImageEmpty, null);
 });
 
@@ -305,6 +338,7 @@ bannerForm.addEventListener('submit', async (e) => {
     bannerState.pendingRemoveImage = false;
     bannerState.currentImageRelative = updated.marketing.banner.image || null;
     bannerImageInput.value = '';
+    setFileNameForInput(bannerImageInput, null);
     const abs = bannerState.currentImageRelative
       ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative) : null;
     setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
@@ -321,14 +355,15 @@ bannerForm.addEventListener('submit', async (e) => {
  * CONTENT / MENUS (Passo 4)
  * ========================================================= */
 
-const TYPE_LABELS = {
-  youtube: 'YouTube',
-  html: 'HTML / Texto',
-  pdf: 'PDF Local',
-  webview: 'Browser Interno',
-  external: 'Browser Externo',
-  launch: 'Lançar Ficheiro'
-};
+// Module type labels are now resolved from the active locale via
+// `content.type.<key>` so the list stays in the user's chosen language
+// (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
+const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch'];
+function typeLabel(type) {
+  const key = 'content.type.' + type;
+  const v = t(key);
+  return v === key ? type : v;
+}
 
 const contentList = document.getElementById('content-list');
 const contentListEmpty = document.getElementById('content-list-empty');
@@ -390,6 +425,11 @@ function clearEditor() {
   dyn.launch.file.value = '';
   setFileCurrentText('pdf', t('content.file_none'), false);
   setFileCurrentText('launch', t('content.file_none'), false);
+  // Reset visible filename labels for the dynamic file pickers — otherwise
+  // the previous module's name would linger when reopening / editing.
+  ['pdf', 'launch'].forEach((k) => {
+    if (dyn[k] && dyn[k].file) setFileNameForInput(dyn[k].file, null);
+  });
   showDynamicGroup('youtube');
 }
 
@@ -458,13 +498,13 @@ function renderContentList() {
 
     const info = document.createElement('div');
     info.className = 'content-item-info';
-    info.title = 'Clique para editar';
+    info.title = t('content.click_to_edit');
     info.innerHTML = `
       <span class="content-item-title"></span>
       <span class="content-item-type"></span>
     `;
     info.querySelector('.content-item-title').textContent = mod.title;
-    info.querySelector('.content-item-type').textContent = TYPE_LABELS[mod.type] || mod.type;
+    info.querySelector('.content-item-type').textContent = typeLabel(mod.type);
     info.addEventListener('click', () => openEditorForEdit(mod.id));
 
     const actions = document.createElement('div');
@@ -473,7 +513,7 @@ function renderContentList() {
     const upBtn = document.createElement('button');
     upBtn.type = 'button';
     upBtn.className = 'icon-btn';
-    upBtn.title = 'Subir';
+    upBtn.title = t('content.btn_up');
     upBtn.textContent = '▲';
     upBtn.disabled = index === 0;
     upBtn.addEventListener('click', () => moveModule(mod.id, -1));
@@ -481,7 +521,7 @@ function renderContentList() {
     const downBtn = document.createElement('button');
     downBtn.type = 'button';
     downBtn.className = 'icon-btn';
-    downBtn.title = 'Descer';
+    downBtn.title = t('content.btn_down');
     downBtn.textContent = '▼';
     downBtn.disabled = index === contentModules.length - 1;
     downBtn.addEventListener('click', () => moveModule(mod.id, 1));
@@ -489,14 +529,14 @@ function renderContentList() {
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'icon-btn';
-    editBtn.title = 'Editar';
+    editBtn.title = t('content.btn_edit');
     editBtn.textContent = '✎';
     editBtn.addEventListener('click', () => openEditorForEdit(mod.id));
 
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'icon-btn danger';
-    delBtn.title = 'Eliminar';
+    delBtn.title = t('content.btn_delete');
     delBtn.textContent = '✕';
     delBtn.addEventListener('click', () => deleteModule(mod.id));
 
@@ -537,7 +577,7 @@ async function moveModule(id, delta) {
     await persistContent(t('content.order_updated'));
   } catch (err) {
     console.error(err);
-    showContentStatus('Erro ao reordenar: ' + err.message, 'error');
+    showContentStatus(t('content.reorder_error_prefix') + err.message, 'error');
   }
 }
 
@@ -552,7 +592,7 @@ async function deleteModule(id) {
     await persistContent(t('content.module_deleted'));
   } catch (err) {
     console.error(err);
-    showContentStatus('Erro ao eliminar: ' + err.message, 'error');
+    showContentStatus(t('content.delete_error_prefix') + err.message, 'error');
   }
 }
 
@@ -587,7 +627,7 @@ contentForm.addEventListener('submit', async (e) => {
   const title = moduleTitle.value.trim();
   const type = moduleType.value;
   if (!title) { moduleTitle.focus(); return; }
-  if (!TYPE_LABELS[type]) return;
+  if (!TYPE_KEYS.includes(type)) return;
 
   // Build the data object for this module
   let data = {};
@@ -743,7 +783,7 @@ exportIconInput.addEventListener('change', async (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file || !file.path) return;
   if (!file.name.toLowerCase().endsWith('.ico')) {
-    alert('Por favor, escolha um ficheiro .ico');
+    alert(t('export.icon_must_be_ico'));
     exportIconInput.value = '';
     return;
   }
@@ -753,6 +793,7 @@ exportIconInput.addEventListener('change', async (e) => {
     exportIconCurrent.classList.add('has-file');
     updateExportSummary(updated);
     exportIconInput.value = '';
+    setFileNameForInput(exportIconInput, null);
   } catch (err) {
     alert(t('common.error_prefix') + err.message);
   }

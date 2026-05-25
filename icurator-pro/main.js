@@ -54,7 +54,7 @@ const FILE_TYPES = new Set(['pdf', 'launch']);
 const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
-const ALLOWED_LANGS = new Set(['pt', 'en']);
+const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr']);
 
 const DEFAULT_CONFIG = {
   language: 'pt',

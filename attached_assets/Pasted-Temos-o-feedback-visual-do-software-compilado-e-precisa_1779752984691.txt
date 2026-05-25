@@ -1,0 +1,22 @@
+Temos o feedback visual do software compilado e precisamos de fazer 3 correções vitais na UI e no sistema de idiomas. Por favor, aplica as seguintes alterações no Construtor (`src/builder/`) e no Visualizador (`src/viewer/`):
+
+### 1. Correção Urgente dos 4 Cantos Promocionais (CSS)
+Os botões promocionais estão muito grandes e a tapar o conteúdo útil da aplicação (menus, botões e barras laterais). Precisamos que eles sejam discretos, elegantes e que não quebrem a usabilidade:
+* **Dimensões e Margens:** Reduz o `padding` para no máximo `6px 10px`, cantos arredondados simples (`border-radius: 4px`), e tamanho de letra bem pequeno (`font-size: 10px` ou `11px`).
+* **Opacidade e Hover:** Define a opacidade padrão destes 4 blocos para `0.4` ou `0.5` (ficando quase transparentes para não distrair o utilizador). Quando o utilizador passar com o rato por cima (`:hover`), a opacidade deve subir para `1.0` (100% visível) com uma transição suave (`transition: opacity 0.2s ease`).
+* **Posicionamento Estratégico:** Garante que o bloco do canto inferior esquerdo não tapa o botão azul "Preview Product" da barra lateral. Se necessário, empurra-o ligeiramente mais para a direita ou diminui o comprimento do texto promocional.
+
+### 2. Correção de Mistura de Idiomas (i18n)
+* **Inputs de Ficheiro:** Os botões nativos como `<input type="file">` mostram "Escolher ficheiro" baseado no sistema operativo. Substitui-os por uma estilização costumizada onde o botão estético lê o texto dinâmico do sistema i18n (ex: `label.choose_file`).
+* **Revisão Completa:** Faz um varrimento no `index.html` e nos ficheiros JavaScript para garantir que absolutamente NENHUMA string de texto ou parágrafo de ajuda debaixo dos inputs (ex: "Appears in the window bar...") ficou em texto limpo (hardcoded). Tudo deve usar o atributo `data-i18n`.
+
+### 3. Adicionar Idiomas: Espanhol (ES) e Francês (FR)
+* Cria os dois novos ficheiros de tradução em `locales/es.json` e `locales/fr.json`.
+* Traduz com precisão todos os campos que já existem no `pt.json` e `en.json` (as abas "Brand / Design", "Lead Capture", os tipos de conteúdo, mensagens de erro, etc.).
+* Atualiza o Dropdown de Idiomas no menu do Construtor para incluir as novas opções de forma limpa:
+  - 🇵🇹 PT
+  - 🇬🇧 EN
+  - 🇪🇸 ES
+  - 🇫🇷 FR
+
+Aplica estas correções e mostra-me o resultado assim que concluíres!

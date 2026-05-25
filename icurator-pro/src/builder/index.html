@@ -41,6 +41,8 @@
           <select id="lang-select" class="lang-select">
             <option value="pt">🇵🇹 PT</option>
             <option value="en">🇬🇧 EN</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="fr">🇫🇷 FR</option>
           </select>
         </div>
 
@@ -90,7 +92,9 @@
             <div class="form-group">
               <label data-i18n="brand.logo_label">Logo / Imagem de Cabeçalho</label>
               <div class="file-row">
-                <input type="file" id="brand-logo" accept="image/*" />
+                <label class="file-btn" for="brand-logo"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                <input type="file" id="brand-logo" accept="image/*" class="file-input-hidden" />
+                <span class="file-name" id="brand-logo-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                 <button type="button" class="btn btn-ghost" id="brand-logo-remove" data-i18n="common.remove">Remover</button>
               </div>
               <div class="logo-preview-wrap">
@@ -192,7 +196,9 @@
             <div class="form-group">
               <label data-i18n="banner.image_label">Imagem do Banner</label>
               <div class="file-row">
-                <input type="file" id="banner-image" accept="image/*" />
+                <label class="file-btn" for="banner-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                <input type="file" id="banner-image" accept="image/*" class="file-input-hidden" />
+                <span class="file-name" id="banner-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                 <button type="button" class="btn btn-ghost" id="banner-image-remove" data-i18n="common.remove">Remover</button>
               </div>
               <div class="logo-preview-wrap banner-preview-wrap">
@@ -275,6 +281,7 @@
                 <div class="form-group" id="dyn-youtube" data-dyn="youtube">
                   <label for="dyn-youtube-url" data-i18n="content.youtube_url_label">URL ou ID do vídeo</label>
                   <input type="text" id="dyn-youtube-url"
+                         data-i18n-placeholder="content.youtube_url_placeholder"
                          placeholder="https://www.youtube.com/watch?v=... ou só o ID" />
                   <small data-i18n-html="content.youtube_help">Renderizado num <code>&lt;iframe&gt;</code> dentro do produto final.</small>
                 </div>
@@ -282,6 +289,7 @@
                 <div class="form-group hidden" id="dyn-html" data-dyn="html">
                   <label for="dyn-html-code" data-i18n="content.html_label">HTML / Texto</label>
                   <textarea id="dyn-html-code" class="code-area" rows="12"
+                            data-i18n-placeholder="content.html_placeholder"
                             placeholder="<h1>Bem-vindo</h1>&#10;<p>O seu conteúdo aqui…</p>"></textarea>
                   <small data-i18n="content.html_help">O HTML será injetado tal e qual na área principal do Visualizador.</small>
                 </div>
@@ -289,7 +297,9 @@
                 <div class="form-group hidden" id="dyn-pdf" data-dyn="pdf">
                   <label data-i18n="content.pdf_label">Ficheiro PDF</label>
                   <div class="file-row">
-                    <input type="file" id="dyn-pdf-file" accept=".pdf,application/pdf" />
+                    <label class="file-btn" for="dyn-pdf-file"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                    <input type="file" id="dyn-pdf-file" accept=".pdf,application/pdf" class="file-input-hidden" />
+                    <span class="file-name" id="dyn-pdf-file-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                   </div>
                   <div class="file-current" id="dyn-pdf-current" data-i18n="content.file_none">Nenhum ficheiro selecionado.</div>
                   <small data-i18n="content.pdf_help">O PDF será copiado para dist-assets/ ao guardar.</small>
@@ -297,20 +307,26 @@
 
                 <div class="form-group hidden" id="dyn-webview" data-dyn="webview">
                   <label for="dyn-webview-url" data-i18n="content.webview_url_label">URL para abrir dentro do software</label>
-                  <input type="text" id="dyn-webview-url" placeholder="https://exemplo.com" />
+                  <input type="text" id="dyn-webview-url"
+                         data-i18n-placeholder="content.webview_url_placeholder"
+                         placeholder="https://exemplo.com" />
                   <small data-i18n-html="content.webview_help">Carregado via <code>&lt;webview&gt;</code> — o utilizador fica dentro da app.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-external" data-dyn="external">
                   <label for="dyn-external-url" data-i18n="content.external_url_label">URL para abrir no browser do sistema</label>
-                  <input type="text" id="dyn-external-url" placeholder="https://exemplo.com/afiliado" />
+                  <input type="text" id="dyn-external-url"
+                         data-i18n-placeholder="content.external_url_placeholder"
+                         placeholder="https://exemplo.com/afiliado" />
                   <small data-i18n="content.external_help">Ideal para links de afiliado — abre no Chrome/Edge padrão.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-launch" data-dyn="launch">
                   <label data-i18n="content.launch_label">Ficheiro a lançar</label>
                   <div class="file-row">
-                    <input type="file" id="dyn-launch-file" />
+                    <label class="file-btn" for="dyn-launch-file"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                    <input type="file" id="dyn-launch-file" class="file-input-hidden" />
+                    <span class="file-name" id="dyn-launch-file-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                   </div>
                   <div class="file-current" id="dyn-launch-current" data-i18n="content.file_none">Nenhum ficheiro selecionado.</div>
                   <small data-i18n="content.launch_help">Qualquer formato (.exe, .zip, .doc…). Copiado para dist-assets/.</small>
@@ -331,7 +347,9 @@
             <div class="form-group">
               <label data-i18n="export.icon_label">Ícone do Software (.ico)</label>
               <div class="file-row">
-                <input type="file" id="export-icon" accept=".ico,image/x-icon,image/vnd.microsoft.icon" />
+                <label class="file-btn" for="export-icon"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                <input type="file" id="export-icon" accept=".ico,image/x-icon,image/vnd.microsoft.icon" class="file-input-hidden" />
+                <span class="file-name" id="export-icon-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
               </div>
               <div class="file-current" id="export-icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
               <small data-i18n="export.icon_help">O ícone tem de ser obrigatoriamente um ficheiro .ico (formato Windows).</small>
@@ -339,7 +357,7 @@
 
             <div class="form-group">
               <label data-i18n="export.summary_label">Resumo do Projeto</label>
-              <div class="export-summary" id="export-summary">A carregar resumo…</div>
+              <div class="export-summary" id="export-summary" data-i18n="common.loading_summary">A carregar resumo…</div>
             </div>
 
             <div class="form-group">

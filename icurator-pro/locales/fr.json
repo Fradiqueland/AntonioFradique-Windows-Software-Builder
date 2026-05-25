@@ -1,0 +1,164 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "Constructeur"
+  },
+  "lang": {
+    "label": "Langue"
+  },
+  "tab": {
+    "brand": "Marque / Design",
+    "leads": "Capture de Leads",
+    "banners": "Bannières",
+    "content": "Contenu / Menus",
+    "export": "Exporter"
+  },
+  "header": {
+    "brand":    { "title": "Marque / Design",       "subtitle": "Personnalisez l'apparence du produit final." },
+    "leads":    { "title": "Capture de Leads",      "subtitle": "Configurez l'opt-in / squeeze page initial." },
+    "banners":  { "title": "Bannières",             "subtitle": "Ajoutez des bannières publicitaires et liens d'affiliation." },
+    "content":  { "title": "Contenu / Menus",       "subtitle": "Construisez le menu de navigation du produit final." },
+    "export":   { "title": "Exporter",              "subtitle": "Compilez le produit final en .exe (Windows)." }
+  },
+  "sidebar": {
+    "preview_btn": "Aperçu du Produit",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "remove": "Supprimer",
+    "saving": "Enregistrement…",
+    "saved": "Paramètres enregistrés.",
+    "error_prefix": "Erreur : ",
+    "choose_file": "Choisir un fichier",
+    "no_file_chosen": "Aucun fichier sélectionné",
+    "loading_summary": "Chargement du résumé…"
+  },
+  "brand": {
+    "title_label": "Titre du Logiciel",
+    "title_placeholder": "Ex : Mon Cours Numérique",
+    "title_help": "Apparaît dans la barre de la fenêtre et en en-tête du menu du produit final.",
+    "logo_label": "Logo / Image d'En-tête",
+    "logo_empty": "Aucun logo chargé",
+    "logo_help": "Le fichier sera copié dans le dossier interne dist-assets/.",
+    "colors_label": "Couleurs Personnalisées",
+    "color_sidebar": "Couleur du Menu Latéral",
+    "color_background": "Couleur de Fond Principale",
+    "color_buttons": "Couleur des Boutons",
+    "save_btn": "Enregistrer les Paramètres"
+  },
+  "leads": {
+    "toggle_title": "Activer le Verrouillage de Contenu (Opt-in Gate)",
+    "toggle_sub": "Si activé, le client final ne verra le contenu qu'après avoir soumis le formulaire ci-dessous.",
+    "heading_label": "Titre du Verrouillage",
+    "heading_placeholder": "Ex : Entrez votre email pour accéder au cours",
+    "heading_help": "Grand message affiché au-dessus du formulaire dans la Visionneuse.",
+    "html_label": "Code HTML du Formulaire",
+    "html_placeholder": "Collez ici le code du formulaire (Mailchimp, AWeber, ActiveCampaign, etc.)",
+    "html_help": "Le HTML est injecté tel quel dans la Visionneuse. Vérifiez toujours qu'il provient d'un fournisseur de confiance.",
+    "save_btn": "Enregistrer les Paramètres Leads"
+  },
+  "banner": {
+    "toggle_title": "Activer la Bannière Publicitaire",
+    "toggle_sub": "La bannière restera fixe dans la Visionneuse, sur toutes les pages.",
+    "image_label": "Image de la Bannière",
+    "image_empty": "Aucune bannière chargée",
+    "image_help": "Recommandé : image horizontale (ex : 728×90 ou 970×90). Copiée dans dist-assets/.",
+    "url_label": "Lien de Destination",
+    "url_placeholder": "https://exemple.com/mon-lien-affilie",
+    "url_help": "URL ouverte dans le navigateur externe quand le client final clique sur la bannière.",
+    "position_label": "Position de la Bannière",
+    "position_top": "Haut de Page",
+    "position_bottom": "Bas de Page",
+    "save_btn": "Enregistrer les Paramètres de Bannière"
+  },
+  "content": {
+    "list_title": "Modules du Menu",
+    "add_btn": "+ Ajouter un Nouveau Module",
+    "list_empty": "Aucun module pour l'instant. Cliquez sur \"Ajouter un Nouveau Module\" pour commencer.",
+    "editor_empty": "Sélectionnez un module dans la liste, ou cliquez sur \"+ Ajouter un Nouveau Module\" pour commencer.",
+    "editor_new_title": "Nouveau Module",
+    "editor_edit_title": "Modifier le Module",
+    "editor_save": "Enregistrer le Module",
+    "module_title_label": "Titre du Bouton",
+    "module_title_placeholder": "Ex : Leçon 1 — Introduction",
+    "module_type_label": "Type d'Action",
+    "type": {
+      "youtube": "Vidéo YouTube (Iframe)",
+      "html": "HTML / Texte Riche",
+      "pdf": "Fichier PDF Local",
+      "webview": "Navigateur Interne (Webview)",
+      "external": "Navigateur Externe (Chrome/Edge)",
+      "launch": "Lancer un Fichier (.exe / .zip / etc)"
+    },
+    "youtube_url_label": "URL ou ID de la vidéo",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou seulement l'ID",
+    "youtube_help": "Rendu dans une <iframe> à l'intérieur du produit final.",
+    "html_label": "HTML / Texte",
+    "html_placeholder": "<h1>Bienvenue</h1>\n<p>Votre contenu ici…</p>",
+    "html_help": "Le HTML sera injecté tel quel dans la zone principale de la Visionneuse.",
+    "pdf_label": "Fichier PDF",
+    "pdf_help": "Le PDF sera copié dans dist-assets/ à l'enregistrement.",
+    "file_none": "Aucun fichier sélectionné.",
+    "file_new_prefix": "Nouveau fichier : ",
+    "file_current_prefix": "Fichier actuel : ",
+    "webview_url_label": "URL à ouvrir à l'intérieur du logiciel",
+    "webview_url_placeholder": "https://exemple.com",
+    "webview_help": "Chargé via <webview> — l'utilisateur reste dans l'application.",
+    "external_url_label": "URL à ouvrir dans le navigateur du système",
+    "external_url_placeholder": "https://exemple.com/affilie",
+    "external_help": "Idéal pour les liens d'affiliation — ouvre dans Chrome/Edge par défaut.",
+    "launch_label": "Fichier à lancer",
+    "launch_help": "Tout format (.exe, .zip, .doc…). Copié dans dist-assets/.",
+    "delete_confirm": "Supprimer le module \"{title}\" ? Cette action est irréversible.",
+    "order_updated": "Ordre mis à jour.",
+    "click_to_edit": "Cliquez pour modifier",
+    "btn_up": "Monter",
+    "btn_down": "Descendre",
+    "btn_edit": "Modifier",
+    "btn_delete": "Supprimer",
+    "reorder_error_prefix": "Erreur de réordonnancement : ",
+    "delete_error_prefix": "Erreur de suppression : ",
+    "module_deleted": "Module supprimé.",
+    "module_saved": "Module enregistré."
+  },
+  "export": {
+    "icon_label": "Icône du Logiciel (.ico)",
+    "icon_none": "Aucune icône définie.",
+    "icon_current_prefix": "Icône actuelle : ",
+    "icon_help": "L'icône doit obligatoirement être un fichier .ico (format Windows).",
+    "icon_must_be_ico": "Veuillez choisir un fichier .ico",
+    "summary_label": "Résumé du Projet",
+    "build_btn": "Compiler le Produit Final (.exe)",
+    "build_help": "La compilation exécute electron-builder et génère l'installateur dans release/. Peut prendre quelques minutes.",
+    "status_label": "Statut",
+    "log_empty": "Aucune activité. Cliquez sur \"Compiler\" pour commencer.",
+    "open_release_btn": "Ouvrir le dossier release/",
+    "summary": {
+      "project": "Projet",
+      "modules": "Modules",
+      "logo": "Logo",
+      "leads": "Opt-in / Leads",
+      "banner": "Bannière",
+      "icon": "Icône .exe",
+      "defined": "Défini",
+      "no_logo": "Aucun logo",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "default_electron": "Default Electron"
+    },
+    "log": {
+      "starting": "Démarrage de la compilation…",
+      "finished_prefix": "Compilation terminée. Fichiers : ",
+      "failed_prefix": "Échec : "
+    }
+  },
+  "corners": {
+    "music_label": "Ma musique",
+    "author_label": "Créé par Antonio Fradique",
+    "plastic_text": "Gagnez de l'argent en aidant la planète ! Prospérez en transformant le plastique en profit :",
+    "parking_text": "Marre de tourner ? Trouvez un parking en quelques secondes avec ParknDgo !"
+  }
+}
