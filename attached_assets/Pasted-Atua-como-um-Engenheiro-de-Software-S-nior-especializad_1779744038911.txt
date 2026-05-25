@@ -1,0 +1,60 @@
+Atua como um Engenheiro de Software Sénior especializado em desenvolvimento Desktop com Electron.js e Node.js.
+
+O meu objetivo é criar uma versão moderna, poderosa e multiplataforma de um software clássico de Internet Marketing chamado "iCurator Pro". Este software é um **Dashboard Creator / Content Packager**. Ele permite que um criador agrupe vários tipos de ficheiros, links, vídeos e formulários numa única interface (com a sua própria marca) e depois exporte tudo como um produto digital autónomo (ficheiro .exe para Windows).
+
+A aplicação deve ter dois modos principais:
+1. **Modo Construtor (Builder):** A interface onde o criador configura o design, os menus, adiciona os ficheiros/links e as regras de marketing.
+2. **Modo Visualizador (Viewer/Produto Final):** O produto compilado que o cliente final vai abrir e consumir.
+
+Por favor, constrói este projeto passo a passo, aguardando a minha aprovação antes de avançares para o passo seguinte.
+
+### Stack Tecnológica
+* **Core:** Electron.js e Node.js.
+* **Frontend:** HTML5, CSS3, e Vanilla JavaScript. Usa uma framework CSS leve (ex: Tailwind CSS via CDN ou Bootstrap) para um design limpo e moderno.
+* **Armazenamento:** Ficheiros JSON locais para guardar o estado do projeto (`project-config.json`).
+* **Compilação:** `electron-builder` para gerar o `.exe` final com um ícone customizado.
+
+---
+
+### PASSO 1: Configuração Base e Navegação do Construtor
+* Inicializa o projeto Electron.
+* Cria a janela principal do "Modo Construtor".
+* Cria uma interface com um menu lateral de separadores para organizar o fluxo de trabalho do criador: "1. Marca/Design", "2. Captura de Leads", "3. Banners", "4. Conteúdo/Menus", "5. Exportar".
+
+### PASSO 2: Separador "Marca e Design" (Branding)
+Neste separador, o criador pode personalizar o aspeto do software final:
+* **Título do Software:** O nome que aparecerá na barra da janela e no menu.
+* **Logo/Imagem de Cabeçalho:** Upload de uma imagem que ficará no topo do menu lateral do Visualizador.
+* **Cores Customizadas:** Color pickers para a cor de fundo do menu, cor de fundo da área principal e cor dos botões.
+* (O sistema deve guardar estas definições no `project-config.json`).
+
+### PASSO 3: Separadores de Marketing (Leads e Banners)
+Estas são as funcionalidades de rentabilização clássicas do iCurator:
+* **Opt-in Gate / Squeeze Page:** Uma opção para ativar um "Bloqueio Inicial". Se ativo, o criador pode colar o código HTML de um formulário de email (ex: Mailchimp, AWeber, ActiveCampaign). O Visualizador só permitirá aceder ao conteúdo depois de o cliente preencher este formulário (o ecrã fica bloqueado com este HTML até ser submetido/ou ter um botão de "Entrar").
+* **Banners de Publicidade:** Opção para fazer upload de uma imagem de banner e inserir um link de afiliado. Este banner ficará fixo na parte inferior ou superior do Visualizador, independentemente da página em que o cliente estiver.
+
+### PASSO 4: Separador "Conteúdo/Menus" (O Core do Software)
+Aqui o criador adiciona os botões do menu de navegação e associa-lhes ações.
+Deve haver uma lista onde se pode adicionar, remover e reordenar botões.
+Para cada botão criado, o utilizador escolhe o título e o **Tipo de Ação** de um Dropdown. As opções exatas são:
+1. **YouTube / Vídeo Web:** Insere o link e renderiza num `<iframe>`.
+2. **Editor de Texto HTML (WYSIWYG):** Um editor simples para escrever texto formatado diretamente no software.
+3. **Ficheiro PDF Local:** Seleciona um PDF do PC. O visualizador renderiza-o na área central (`<webview>` ou `<iframe>`).
+4. **Browser Interno:** URL externo que abre na área central usando a tag `<webview>` do Electron (ativada no `webPreferences`), mantendo o utilizador dentro do software.
+5. **Browser Externo (Links de Afiliado):** URL que, ao ser clicado, usa o `shell.openExternal()` do Electron para abrir no Chrome/Edge padrão do PC.
+6. **Lançar Ficheiro (.exe / .zip / .doc):** O criador seleciona um ficheiro. Ao clicar no botão, o software usa `child_process.execFile` ou `shell.openPath` para executar/abrir esse ficheiro no sistema do cliente.
+
+*Regra de Arquitetura de Ficheiros:* Sempre que o criador adicionar um ficheiro local (Logo, Banners, PDFs, Ficheiros a lançar), o Node.js usando o módulo `fs` deve copiar esse ficheiro para uma pasta interna do projeto (ex: `/dist-assets/`) para que tudo fique contido no mesmo diretório na hora de exportar.
+
+### PASSO 5: O Modo Visualizador (Preview)
+* Cria um botão "Pré-visualizar Produto".
+* Ao clicar, abre uma nova janela Electron que lê o `project-config.json` e a pasta `/dist-assets/` e renderiza o produto final exatamente como o cliente o verá: o Opt-in gate inicial (se ativo), o Header/Logo, as cores escolhidas, os banners fixos, e o menu lateral dinâmico que carrega as diferentes ações na área central conforme o clique.
+
+### PASSO 6: Exportação e Compilação
+* Configura o `package.json` com o `electron-builder`.
+* Cria um script ou botão no Construtor que prepare a pasta final para ser compilada num ficheiro `.exe` para Windows.
+
+---
+**Instruções de Execução para a IA:**
+Não escrevas o código todo de uma vez. A arquitetura é complexa.
+Começa APENAS pelo **PASSO 1**. Cria a estrutura de pastas, o `main.js`, o `index.html` do Construtor e o layout base com os separadores. Quando estiver funcional, avisa-me para eu testar e dar luz verde para o Passo 2.
