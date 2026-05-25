@@ -1,0 +1,23 @@
+Luz verde! O Passo 1 está perfeito e a estrutura base está a funcionar. Avança agora para o **PASSO 2: Separador "Marca e Design"**.
+
+Aqui estão os requisitos técnicos estritos para a construção deste passo:
+
+### 1. UI do Separador (Frontend em `src/builder/`)
+Substitui o placeholder do separador "Marca/Design" pelos seguintes controlos:
+* **Título do Software:** Um campo de texto (`<input type="text">`).
+* **Logo/Imagem de Cabeçalho:** Um campo de upload (`<input type="file" accept="image/*">`) e uma pequena tag `<img>` em baixo para pré-visualizar a imagem carregada.
+* **Cores Customizadas:** Três seletores de cor (`<input type="color">`) para: "Cor do Menu Lateral", "Cor de Fundo Principal" e "Cor dos Botões". Preenche-os com cores por defeito razoáveis (ex: menu escuro, fundo claro, botões azuis).
+* **Botão de Guardar:** Um botão "Guardar Definições".
+
+### 2. Lógica de Node.js e IPC (Backend em `main.js` e `preload.js`)
+* No `preload.js`, expõe uma função segura via `contextBridge` (ex: `api.saveBrandConfig(data)`).
+* O frontend deve recolher os valores dos inputs e chamar essa função ao clicar em "Guardar".
+* No `main.js`, cria um listener `ipcMain.handle` para receber estes dados.
+* O `main.js` deve usar o módulo `fs` para gravar estes dados num ficheiro chamado `project-config.json` (cria-o caso não exista) dentro de uma pasta dedicada no projeto, como `/data/`.
+
+### 3. Gestão Isolada de Ficheiros (Muito Importante)
+* Se o utilizador selecionar um Logo, o `main.js` deve usar o `fs` para **copiar fisicamente** esse ficheiro de imagem da sua localização original no PC para uma pasta interna chamada `/dist-assets/` (cria a pasta no código se ela não existir).
+* O `project-config.json` deve guardar apenas o **caminho relativo** desse logo (ex: `dist-assets/meu-logo.png`) e não o caminho absoluto do C:\ do utilizador, para garantir que não se quebra quando for compilado.
+* Atualiza os campos na UI automaticamente ao iniciar o Construtor, caso o `project-config.json` já exista (para que as alterações fiquem persistentes quando fecho e abro a app).
+
+Executa apenas este Passo 2. Quando estiver concluído e a gravar corretamente no JSON, avisa-me para avançarmos para o Passo 3.

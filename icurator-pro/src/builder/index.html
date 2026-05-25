@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' https://cdn.jsdelivr.net;" />
+      content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: file:; font-src 'self' https://cdn.jsdelivr.net;" />
     <title>iCurator Pro — Construtor</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -45,7 +45,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled>
             Pré-visualizar Produto
           </button>
-          <div class="version">v0.1.0 · Passo 1</div>
+          <div class="version">v0.1.0 · Passo 2</div>
         </div>
       </aside>
 
@@ -55,11 +55,65 @@
           <p id="page-subtitle">Personalize a aparência do produto final.</p>
         </header>
 
+        <!-- PASSO 2 — Marca / Design -->
         <section class="panel" data-panel="brand">
-          <div class="placeholder">
-            <h2>Separador 1 — Marca / Design</h2>
-            <p>A ser implementado no <strong>Passo 2</strong>.</p>
-          </div>
+          <form id="brand-form" class="form-card" autocomplete="off">
+            <div class="form-group">
+              <label for="brand-title">Título do Software</label>
+              <input type="text" id="brand-title" name="title"
+                     placeholder="Ex: O Meu Curso Digital" maxlength="80" required />
+              <small>Aparece na barra da janela e no cabeçalho do menu do produto final.</small>
+            </div>
+
+            <div class="form-group">
+              <label>Logo / Imagem de Cabeçalho</label>
+              <div class="file-row">
+                <input type="file" id="brand-logo" accept="image/*" />
+                <button type="button" class="btn btn-ghost" id="brand-logo-remove">
+                  Remover
+                </button>
+              </div>
+              <div class="logo-preview-wrap">
+                <img id="brand-logo-preview" alt="Pré-visualização do logo" />
+                <span id="brand-logo-empty" class="logo-empty">Sem logo carregado</span>
+              </div>
+              <small>O ficheiro será copiado para a pasta interna <code>dist-assets/</code>.</small>
+            </div>
+
+            <div class="form-group">
+              <label>Cores Customizadas</label>
+              <div class="color-grid">
+                <div class="color-field">
+                  <input type="color" id="color-sidebar" value="#111827" />
+                  <div class="color-meta">
+                    <span class="color-label">Cor do Menu Lateral</span>
+                    <span class="color-hex" id="color-sidebar-hex">#111827</span>
+                  </div>
+                </div>
+                <div class="color-field">
+                  <input type="color" id="color-background" value="#f8fafc" />
+                  <div class="color-meta">
+                    <span class="color-label">Cor de Fundo Principal</span>
+                    <span class="color-hex" id="color-background-hex">#f8fafc</span>
+                  </div>
+                </div>
+                <div class="color-field">
+                  <input type="color" id="color-buttons" value="#2563eb" />
+                  <div class="color-meta">
+                    <span class="color-label">Cor dos Botões</span>
+                    <span class="color-hex" id="color-buttons-hex">#2563eb</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="save-status"></span>
+              <button type="submit" class="btn btn-primary" id="brand-save">
+                Guardar Definições
+              </button>
+            </div>
+          </form>
         </section>
 
         <section class="panel hidden" data-panel="leads">
