@@ -1,0 +1,23 @@
+O utilizador quer distribuir o próprio software Construtor (LaunchBox Pro) como um ficheiro `.exe` autónomo para oferecer a outras pessoas. 
+
+Devido à nossa lógica atual do Passo 6 (`app.isPackaged`), qualquer executável gerado transforma-se imediatamente no Viewer. Precisamos de alterar a arquitetura para que o software consiga distinguir entre a "Master App" (Construtor) e um "Curso Exportado" (Viewer).
+
+Por favor, implementa a seguinte solução:
+
+### 1. Atualizar o Arranque no `main.js`
+* Substitui a lógica do `app.isPackaged` por uma verificação de um ficheiro de "flag".
+* No arranque (`app.whenReady()`), usa o `fs.existsSync` para procurar um ficheiro chamado `course-mode.flag` dentro da pasta de dados (`path.join(BASE_PATH, 'data', 'course-mode.flag')`).
+* Se o ficheiro `course-mode.flag` **existir**, significa que é um curso exportado -> `createViewerWindow()`.
+* Se o ficheiro **NÃO existir** -> `createBuilderWindow()` (mesmo que `app.isPackaged` seja `true`).
+
+### 2. Atualizar o IPC `export:build` (A magia da compilação)
+Quando o utilizador clica em "Compilar Produto Final" para gerar um curso:
+* Antes de invocar o `electron-builder`, o `main.js` deve **criar** um ficheiro vazio chamado `course-mode.flag` dentro da pasta `data/` (`fs.writeFileSync`).
+* Garante que o `build-config.json` inclui a pasta `data/` (ou este ficheiro específico) nos `extraResources`. Assim, o curso gerado vai levar esta "flag" lá dentro.
+* **MUITO IMPORTANTE:** Assim que a compilação do curso terminar (no bloco `finally` ou no fim do sucesso/erro), o `main.js` deve **eliminar** o `course-mode.flag` da pasta `data/` (`fs.unlinkSync`). Isto garante que o Construtor do utilizador não fica "trancado" em modo curso no futuro.
+
+### 3. Script para exportar o Construtor (`package.json`)
+* Adiciona um novo script no `package.json` chamado `"build:master": "electron-builder --dir"`. Na verdade, configura-o para criar o executável do instalador: `"build:master": "electron-builder --win"`.
+* Garante que o `build:master` usa as configurações originais e NÃO inclui a flag de curso.
+
+Avisa-me quando estiver concluído para podermos compilar a versão final do software!

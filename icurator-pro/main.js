@@ -15,6 +15,10 @@ const BASE_PATH = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
 const DATA_DIR = path.join(BASE_PATH, 'data');
 const ASSETS_DIR = path.join(BASE_PATH, 'dist-assets');
 const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
+// Flag-file that distinguishes a "course .exe" (Viewer-only) from the
+// "Master App" (Builder). If this file is present in data/, the app boots
+// into Viewer mode regardless of app.isPackaged.
+const COURSE_FLAG_PATH = path.join(DATA_DIR, 'course-mode.flag');
 
 // Build outputs always live next to package.json (dev-only operation).
 const BUILD_CONFIG_PATH = path.join(PROJECT_ROOT, 'build-config.json');
@@ -403,7 +407,9 @@ function generateBuildConfig(config) {
     directories: { output: 'release' },
     files: ['main.js', 'preload.js', 'preload-viewer.js', 'src/**/*'],
     extraResources: [
-      { from: 'data/project-config.json', to: 'data/project-config.json' },
+      // Whole data/ dir so the course-mode.flag travels into the .exe alongside
+      // project-config.json and the icon.
+      { from: 'data', to: 'data' },
       { from: 'dist-assets', to: 'dist-assets' }
     ],
     win: {
@@ -444,6 +450,16 @@ ipcMain.handle('export:build', async (event) => {
     throw new Error('electron-builder não está instalado. Corra: npm install');
   }
 
+  // Drop the course-mode flag so it gets bundled via extraResources. This is
+  // ALWAYS removed in the finally block, so the dev Construtor never gets
+  // accidentally locked into Viewer mode.
+  try {
+    fs.writeFileSync(COURSE_FLAG_PATH, '', 'utf-8');
+    send('Flag de curso criada (data/course-mode.flag) — será embutida no .exe.');
+  } catch (err) {
+    throw new Error('Não foi possível criar a flag de curso: ' + err.message);
+  }
+
   try {
     const outFiles = await builder.build({
       targets: builder.Platform.WINDOWS.createTarget(),
@@ -457,6 +473,17 @@ ipcMain.handle('export:build', async (event) => {
     const msg = err && err.message ? err.message : String(err);
     send('Erro durante o build: ' + msg, 'error');
     throw err;
+  } finally {
+    // CRÍTICO: remover a flag para que o Construtor não fique "trancado" em
+    // modo curso no próximo arranque.
+    try {
+      if (fs.existsSync(COURSE_FLAG_PATH)) {
+        fs.unlinkSync(COURSE_FLAG_PATH);
+        send('Flag de curso removida do Construtor (limpeza pós-build).');
+      }
+    } catch (cleanupErr) {
+      send('Aviso: não foi possível remover course-mode.flag: ' + cleanupErr.message, 'error');
+    }
   }
 });
 
@@ -468,21 +495,26 @@ ipcMain.handle('export:openReleaseFolder', () => {
 
 /* -------- App lifecycle -------- */
 
+function isCourseMode() {
+  // Não depende de app.isPackaged. O que decide é a flag.
+  return fs.existsSync(COURSE_FLAG_PATH);
+}
+
 app.whenReady().then(() => {
   ensureDirs();
   readConfig();
 
-  if (app.isPackaged) {
-    // Modo Produto Final: arranca direto no Viewer maximizado, sem Construtor.
+  if (isCourseMode()) {
+    // Curso exportado: arranca direto no Viewer maximizado, sem Construtor.
     createViewerWindow({ standalone: true });
   } else {
-    // Modo Desenvolvimento: arranca no Construtor.
+    // Master App (Construtor) — dev OU .exe distribuído ao próprio criador.
     createBuilderWindow();
   }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      if (app.isPackaged) createViewerWindow({ standalone: true });
+      if (isCourseMode()) createViewerWindow({ standalone: true });
       else createBuilderWindow();
     }
   });

@@ -9,7 +9,8 @@
     "start": "electron .",
     "dev": "electron . --enable-logging",
     "build": "electron-builder",
-    "build:win": "electron-builder --win --x64"
+    "build:win": "electron-builder --win --x64",
+    "build:master": "electron-builder --win"
   },
   "devDependencies": {
     "electron": "^32.0.0",
