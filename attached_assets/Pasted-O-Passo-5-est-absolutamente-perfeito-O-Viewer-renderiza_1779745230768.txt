@@ -1,0 +1,41 @@
+O Passo 5 está absolutamente perfeito! O Viewer renderiza de forma imersiva e a navegação funciona sem falhas. 
+
+Chegámos ao **PASSO 6 (Final): Exportação para .exe**. 
+O objetivo deste passo é empacotar o projeto num executável "standalone" que o criador pode vender/distribuir. Vamos usar a flag `app.isPackaged` para que o software saiba se está em modo "Criação" ou em modo "Produto Final".
+
+### 1. O "Truque" de Produção no `main.js`
+* No arranque da aplicação (quando o Electron faz `app.whenReady()`), adiciona esta lógica:
+  * Se `app.isPackaged === false` (Modo Desenvolvimento): Abre a janela do Construtor (`src/builder/index.html`), como faz atualmente.
+  * Se `app.isPackaged === true` (Modo Produto Final): Ignora o Construtor e chama diretamente a função `createViewerWindow()`, mas faz com que a janela do Viewer seja o foco principal, maximizada ou com o tamanho padrão, e sem ferramentas de Developer. O utilizador final só verá o Viewer.
+
+### 2. Adaptação dos Caminhos (MUITO IMPORTANTE)
+Quando o Electron é empacotado, os ficheiros extra (JSON e Assets) não ficam na mesma pasta. Ficam na diretoria de *resources*. Atualiza a tua lógica de gestão de caminhos (`readConfig`, `resolveAssetPath`, etc.) no `main.js`:
+* Cria uma variável `const basePath = app.isPackaged ? process.resourcesPath : __dirname;`
+* O ficheiro JSON deve ser lido/guardado em: `path.join(basePath, 'data', 'project-config.json')`.
+* Os ficheiros locais devem ser guardados/lidos em: `path.join(basePath, 'dist-assets')`.
+
+### 3. UI - O Separador "Exportar" (`src/builder/`)
+Neste último separador, adiciona:
+* **Ícone do Software:** Um campo de upload (`<input type="file" accept=".ico">`) para escolher o ícone do ficheiro `.exe`. O ficheiro deve ser obrigatoriamente `.ico`.
+* **Resumo do Projeto:** Uma pequena área de texto dinâmica gerada via JS (ex: "Projeto: [Nome] | Módulos: [X] | Opt-in: [Ativo/Inativo]").
+* **Botão Gigante:** "Compilar Produto Final (.exe)".
+* **Área de Status:** Uma div vazia para mostrar logs do processo ("A preparar...", "A compilar, aguarde...", "Concluído!").
+
+### 4. Lógica de Compilação (IPC `export:build`)
+Quando o utilizador clica em "Compilar Produto Final":
+1. O backend recebe o ícone (se selecionado) e guarda-o como `data/icon.ico`.
+2. O backend usa o módulo `fs` para gerar dinamicamente um ficheiro `build-config.json` na raiz do projeto com estas opções para o `electron-builder`:
+```json
+{
+  "appId": "com.icurator.product",
+  "productName": "TÍTULO DO PROJETO", 
+  "directories": { "output": "release" },
+  "win": { 
+     "target": "nsis",
+     "icon": "data/icon.ico"
+  },
+  "extraResources": [
+    "data/project-config.json",
+    "dist-assets/**/*"
+  ]
+}

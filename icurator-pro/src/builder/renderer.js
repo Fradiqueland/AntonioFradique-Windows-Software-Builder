@@ -613,9 +613,106 @@ async function loadInitialConfig() {
     // --- Content / menus
     contentModules = Array.isArray(config.content) ? config.content : [];
     renderContentList();
+
+    // --- Export (Passo 6)
+    updateExportSummary(config);
+    const iconPath = config.export && config.export.iconPath;
+    if (iconPath) {
+      exportIconCurrent.textContent = 'Ícone atual: ' + iconPath;
+      exportIconCurrent.classList.add('has-file');
+    } else {
+      exportIconCurrent.textContent = 'Nenhum ícone definido.';
+      exportIconCurrent.classList.remove('has-file');
+    }
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
   }
 }
+
+/* =========================================================
+ * EXPORT (Passo 6)
+ * ========================================================= */
+const exportIconInput = document.getElementById('export-icon');
+const exportIconCurrent = document.getElementById('export-icon-current');
+const exportSummaryEl = document.getElementById('export-summary');
+const exportBuildBtn = document.getElementById('export-build');
+const exportLogEl = document.getElementById('export-log');
+const exportOpenReleaseBtn = document.getElementById('export-open-release');
+
+function updateExportSummary(config) {
+  const title = (config.brand && config.brand.title) || '—';
+  const moduleCount = Array.isArray(config.content) ? config.content.length : 0;
+  const leadsOn = !!(config.marketing && config.marketing.leads && config.marketing.leads.enabled);
+  const bannerOn = !!(config.marketing && config.marketing.banner && config.marketing.banner.enabled);
+  const hasLogo = !!(config.brand && config.brand.logo);
+  const hasIcon = !!(config.export && config.export.iconPath);
+
+  exportSummaryEl.innerHTML = `
+    <div class="summary-row"><span class="summary-label">Projeto</span><span class="summary-value"></span></div>
+    <div class="summary-row"><span class="summary-label">Módulos</span><span class="summary-value">${moduleCount}</span></div>
+    <div class="summary-row"><span class="summary-label">Logo</span>
+      <span class="pill ${hasLogo ? 'on' : 'off'}">${hasLogo ? 'Definido' : 'Sem logo'}</span></div>
+    <div class="summary-row"><span class="summary-label">Opt-in / Leads</span>
+      <span class="pill ${leadsOn ? 'on' : 'off'}">${leadsOn ? 'Ativo' : 'Inativo'}</span></div>
+    <div class="summary-row"><span class="summary-label">Banner</span>
+      <span class="pill ${bannerOn ? 'on' : 'off'}">${bannerOn ? 'Ativo' : 'Inativo'}</span></div>
+    <div class="summary-row"><span class="summary-label">Ícone .exe</span>
+      <span class="pill ${hasIcon ? 'on' : 'off'}">${hasIcon ? 'Definido' : 'Default Electron'}</span></div>
+  `;
+  exportSummaryEl.querySelector('.summary-row .summary-value').textContent = title;
+}
+
+exportIconInput.addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file || !file.path) return;
+  if (!file.name.toLowerCase().endsWith('.ico')) {
+    alert('Por favor, escolha um ficheiro .ico');
+    exportIconInput.value = '';
+    return;
+  }
+  try {
+    const updated = await window.icurator.saveIcon({ sourcePath: file.path });
+    exportIconCurrent.textContent = 'Ícone atual: ' + updated.export.iconPath;
+    exportIconCurrent.classList.add('has-file');
+    updateExportSummary(updated);
+    exportIconInput.value = '';
+  } catch (err) {
+    alert('Erro ao guardar ícone: ' + err.message);
+  }
+});
+
+function appendExportLog(msg, kind) {
+  const empty = exportLogEl.querySelector('.export-log-empty');
+  if (empty) empty.remove();
+  const line = document.createElement('div');
+  line.className = 'log-line' + (kind && kind !== 'info' ? ' ' + kind : '');
+  const ts = new Date().toLocaleTimeString();
+  line.textContent = `[${ts}] ${msg}`;
+  exportLogEl.appendChild(line);
+  exportLogEl.scrollTop = exportLogEl.scrollHeight;
+}
+
+// Subscribe to streaming logs from main
+if (window.icurator && window.icurator.onExportLog) {
+  window.icurator.onExportLog(({ msg, kind }) => appendExportLog(msg, kind));
+}
+
+exportBuildBtn.addEventListener('click', async () => {
+  exportBuildBtn.disabled = true;
+  exportLogEl.innerHTML = '';
+  appendExportLog('A iniciar compilação…');
+  try {
+    const result = await window.icurator.buildProduct();
+    appendExportLog('Compilação terminada. Ficheiros: ' + (result.files || []).length, 'success');
+  } catch (err) {
+    appendExportLog('Falhou: ' + (err && err.message ? err.message : err), 'error');
+  } finally {
+    exportBuildBtn.disabled = false;
+  }
+});
+
+exportOpenReleaseBtn.addEventListener('click', () => {
+  window.icurator.openReleaseFolder();
+});
 
 loadInitialConfig();

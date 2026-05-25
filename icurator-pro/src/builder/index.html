@@ -298,10 +298,46 @@
           </div>
         </section>
 
+        <!-- PASSO 6 — Exportar -->
         <section class="panel hidden" data-panel="export">
-          <div class="placeholder">
-            <h2>Separador 5 — Exportar</h2>
-            <p>A ser implementado no <strong>Passo 6</strong>.</p>
+          <div class="form-card">
+            <div class="form-group">
+              <label>Ícone do Software (.ico)</label>
+              <div class="file-row">
+                <input type="file" id="export-icon" accept=".ico,image/x-icon,image/vnd.microsoft.icon" />
+              </div>
+              <div class="file-current" id="export-icon-current">Nenhum ícone definido.</div>
+              <small>O ícone tem de ser obrigatoriamente um ficheiro <code>.ico</code> (formato Windows).</small>
+            </div>
+
+            <div class="form-group">
+              <label>Resumo do Projeto</label>
+              <div class="export-summary" id="export-summary">
+                A carregar resumo…
+              </div>
+            </div>
+
+            <div class="form-group">
+              <button type="button" class="btn btn-export" id="export-build">
+                Compilar Produto Final (.exe)
+              </button>
+              <small>
+                A compilação corre o <code>electron-builder</code> e gera o instalador em
+                <code>release/</code>. Pode demorar alguns minutos.
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label>Status</label>
+              <div class="export-log" id="export-log">
+                <div class="export-log-empty">Sem atividade. Clique em "Compilar" para começar.</div>
+              </div>
+              <div class="form-actions" style="border-top: none; padding-top: 8px;">
+                <button type="button" class="btn btn-ghost btn-sm" id="export-open-release">
+                  Abrir pasta release/
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       </main>

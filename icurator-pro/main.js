@@ -3,10 +3,22 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+/* -------- Paths: dev vs packaged --------
+ *
+ * When packaged (.exe), the app reads its config and assets from
+ * `process.resourcesPath` because electron-builder copies them there via
+ * the `extraResources` setting in build-config.json.
+ * In development, everything lives next to main.js as usual.
+ */
 const PROJECT_ROOT = __dirname;
-const DATA_DIR = path.join(PROJECT_ROOT, 'data');
-const ASSETS_DIR = path.join(PROJECT_ROOT, 'dist-assets');
+const BASE_PATH = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
+const DATA_DIR = path.join(BASE_PATH, 'data');
+const ASSETS_DIR = path.join(BASE_PATH, 'dist-assets');
 const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
+
+// Build outputs always live next to package.json (dev-only operation).
+const BUILD_CONFIG_PATH = path.join(PROJECT_ROOT, 'build-config.json');
+const ICON_DEST_PATH = path.join(PROJECT_ROOT, 'data', 'icon.ico');
 
 const FILE_TYPES = new Set(['pdf', 'launch']);
 const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
@@ -21,7 +33,8 @@ const DEFAULT_CONFIG = {
     leads: { enabled: false, heading: 'Insira o seu email para aceder ao conteúdo', formHtml: '' },
     banner: { enabled: false, image: null, url: '', position: 'bottom' }
   },
-  content: []
+  content: [],
+  export: { iconPath: null } // 'data/icon.ico' when set
 };
 
 let builderWindow = null;
@@ -90,7 +103,7 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
 
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
-  const abs = path.join(PROJECT_ROOT, relativePath);
+  const abs = path.join(BASE_PATH, relativePath);
   if (abs.startsWith(ASSETS_DIR) && fs.existsSync(abs)) {
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
   }
@@ -98,7 +111,7 @@ function deleteAssetIfInside(relativePath) {
 
 function resolveRelativeAsset(relativePath) {
   if (!relativePath) return null;
-  return path.join(PROJECT_ROOT, relativePath);
+  return path.join(BASE_PATH, relativePath);
 }
 
 /* -------- Windows -------- */
@@ -119,13 +132,12 @@ function createBuilderWindow() {
       sandbox: false
     }
   });
-
   builderWindow.setMenuBarVisibility(false);
   builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
   builderWindow.on('closed', () => { builderWindow = null; });
 }
 
-function createViewerWindow() {
+function createViewerWindow({ standalone = false } = {}) {
   if (viewerWindow && !viewerWindow.isDestroyed()) {
     viewerWindow.focus();
     return viewerWindow;
@@ -140,19 +152,25 @@ function createViewerWindow() {
     height: 820,
     minWidth: 900,
     minHeight: 600,
-    title: title + ' — Pré-visualização',
+    title: standalone ? title : (title + ' — Pré-visualização'),
     backgroundColor: bgColor,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-viewer.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
-      sandbox: false
+      sandbox: false,
+      devTools: !app.isPackaged
     }
   });
 
   viewerWindow.setMenuBarVisibility(false);
   viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
+  viewerWindow.once('ready-to-show', () => {
+    if (standalone) viewerWindow.maximize();
+    viewerWindow.show();
+  });
   viewerWindow.on('closed', () => { viewerWindow = null; });
   return viewerWindow;
 }
@@ -160,7 +178,6 @@ function createViewerWindow() {
 /* -------- IPC: shared -------- */
 
 ipcMain.handle('config:load', () => readConfig());
-
 ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
 
 /* -------- IPC: brand -------- */
@@ -250,7 +267,7 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
   return updated;
 });
 
-/* -------- IPC: content / menus -------- */
+/* -------- IPC: content -------- */
 
 function sanitizeModule(mod) {
   if (!mod || typeof mod !== 'object') return null;
@@ -318,17 +335,16 @@ ipcMain.handle('content:save', (_event, payload) => {
   return updated;
 });
 
-/* -------- IPC: viewer + shell (Passo 5) -------- */
+/* -------- IPC: viewer + shell -------- */
 
 ipcMain.handle('viewer:open', () => {
-  createViewerWindow();
+  createViewerWindow({ standalone: false });
   return true;
 });
 
 ipcMain.handle('shell:openExternal', async (_event, url) => {
   if (typeof url !== 'string' || !url.trim()) return false;
   const trimmed = url.trim();
-  // Allow only http/https for external browser to keep this safe.
   if (!/^https?:\/\//i.test(trimmed)) {
     throw new Error('URL inválido (apenas http/https): ' + trimmed);
   }
@@ -340,8 +356,7 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
   if (typeof relativePath !== 'string' || !relativePath) {
     throw new Error('Caminho de ficheiro vazio.');
   }
-  // Only allow launching files that live inside dist-assets/
-  const abs = path.join(PROJECT_ROOT, relativePath);
+  const abs = path.join(BASE_PATH, relativePath);
   if (!abs.startsWith(ASSETS_DIR)) {
     throw new Error('Caminho não permitido: ' + relativePath);
   }
@@ -353,14 +368,123 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
   return true;
 });
 
+/* -------- IPC: export (Passo 6) -------- */
+
+ipcMain.handle('export:saveIcon', (_event, payload) => {
+  if (!payload || !payload.sourcePath) {
+    throw new Error('Caminho do ícone em falta.');
+  }
+  if (!fs.existsSync(payload.sourcePath)) {
+    throw new Error('Ficheiro de ícone não encontrado.');
+  }
+  if (path.extname(payload.sourcePath).toLowerCase() !== '.ico') {
+    throw new Error('O ícone tem de ser um ficheiro .ico');
+  }
+  if (!fs.existsSync(path.dirname(ICON_DEST_PATH))) {
+    fs.mkdirSync(path.dirname(ICON_DEST_PATH), { recursive: true });
+  }
+  fs.copyFileSync(payload.sourcePath, ICON_DEST_PATH);
+
+  const current = readConfig();
+  const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/icon.ico' } };
+  writeConfig(updated);
+  return updated;
+});
+
+function generateBuildConfig(config) {
+  const productName = (config.brand && config.brand.title)
+    ? config.brand.title.trim()
+    : 'iCurator Pro';
+  const hasIcon = !!(config.export && config.export.iconPath) && fs.existsSync(ICON_DEST_PATH);
+
+  return {
+    appId: 'com.icurator.product',
+    productName,
+    directories: { output: 'release' },
+    files: ['main.js', 'preload.js', 'preload-viewer.js', 'src/**/*'],
+    extraResources: [
+      { from: 'data/project-config.json', to: 'data/project-config.json' },
+      { from: 'dist-assets', to: 'dist-assets' }
+    ],
+    win: {
+      target: 'nsis',
+      ...(hasIcon ? { icon: 'data/icon.ico' } : {})
+    },
+    nsis: {
+      oneClick: false,
+      allowToChangeInstallationDirectory: true
+    }
+  };
+}
+
+ipcMain.handle('export:build', async (event) => {
+  if (app.isPackaged) {
+    throw new Error('A compilação só pode ser feita em modo desenvolvimento.');
+  }
+
+  const send = (msg, kind = 'info') => {
+    event.sender.send('export:log', { msg, kind });
+  };
+
+  send('A preparar configuração de build…');
+  const config = readConfig();
+  const buildConfig = generateBuildConfig(config);
+
+  fs.writeFileSync(BUILD_CONFIG_PATH, JSON.stringify(buildConfig, null, 2), 'utf-8');
+  send('build-config.json criado em ' + BUILD_CONFIG_PATH);
+  send('A garantir que data/project-config.json e dist-assets/ existem para extraResources…');
+  ensureDirs();
+
+  send('A iniciar electron-builder. Este passo pode demorar 1-3 minutos…');
+
+  let builder;
+  try {
+    builder = require('electron-builder');
+  } catch (err) {
+    throw new Error('electron-builder não está instalado. Corra: npm install');
+  }
+
+  try {
+    const outFiles = await builder.build({
+      targets: builder.Platform.WINDOWS.createTarget(),
+      config: buildConfig
+    });
+    send('Build concluído com sucesso.', 'success');
+    (outFiles || []).forEach((f) => send('Gerado: ' + f, 'success'));
+    send('Abra a pasta "release/" na raiz do projeto para encontrar o instalador.', 'success');
+    return { ok: true, files: outFiles || [] };
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    send('Erro durante o build: ' + msg, 'error');
+    throw err;
+  }
+});
+
+ipcMain.handle('export:openReleaseFolder', () => {
+  const dir = path.join(PROJECT_ROOT, 'release');
+  if (fs.existsSync(dir)) shell.openPath(dir);
+  return true;
+});
+
 /* -------- App lifecycle -------- */
 
 app.whenReady().then(() => {
   ensureDirs();
   readConfig();
-  createBuilderWindow();
+
+  if (app.isPackaged) {
+    // Modo Produto Final: arranca direto no Viewer maximizado, sem Construtor.
+    createViewerWindow({ standalone: true });
+  } else {
+    // Modo Desenvolvimento: arranca no Construtor.
+    createBuilderWindow();
+  }
+
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createBuilderWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      if (app.isPackaged) createViewerWindow({ standalone: true });
+      else createBuilderWindow();
+    }
   });
 });
 

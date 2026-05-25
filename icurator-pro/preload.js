@@ -8,5 +8,13 @@ contextBridge.exposeInMainWorld('icurator', {
   saveBannerConfig: (data) => ipcRenderer.invoke('marketing:saveBanners', data),
   saveContent: (data) => ipcRenderer.invoke('content:save', data),
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
-  openViewer: () => ipcRenderer.invoke('viewer:open')
+  openViewer: () => ipcRenderer.invoke('viewer:open'),
+  saveIcon: (data) => ipcRenderer.invoke('export:saveIcon', data),
+  buildProduct: () => ipcRenderer.invoke('export:build'),
+  openReleaseFolder: () => ipcRenderer.invoke('export:openReleaseFolder'),
+  onExportLog: (cb) => {
+    const listener = (_e, payload) => cb(payload);
+    ipcRenderer.on('export:log', listener);
+    return () => ipcRenderer.removeListener('export:log', listener);
+  }
 });
