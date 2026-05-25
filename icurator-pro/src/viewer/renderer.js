@@ -271,4 +271,25 @@ async function boot() {
   if (leads && leads.enabled) showOptinGate(leads);
 }
 
+/* =========================================================
+ * Cantos promocionais — abrem no browser do sistema.
+ * Estes elementos são HARDCODED em src/viewer/index.html
+ * e NÃO podem ser desligados pelo Construtor.
+ * ========================================================= */
+function wireCornerLinks() {
+  document.querySelectorAll('.corner-link[data-ext]').forEach((a) => {
+    a.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      const url = a.getAttribute('data-ext');
+      if (!url) return;
+      try {
+        await window.viewer.openExternal(url);
+      } catch (err) {
+        console.error('Falha a abrir link promocional:', err);
+      }
+    });
+  });
+}
+wireCornerLinks();
+
 boot();

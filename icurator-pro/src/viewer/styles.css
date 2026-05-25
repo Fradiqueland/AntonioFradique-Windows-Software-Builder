@@ -263,3 +263,43 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   max-width: 360px;
 }
+
+/* =========================================================
+ * Cantos promocionais (Powered by Antonio Fradique)
+ * OBRIGATÓRIOS no produto final — sem opção de desligar.
+ * z-index: 99999 para ficar acima de iframes, webviews,
+ * banners, opt-in modal, etc.
+ * ========================================================= */
+.corner {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.82);
+  color: #e2e8f0;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 8px;
+  max-width: 260px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  user-select: none;
+}
+.corner .corner-text { color: rgba(226, 232, 240, 0.9); }
+.corner .corner-link {
+  color: #93c5fd;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  word-break: break-all;
+}
+.corner .corner-link:hover { text-decoration: underline; color: #bfdbfe; }
+
+.corner-tl { top: 8px;    left: 8px;  }
+.corner-tr { top: 8px;    right: 8px; text-align: right; }
+.corner-bl { bottom: 8px; left: 8px;  max-width: 360px; }
+.corner-br { bottom: 8px; right: 8px; text-align: right; }
+
+.corner-bl .corner-text { display: inline; margin-right: 4px; }
+.corner-bl .corner-link { display: inline; }
