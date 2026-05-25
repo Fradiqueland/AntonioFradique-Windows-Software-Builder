@@ -1,0 +1,30 @@
+O instalador do Construtor foi gerado com sucesso, mas a aplicação "crasha" silenciosamente ao arrancar no Windows. Isto deve-se a um erro comum de permissões (EPERM) do Electron: o Construtor empacotado está a tentar escrever o `project-config.json` e criar a pasta `data/` dentro do `process.resourcesPath`, que é uma diretoria "Read-Only" no Windows após a instalação.
+
+Precisamos de separar dinamicamente as diretorias de leitura/escrita dependendo do modo (Construtor vs Curso).
+
+Por favor, no `main.js`, altera a definição das constantes de caminhos (`DATA_DIR`, `ASSETS_DIR`, etc.) para a seguinte lógica:
+
+1. **Deteção Inicial do Modo:**
+   O software deve detetar se é um Curso Exportado verificando se a flag existe na pasta de *resources*.
+   `const isCourse = fs.existsSync(path.join(app.isPackaged ? process.resourcesPath : __dirname, 'data', 'course-mode.flag'));`
+
+2. **Atribuição Dinâmica de Caminhos:**
+   Se `isCourse` for `true` (Modo Visualizador):
+   Os caminhos devem apontar para a diretoria empacotada (apenas leitura):
+   `const base = app.isPackaged ? process.resourcesPath : __dirname;`
+   `DATA_DIR = path.join(base, 'data');`
+   `ASSETS_DIR = path.join(base, 'dist-assets');`
+
+   Se `isCourse` for `false` (Modo Construtor):
+   Os caminhos devem apontar para uma diretoria com permissões totais de escrita:
+   `const base = app.isPackaged ? app.getPath('userData') : __dirname;`
+   `DATA_DIR = path.join(base, 'data');`
+   `ASSETS_DIR = path.join(base, 'dist-assets');`
+
+3. **Garantir que as pastas existem:**
+   No arranque (Modo Construtor), garante que o código faz `fs.mkdirSync` do `DATA_DIR` e `ASSETS_DIR` com `{ recursive: true }` para não falhar.
+
+4. **Atenção no `export:build`:**
+   Quando o Construtor gera um curso, ele deve copiar o `project-config.json` e a pasta `dist-assets/` do seu `app.getPath('userData')` para a diretoria temporária do `electron-builder` OU ajustar o `extraResources` no `build-config.json` para garantir que o que vai ser empacotado para o cliente final é a informação correta.
+
+Por favor, ajusta esta arquitetura de caminhos para evitar o erro EPERM.

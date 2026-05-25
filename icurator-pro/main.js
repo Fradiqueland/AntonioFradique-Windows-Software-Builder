@@ -3,26 +3,52 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-/* -------- Paths: dev vs packaged --------
+/* =========================================================
+ * PATHS: dev vs packaged, Builder vs Course
+ * =========================================================
  *
- * When packaged (.exe), the app reads its config and assets from
- * `process.resourcesPath` because electron-builder copies them there via
- * the `extraResources` setting in build-config.json.
- * In development, everything lives next to main.js as usual.
+ * The Windows installer puts the app under Program Files which is read-only
+ * for the standard user. Writing inside `process.resourcesPath` from there
+ * throws EPERM and crashes the app on first save. To avoid that:
+ *
+ *  - COURSE (packaged with bundled flag) → read-only resources. Viewer never
+ *    writes, so this is fine.
+ *  - BUILDER (packaged WITHOUT flag)     → `app.getPath('userData')`, which
+ *    on Windows is `%AppData%\LaunchBox Pro` and is always writable.
+ *  - DEV (not packaged, either mode)     → next to main.js as before.
+ *
+ * The course-mode flag is detected ONLY in the bundled resources path. We
+ * never check userData for it — otherwise a stale flag left in the Builder's
+ * writable dir (e.g. after a failed export) would permanently turn the
+ * installed Builder into a Viewer.
  */
 const PROJECT_ROOT = __dirname;
-const BASE_PATH = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
-const DATA_DIR = path.join(BASE_PATH, 'data');
-const ASSETS_DIR = path.join(BASE_PATH, 'dist-assets');
+
+const BUNDLED_BASE = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
+const BUNDLED_FLAG_PATH = path.join(BUNDLED_BASE, 'data', 'course-mode.flag');
+const isCourse = fs.existsSync(BUNDLED_FLAG_PATH);
+
+// Writable base for the active mode (Builder uses userData when packaged).
+const WRITE_BASE = app.isPackaged
+  ? (isCourse ? process.resourcesPath : app.getPath('userData'))
+  : PROJECT_ROOT;
+
+const DATA_DIR = path.join(WRITE_BASE, 'data');
+const ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
 const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
-// Flag-file that distinguishes a "course .exe" (Viewer-only) from the
-// "Master App" (Builder). If this file is present in data/, the app boots
-// into Viewer mode regardless of app.isPackaged.
+const ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
+// Flag staged inside the Builder's writable data dir during export:build, so
+// it gets picked up by extraResources and travels into the new course .exe.
+// Always removed in the `finally` block after the build.
 const COURSE_FLAG_PATH = path.join(DATA_DIR, 'course-mode.flag');
 
-// Build outputs always live next to package.json (dev-only operation).
-const BUILD_CONFIG_PATH = path.join(PROJECT_ROOT, 'build-config.json');
-const ICON_DEST_PATH = path.join(PROJECT_ROOT, 'data', 'icon.ico');
+// Build artifacts (Builder-only) live in writable locations.
+const BUILD_CONFIG_PATH = app.isPackaged
+  ? path.join(app.getPath('userData'), 'build-config.json')
+  : path.join(PROJECT_ROOT, 'build-config.json');
+const RELEASE_DIR = app.isPackaged
+  ? path.join(app.getPath('documents'), 'LaunchBox Pro Builds')
+  : path.join(PROJECT_ROOT, 'release');
 
 const FILE_TYPES = new Set(['pdf', 'launch']);
 const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
@@ -51,6 +77,10 @@ let viewerWindow = null;
 /* -------- FS helpers -------- */
 
 function ensureDirs() {
+  // Skip in Course mode — DATA_DIR/ASSETS_DIR are inside read-only resources
+  // and already exist (bundled by electron-builder). Trying to mkdir there
+  // would throw EPERM on a clean install.
+  if (isCourse) return;
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(ASSETS_DIR)) fs.mkdirSync(ASSETS_DIR, { recursive: true });
 }
@@ -111,7 +141,7 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
 
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
-  const abs = path.join(BASE_PATH, relativePath);
+  const abs = path.join(WRITE_BASE, relativePath);
   if (abs.startsWith(ASSETS_DIR) && fs.existsSync(abs)) {
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
   }
@@ -119,7 +149,7 @@ function deleteAssetIfInside(relativePath) {
 
 function resolveRelativeAsset(relativePath) {
   if (!relativePath) return null;
-  return path.join(BASE_PATH, relativePath);
+  return path.join(WRITE_BASE, relativePath);
 }
 
 /* -------- Windows -------- */
@@ -364,7 +394,7 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
   if (typeof relativePath !== 'string' || !relativePath) {
     throw new Error('Caminho de ficheiro vazio.');
   }
-  const abs = path.join(BASE_PATH, relativePath);
+  const abs = path.join(WRITE_BASE, relativePath);
   if (!abs.startsWith(ASSETS_DIR)) {
     throw new Error('Caminho não permitido: ' + relativePath);
   }
@@ -388,9 +418,7 @@ ipcMain.handle('export:saveIcon', (_event, payload) => {
   if (path.extname(payload.sourcePath).toLowerCase() !== '.ico') {
     throw new Error('O ícone tem de ser um ficheiro .ico');
   }
-  if (!fs.existsSync(path.dirname(ICON_DEST_PATH))) {
-    fs.mkdirSync(path.dirname(ICON_DEST_PATH), { recursive: true });
-  }
+  ensureDirs();
   fs.copyFileSync(payload.sourcePath, ICON_DEST_PATH);
 
   const current = readConfig();
@@ -408,17 +436,18 @@ function generateBuildConfig(config) {
   return {
     appId: 'com.launchbox.product',
     productName,
-    directories: { output: 'release' },
-    files: ['main.js', 'preload.js', 'preload-viewer.js', 'src/**/*'],
+    directories: { output: RELEASE_DIR },
+    files: ['main.js', 'preload.js', 'preload-viewer.js', 'src/**/*', 'locales/**/*'],
     extraResources: [
-      // Whole data/ dir so the course-mode.flag travels into the .exe alongside
-      // project-config.json and the icon.
-      { from: 'data', to: 'data' },
-      { from: 'dist-assets', to: 'dist-assets' }
+      // Absolute paths — DATA_DIR / ASSETS_DIR resolve to the Builder's
+      // writable area (userData when packaged, project root in dev). The
+      // course-mode flag staged in DATA_DIR travels here.
+      { from: DATA_DIR, to: 'data' },
+      { from: ASSETS_DIR, to: 'dist-assets' }
     ],
     win: {
       target: 'nsis',
-      ...(hasIcon ? { icon: 'data/icon.ico' } : {})
+      ...(hasIcon ? { icon: ICON_DEST_PATH } : {})
     },
     nsis: {
       oneClick: false,
@@ -471,7 +500,7 @@ ipcMain.handle('export:build', async (event) => {
     });
     send('Build concluído com sucesso.', 'success');
     (outFiles || []).forEach((f) => send('Gerado: ' + f, 'success'));
-    send('Abra a pasta "release/" na raiz do projeto para encontrar o instalador.', 'success');
+    send('Abra a pasta de build para encontrar o instalador: ' + RELEASE_DIR, 'success');
     return { ok: true, files: outFiles || [] };
   } catch (err) {
     const msg = err && err.message ? err.message : String(err);
@@ -512,23 +541,17 @@ ipcMain.handle('language:save', (_event, lang) => {
 });
 
 ipcMain.handle('export:openReleaseFolder', () => {
-  const dir = path.join(PROJECT_ROOT, 'release');
-  if (fs.existsSync(dir)) shell.openPath(dir);
+  if (fs.existsSync(RELEASE_DIR)) shell.openPath(RELEASE_DIR);
   return true;
 });
 
 /* -------- App lifecycle -------- */
 
-function isCourseMode() {
-  // Não depende de app.isPackaged. O que decide é a flag.
-  return fs.existsSync(COURSE_FLAG_PATH);
-}
-
 app.whenReady().then(() => {
   ensureDirs();
   readConfig();
 
-  if (isCourseMode()) {
+  if (isCourse) {
     // Curso exportado: arranca direto no Viewer maximizado, sem Construtor.
     createViewerWindow({ standalone: true });
   } else {
@@ -538,7 +561,7 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      if (isCourseMode()) createViewerWindow({ standalone: true });
+      if (isCourse) createViewerWindow({ standalone: true });
       else createBuilderWindow();
     }
   });
