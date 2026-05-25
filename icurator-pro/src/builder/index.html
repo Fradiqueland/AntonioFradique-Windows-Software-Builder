@@ -8,92 +8,119 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- ===== Cantos de branding / promoção (Antonio Fradique) ===== -->
+    <div class="corner corner-tl">
+      <div class="corner-text" data-i18n="corners.music_label">Minha música</div>
+      <a href="#" class="corner-link" data-ext="https://antoniofradique.net/mymusic">antoniofradique.net/mymusic</a>
+    </div>
+    <div class="corner corner-tr">
+      <div class="corner-text" data-i18n="corners.author_label">Criado por António Fradique</div>
+      <a href="#" class="corner-link" data-ext="https://antoniofradique.net">antoniofradique.net</a>
+    </div>
+    <div class="corner corner-bl">
+      <span class="corner-text" data-i18n="corners.plastic_text">Ganhe dinheiro ajudando o planeta! Prospere transformando plástico em lucro:</span>
+      <a href="#" class="corner-link" data-ext="https://fradiqueland.antoniofradique.net/corsair-connect/">fradiqueland.antoniofradique.net/corsair-connect/</a>
+    </div>
+    <div class="corner corner-br">
+      <div class="corner-text" data-i18n="corners.parking_text">Farto de dar voltas? Encontra estacionamento em segundos com a ParknDgo!</div>
+      <a href="#" class="corner-link" data-ext="https://parkndgo.antoniofradique.net">parkndgo.antoniofradique.net</a>
+    </div>
+
     <div class="app">
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark">LB</div>
           <div class="brand-text">
-            <div class="brand-title">LaunchBox Pro</div>
-            <div class="brand-sub">Construtor</div>
+            <div class="brand-title" data-i18n="app.brand_title">LaunchBox Pro</div>
+            <div class="brand-sub" data-i18n="app.brand_sub">Construtor</div>
           </div>
+        </div>
+
+        <div class="lang-row">
+          <label for="lang-select" data-i18n="lang.label">Idioma</label>
+          <select id="lang-select" class="lang-select">
+            <option value="pt">🇵🇹 PT</option>
+            <option value="en">🇬🇧 EN</option>
+          </select>
         </div>
 
         <nav class="tabs" id="tabs">
           <button class="tab active" data-tab="brand">
-            <span class="tab-num">1</span><span class="tab-label">Marca / Design</span>
+            <span class="tab-num">1</span><span class="tab-label" data-i18n="tab.brand">Marca / Design</span>
           </button>
           <button class="tab" data-tab="leads">
-            <span class="tab-num">2</span><span class="tab-label">Captura de Leads</span>
+            <span class="tab-num">2</span><span class="tab-label" data-i18n="tab.leads">Captura de Leads</span>
           </button>
           <button class="tab" data-tab="banners">
-            <span class="tab-num">3</span><span class="tab-label">Banners</span>
+            <span class="tab-num">3</span><span class="tab-label" data-i18n="tab.banners">Banners</span>
           </button>
           <button class="tab" data-tab="content">
-            <span class="tab-num">4</span><span class="tab-label">Conteúdo / Menus</span>
+            <span class="tab-num">4</span><span class="tab-label" data-i18n="tab.content">Conteúdo / Menus</span>
           </button>
           <button class="tab" data-tab="export">
-            <span class="tab-num">5</span><span class="tab-label">Exportar</span>
+            <span class="tab-num">5</span><span class="tab-label" data-i18n="tab.export">Exportar</span>
           </button>
         </nav>
 
         <div class="sidebar-footer">
-          <button class="btn btn-primary btn-block" id="preview-btn" disabled>
+          <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v0.1.0 · Passo 3</div>
+          <div class="version">v0.1.0</div>
         </div>
       </aside>
 
       <main class="content">
         <header class="content-header">
-          <h1 id="page-title">Marca / Design</h1>
-          <p id="page-subtitle">Personalize a aparência do produto final.</p>
+          <h1 id="page-title" data-i18n="header.brand.title">Marca / Design</h1>
+          <p id="page-subtitle" data-i18n="header.brand.subtitle">Personalize a aparência do produto final.</p>
         </header>
 
         <!-- PASSO 2 — Marca / Design -->
         <section class="panel" data-panel="brand">
           <form id="brand-form" class="form-card" autocomplete="off">
             <div class="form-group">
-              <label for="brand-title">Título do Software</label>
+              <label for="brand-title" data-i18n="brand.title_label">Título do Software</label>
               <input type="text" id="brand-title" name="title"
+                     data-i18n-placeholder="brand.title_placeholder"
                      placeholder="Ex: O Meu Curso Digital" maxlength="80" required />
-              <small>Aparece na barra da janela e no cabeçalho do menu do produto final.</small>
+              <small data-i18n="brand.title_help">Aparece na barra da janela e no cabeçalho do menu do produto final.</small>
             </div>
 
             <div class="form-group">
-              <label>Logo / Imagem de Cabeçalho</label>
+              <label data-i18n="brand.logo_label">Logo / Imagem de Cabeçalho</label>
               <div class="file-row">
                 <input type="file" id="brand-logo" accept="image/*" />
-                <button type="button" class="btn btn-ghost" id="brand-logo-remove">Remover</button>
+                <button type="button" class="btn btn-ghost" id="brand-logo-remove" data-i18n="common.remove">Remover</button>
               </div>
               <div class="logo-preview-wrap">
                 <img id="brand-logo-preview" alt="Pré-visualização do logo" />
-                <span id="brand-logo-empty" class="logo-empty">Sem logo carregado</span>
+                <span id="brand-logo-empty" class="logo-empty" data-i18n="brand.logo_empty">Sem logo carregado</span>
               </div>
-              <small>O ficheiro será copiado para a pasta interna <code>dist-assets/</code>.</small>
+              <small data-i18n="brand.logo_help">O ficheiro será copiado para a pasta interna dist-assets/.</small>
             </div>
 
             <div class="form-group">
-              <label>Cores Customizadas</label>
+              <label data-i18n="brand.colors_label">Cores Customizadas</label>
               <div class="color-grid">
                 <div class="color-field">
                   <input type="color" id="color-sidebar" value="#111827" />
                   <div class="color-meta">
-                    <span class="color-label">Cor do Menu Lateral</span>
+                    <span class="color-label" data-i18n="brand.color_sidebar">Cor do Menu Lateral</span>
                     <span class="color-hex" id="color-sidebar-hex">#111827</span>
                   </div>
                 </div>
                 <div class="color-field">
                   <input type="color" id="color-background" value="#f8fafc" />
                   <div class="color-meta">
-                    <span class="color-label">Cor de Fundo Principal</span>
+                    <span class="color-label" data-i18n="brand.color_background">Cor de Fundo Principal</span>
                     <span class="color-hex" id="color-background-hex">#f8fafc</span>
                   </div>
                 </div>
                 <div class="color-field">
                   <input type="color" id="color-buttons" value="#2563eb" />
                   <div class="color-meta">
-                    <span class="color-label">Cor dos Botões</span>
+                    <span class="color-label" data-i18n="brand.color_buttons">Cor dos Botões</span>
                     <span class="color-hex" id="color-buttons-hex">#2563eb</span>
                   </div>
                 </div>
@@ -102,7 +129,7 @@
 
             <div class="form-actions">
               <span class="save-status" id="save-status"></span>
-              <button type="submit" class="btn btn-primary" id="brand-save">Guardar Definições</button>
+              <button type="submit" class="btn btn-primary" id="brand-save" data-i18n="brand.save_btn">Guardar Definições</button>
             </div>
           </form>
         </section>
@@ -115,8 +142,8 @@
                 <input type="checkbox" id="leads-enabled" />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
                 <span class="toggle-text">
-                  <span class="toggle-title">Ativar Bloqueio de Conteúdo (Opt-in Gate)</span>
-                  <span class="toggle-sub">
+                  <span class="toggle-title" data-i18n="leads.toggle_title">Ativar Bloqueio de Conteúdo (Opt-in Gate)</span>
+                  <span class="toggle-sub" data-i18n="leads.toggle_sub">
                     Se ativado, o cliente final só verá o conteúdo depois de submeter o formulário abaixo.
                   </span>
                 </span>
@@ -124,22 +151,24 @@
             </div>
 
             <div class="form-group">
-              <label for="leads-heading">Título do Bloqueio</label>
+              <label for="leads-heading" data-i18n="leads.heading_label">Título do Bloqueio</label>
               <input type="text" id="leads-heading"
+                     data-i18n-placeholder="leads.heading_placeholder"
                      placeholder="Ex: Insira o seu email para aceder ao curso" maxlength="160" />
-              <small>Mensagem grande mostrada por cima do formulário no Visualizador.</small>
+              <small data-i18n="leads.heading_help">Mensagem grande mostrada por cima do formulário no Visualizador.</small>
             </div>
 
             <div class="form-group">
-              <label for="leads-html">Código HTML do Formulário</label>
+              <label for="leads-html" data-i18n="leads.html_label">Código HTML do Formulário</label>
               <textarea id="leads-html" class="code-area" rows="14"
+                        data-i18n-placeholder="leads.html_placeholder"
                         placeholder="Cole aqui o código do formulário (Mailchimp, AWeber, ActiveCampaign, etc.)"></textarea>
-              <small>O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.</small>
+              <small data-i18n="leads.html_help">O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.</small>
             </div>
 
             <div class="form-actions">
               <span class="save-status" id="leads-status"></span>
-              <button type="submit" class="btn btn-primary" id="leads-save">Guardar Definições de Leads</button>
+              <button type="submit" class="btn btn-primary" id="leads-save" data-i18n="leads.save_btn">Guardar Definições de Leads</button>
             </div>
           </form>
         </section>
@@ -152,8 +181,8 @@
                 <input type="checkbox" id="banner-enabled" />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
                 <span class="toggle-text">
-                  <span class="toggle-title">Ativar Banner de Publicidade</span>
-                  <span class="toggle-sub">
+                  <span class="toggle-title" data-i18n="banner.toggle_title">Ativar Banner de Publicidade</span>
+                  <span class="toggle-sub" data-i18n="banner.toggle_sub">
                     O banner ficará fixo no Visualizador, em todas as páginas.
                   </span>
                 </span>
@@ -161,35 +190,37 @@
             </div>
 
             <div class="form-group">
-              <label>Imagem do Banner</label>
+              <label data-i18n="banner.image_label">Imagem do Banner</label>
               <div class="file-row">
                 <input type="file" id="banner-image" accept="image/*" />
-                <button type="button" class="btn btn-ghost" id="banner-image-remove">Remover</button>
+                <button type="button" class="btn btn-ghost" id="banner-image-remove" data-i18n="common.remove">Remover</button>
               </div>
               <div class="logo-preview-wrap banner-preview-wrap">
                 <img id="banner-image-preview" alt="Pré-visualização do banner" />
-                <span id="banner-image-empty" class="logo-empty">Sem banner carregado</span>
+                <span id="banner-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
               </div>
-              <small>Recomendado: imagem horizontal (ex: 728×90 ou 970×90). Copiada para <code>dist-assets/</code>.</small>
+              <small data-i18n="banner.image_help">Recomendado: imagem horizontal (ex: 728×90 ou 970×90). Copiada para dist-assets/.</small>
             </div>
 
             <div class="form-group">
-              <label for="banner-url">Link de Destino</label>
-              <input type="text" id="banner-url" placeholder="https://exemplo.com/o-meu-link-afiliado" />
-              <small>URL aberto no browser externo quando o cliente final clicar no banner.</small>
+              <label for="banner-url" data-i18n="banner.url_label">Link de Destino</label>
+              <input type="text" id="banner-url"
+                     data-i18n-placeholder="banner.url_placeholder"
+                     placeholder="https://exemplo.com/o-meu-link-afiliado" />
+              <small data-i18n="banner.url_help">URL aberto no browser externo quando o cliente final clicar no banner.</small>
             </div>
 
             <div class="form-group">
-              <label for="banner-position">Posição do Banner</label>
+              <label for="banner-position" data-i18n="banner.position_label">Posição do Banner</label>
               <select id="banner-position" class="select">
-                <option value="top">Topo da Página</option>
-                <option value="bottom" selected>Rodapé da Página</option>
+                <option value="top" data-i18n="banner.position_top">Topo da Página</option>
+                <option value="bottom" selected data-i18n="banner.position_bottom">Rodapé da Página</option>
               </select>
             </div>
 
             <div class="form-actions">
               <span class="save-status" id="banner-status"></span>
-              <button type="submit" class="btn btn-primary" id="banner-save">Guardar Definições de Banners</button>
+              <button type="submit" class="btn btn-primary" id="banner-save" data-i18n="banner.save_btn">Guardar Definições de Banners</button>
             </div>
           </form>
         </section>
@@ -197,16 +228,13 @@
         <!-- PASSO 4 — Conteúdo / Menus -->
         <section class="panel hidden" data-panel="content">
           <div class="content-layout">
-            <!-- Lista de módulos -->
             <div class="content-list-wrap">
               <div class="content-list-header">
-                <h3>Módulos do Menu</h3>
-                <button type="button" class="btn btn-primary btn-sm" id="content-add">+ Adicionar Novo Módulo</button>
+                <h3 data-i18n="content.list_title">Módulos do Menu</h3>
+                <button type="button" class="btn btn-primary btn-sm" id="content-add" data-i18n="content.add_btn">+ Adicionar Novo Módulo</button>
               </div>
-              <ul class="content-list" id="content-list">
-                <!-- itens injetados dinamicamente -->
-              </ul>
-              <div class="content-list-empty" id="content-list-empty">
+              <ul class="content-list" id="content-list"></ul>
+              <div class="content-list-empty" id="content-list-empty" data-i18n="content.list_empty">
                 Ainda não existem módulos. Clique em "Adicionar Novo Módulo" para começar.
               </div>
               <div class="content-list-footer">
@@ -214,84 +242,83 @@
               </div>
             </div>
 
-            <!-- Editor do módulo -->
             <div class="content-editor-wrap">
               <div class="content-editor-empty" id="content-editor-empty">
-                <p>Selecione um módulo na lista, ou clique em <strong>"+ Adicionar Novo Módulo"</strong> para começar a editar.</p>
+                <p data-i18n="content.editor_empty">Selecione um módulo na lista, ou clique em "+ Adicionar Novo Módulo" para começar a editar.</p>
               </div>
 
               <form id="content-form" class="form-card hidden" autocomplete="off">
                 <div class="content-editor-header">
-                  <h3 id="content-editor-title">Novo Módulo</h3>
-                  <button type="button" class="btn btn-ghost btn-sm" id="content-editor-close">Fechar</button>
+                  <h3 id="content-editor-title" data-i18n="content.editor_new_title">Novo Módulo</h3>
+                  <button type="button" class="btn btn-ghost btn-sm" id="content-editor-close" data-i18n="common.close">Fechar</button>
                 </div>
 
                 <div class="form-group">
-                  <label for="module-title">Título do Botão</label>
+                  <label for="module-title" data-i18n="content.module_title_label">Título do Botão</label>
                   <input type="text" id="module-title" maxlength="80" required
+                         data-i18n-placeholder="content.module_title_placeholder"
                          placeholder="Ex: Aula 1 — Introdução" />
                 </div>
 
                 <div class="form-group">
-                  <label for="module-type">Tipo de Ação</label>
+                  <label for="module-type" data-i18n="content.module_type_label">Tipo de Ação</label>
                   <select id="module-type" class="select">
-                    <option value="youtube">Vídeo YouTube (Iframe)</option>
-                    <option value="html">HTML / Texto Rico</option>
-                    <option value="pdf">Ficheiro PDF Local</option>
-                    <option value="webview">Browser Interno (Webview)</option>
-                    <option value="external">Browser Externo (Chrome/Edge)</option>
-                    <option value="launch">Lançar Ficheiro (.exe / .zip / etc)</option>
+                    <option value="youtube" data-i18n="content.type.youtube">Vídeo YouTube (Iframe)</option>
+                    <option value="html" data-i18n="content.type.html">HTML / Texto Rico</option>
+                    <option value="pdf" data-i18n="content.type.pdf">Ficheiro PDF Local</option>
+                    <option value="webview" data-i18n="content.type.webview">Browser Interno (Webview)</option>
+                    <option value="external" data-i18n="content.type.external">Browser Externo (Chrome/Edge)</option>
+                    <option value="launch" data-i18n="content.type.launch">Lançar Ficheiro (.exe / .zip / etc)</option>
                   </select>
                 </div>
 
-                <!-- Sub-form dinâmico -->
                 <div class="form-group" id="dyn-youtube" data-dyn="youtube">
-                  <label for="dyn-youtube-url">URL ou ID do vídeo</label>
+                  <label for="dyn-youtube-url" data-i18n="content.youtube_url_label">URL ou ID do vídeo</label>
                   <input type="text" id="dyn-youtube-url"
                          placeholder="https://www.youtube.com/watch?v=... ou só o ID" />
-                  <small>Renderizado num <code>&lt;iframe&gt;</code> dentro do produto final.</small>
+                  <small data-i18n-html="content.youtube_help">Renderizado num <code>&lt;iframe&gt;</code> dentro do produto final.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-html" data-dyn="html">
-                  <label for="dyn-html-code">HTML / Texto</label>
+                  <label for="dyn-html-code" data-i18n="content.html_label">HTML / Texto</label>
                   <textarea id="dyn-html-code" class="code-area" rows="12"
                             placeholder="<h1>Bem-vindo</h1>&#10;<p>O seu conteúdo aqui…</p>"></textarea>
-                  <small>O HTML será injetado tal e qual na área principal do Visualizador.</small>
+                  <small data-i18n="content.html_help">O HTML será injetado tal e qual na área principal do Visualizador.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-pdf" data-dyn="pdf">
-                  <label>Ficheiro PDF</label>
+                  <label data-i18n="content.pdf_label">Ficheiro PDF</label>
                   <div class="file-row">
                     <input type="file" id="dyn-pdf-file" accept=".pdf,application/pdf" />
                   </div>
-                  <div class="file-current" id="dyn-pdf-current">Nenhum ficheiro selecionado.</div>
-                  <small>O PDF será copiado para <code>dist-assets/</code> ao guardar.</small>
+                  <div class="file-current" id="dyn-pdf-current" data-i18n="content.file_none">Nenhum ficheiro selecionado.</div>
+                  <small data-i18n="content.pdf_help">O PDF será copiado para dist-assets/ ao guardar.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-webview" data-dyn="webview">
-                  <label for="dyn-webview-url">URL para abrir dentro do software</label>
+                  <label for="dyn-webview-url" data-i18n="content.webview_url_label">URL para abrir dentro do software</label>
                   <input type="text" id="dyn-webview-url" placeholder="https://exemplo.com" />
-                  <small>Carregado via <code>&lt;webview&gt;</code> — o utilizador fica dentro da app.</small>
+                  <small data-i18n-html="content.webview_help">Carregado via <code>&lt;webview&gt;</code> — o utilizador fica dentro da app.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-external" data-dyn="external">
-                  <label for="dyn-external-url">URL para abrir no browser do sistema</label>
+                  <label for="dyn-external-url" data-i18n="content.external_url_label">URL para abrir no browser do sistema</label>
                   <input type="text" id="dyn-external-url" placeholder="https://exemplo.com/afiliado" />
-                  <small>Ideal para links de afiliado — abre no Chrome/Edge padrão.</small>
+                  <small data-i18n="content.external_help">Ideal para links de afiliado — abre no Chrome/Edge padrão.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-launch" data-dyn="launch">
-                  <label>Ficheiro a lançar</label>
+                  <label data-i18n="content.launch_label">Ficheiro a lançar</label>
                   <div class="file-row">
                     <input type="file" id="dyn-launch-file" />
                   </div>
-                  <div class="file-current" id="dyn-launch-current">Nenhum ficheiro selecionado.</div>
-                  <small>Qualquer formato (.exe, .zip, .doc…). Copiado para <code>dist-assets/</code>.</small>
+                  <div class="file-current" id="dyn-launch-current" data-i18n="content.file_none">Nenhum ficheiro selecionado.</div>
+                  <small data-i18n="content.launch_help">Qualquer formato (.exe, .zip, .doc…). Copiado para dist-assets/.</small>
                 </div>
 
                 <div class="form-actions">
-                  <button type="button" class="btn btn-ghost" id="content-editor-cancel">Cancelar</button>
-                  <button type="submit" class="btn btn-primary" id="content-editor-save">Guardar Módulo</button>
+                  <button type="button" class="btn btn-ghost" id="content-editor-cancel" data-i18n="common.cancel">Cancelar</button>
+                  <button type="submit" class="btn btn-primary" id="content-editor-save" data-i18n="content.editor_save">Guardar Módulo</button>
                 </div>
               </form>
             </div>
@@ -302,38 +329,35 @@
         <section class="panel hidden" data-panel="export">
           <div class="form-card">
             <div class="form-group">
-              <label>Ícone do Software (.ico)</label>
+              <label data-i18n="export.icon_label">Ícone do Software (.ico)</label>
               <div class="file-row">
                 <input type="file" id="export-icon" accept=".ico,image/x-icon,image/vnd.microsoft.icon" />
               </div>
-              <div class="file-current" id="export-icon-current">Nenhum ícone definido.</div>
-              <small>O ícone tem de ser obrigatoriamente um ficheiro <code>.ico</code> (formato Windows).</small>
+              <div class="file-current" id="export-icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
+              <small data-i18n="export.icon_help">O ícone tem de ser obrigatoriamente um ficheiro .ico (formato Windows).</small>
             </div>
 
             <div class="form-group">
-              <label>Resumo do Projeto</label>
-              <div class="export-summary" id="export-summary">
-                A carregar resumo…
-              </div>
+              <label data-i18n="export.summary_label">Resumo do Projeto</label>
+              <div class="export-summary" id="export-summary">A carregar resumo…</div>
             </div>
 
             <div class="form-group">
-              <button type="button" class="btn btn-export" id="export-build">
+              <button type="button" class="btn btn-export" id="export-build" data-i18n="export.build_btn">
                 Compilar Produto Final (.exe)
               </button>
-              <small>
-                A compilação corre o <code>electron-builder</code> e gera o instalador em
-                <code>release/</code>. Pode demorar alguns minutos.
+              <small data-i18n="export.build_help">
+                A compilação corre o electron-builder e gera o instalador em release/. Pode demorar alguns minutos.
               </small>
             </div>
 
             <div class="form-group">
-              <label>Status</label>
+              <label data-i18n="export.status_label">Status</label>
               <div class="export-log" id="export-log">
-                <div class="export-log-empty">Sem atividade. Clique em "Compilar" para começar.</div>
+                <div class="export-log-empty" data-i18n="export.log_empty">Sem atividade. Clique em "Compilar" para começar.</div>
               </div>
               <div class="form-actions" style="border-top: none; padding-top: 8px;">
-                <button type="button" class="btn btn-ghost btn-sm" id="export-open-release">
+                <button type="button" class="btn btn-ghost btn-sm" id="export-open-release" data-i18n="export.open_release_btn">
                   Abrir pasta release/
                 </button>
               </div>

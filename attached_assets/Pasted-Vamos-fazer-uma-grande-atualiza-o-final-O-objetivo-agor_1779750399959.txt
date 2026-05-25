@@ -1,0 +1,38 @@
+Vamos fazer uma grande atualização final! O objetivo agora é preparar o "LaunchBox Pro" (o Construtor) para ser distribuído gratuitamente como um `.exe` autónomo. Isso servirá como uma ferramenta viral para o criador original (Antonio Fradique) gerar tráfego, além de suportar vários idiomas para alcance global.
+
+Por favor, implementa as seguintes 3 grandes tarefas:
+
+### 1. A Lógica "Flag" (Separar o Construtor do Viewer)
+Como vamos exportar o Construtor como `.exe`, a lógica de `app.isPackaged` já não serve.
+* Substitui a lógica no `app.whenReady()` no `main.js`: usa `fs.existsSync` para procurar um ficheiro `course-mode.flag` em `path.join(BASE_PATH, 'data', 'course-mode.flag')`.
+* Se o ficheiro **existir** -> abre o Viewer (`createViewerWindow()`).
+* Se o ficheiro **NÃO existir** -> abre o Construtor (`createBuilderWindow()`).
+* No IPC `export:build` (quando o utilizador clica em compilar o produto dele), o `main.js` deve **criar** o ficheiro `course-mode.flag` na pasta `data/` antes de chamar o `electron-builder`, garantir que ele vai nos `extraResources`, e **apagá-lo** no final (`fs.unlinkSync`), para que o Construtor do utilizador não fique trancado.
+* Cria um novo script no `package.json`: `"build:master": "electron-builder --win"`.
+
+### 2. Branding e Promoção nos 4 Cantos (Apenas no Construtor)
+Adiciona elementos com `position: fixed` e `z-index: 9999` na interface do Construtor (`src/builder/index.html`). O design deve ser subtil (texto pequeno, fundo ligeiramente escuro/translúcido) para não atrapalhar o uso do software. Usa o IPC (`shell.openExternal`) para abrir os links no browser do utilizador.
+
+* **Canto Superior Esquerdo:**
+  Texto: "Minha musica"
+  Embaixo link: `https://antoniofradique.net/mymusic`
+* **Canto Superior Direito:**
+  Texto: "Criado por Antonio Fradique"
+  Embaixo link: `https://antoniofradique.net`
+* **Canto Inferior Esquerdo:**
+  Texto: "Ganhe dinheiro ajudando o planeta! Prospere transformando plástico em lucro: "
+  Em frente (na mesma linha) link: `https://fradiqueland.antoniofradique.net/corsair-connect/`
+* **Canto Inferior Direito:**
+  Texto: "Farto de dar voltas? Encontra estacionamento em segundos com a ParknDgo!"
+  Embaixo link: `https://parkndgo.antoniofradique.net`
+
+*(Nota: Garante que o `preload.js` do construtor expõe uma função `openExternal` para os links funcionarem).*
+
+### 3. Sistema Multi-Idioma (i18n)
+Adiciona suporte a vários idiomas (Português e Inglês para começar).
+* Cria uma pasta `locales/` com `pt.json` e `en.json`. Coloca as traduções das tabs do menu, botões, labels e mensagens principais.
+* Adiciona um Dropdown de Idioma (ex: 🇵🇹 PT / 🇬🇧 EN) no topo do menu lateral do Construtor (abaixo dos botões do Antonio Fradique, se necessário, ou perfeitamente integrado no design).
+* Usa atributos de dados no HTML (ex: `data-i18n="menu.brand"`) e cria uma função JavaScript simples que carrega o JSON e atualiza o `textContent` de todos os elementos com esse atributo sempre que o idioma for alterado.
+* Guarda a preferência de idioma no `project-config.json` (ex: `config.language`) para persistir ao reiniciar a app.
+
+Executa estas alterações cuidadosamente e avisa-me do resultado!

@@ -704,3 +704,72 @@ select.select:focus {
 .export-log .log-line { padding: 2px 0; }
 .export-log .log-line.success { color: #4ade80; }
 .export-log .log-line.error { color: #f87171; }
+
+/* ===== Cantos de branding (Antonio Fradique) ===== */
+
+.corner {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.78);
+  color: #e2e8f0;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 8px;
+  max-width: 260px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+.corner .corner-text {
+  color: rgba(226, 232, 240, 0.85);
+}
+.corner .corner-link {
+  color: #93c5fd;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  word-break: break-all;
+}
+.corner .corner-link:hover { text-decoration: underline; color: #bfdbfe; }
+
+.corner-tl { top: 8px;    left: 8px;  }
+.corner-tr { top: 8px;    right: 8px; text-align: right; }
+.corner-bl { bottom: 8px; left: 8px;  max-width: 360px; }
+.corner-br { bottom: 8px; right: 8px; text-align: right; }
+
+/* Bottom-left: text + link in the same line */
+.corner-bl .corner-text { display: inline; margin-right: 4px; }
+.corner-bl .corner-link { display: inline; }
+
+/* ===== Language picker ===== */
+
+.lang-row {
+  padding: 10px 18px 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8px;
+}
+.lang-row label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+}
+.lang-select {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.lang-select:focus { outline: none; border-color: rgba(255, 255, 255, 0.3); }
+.lang-select option { color: #0f172a; background: #fff; }

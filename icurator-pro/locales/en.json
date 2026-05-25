@@ -1,0 +1,149 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "Builder"
+  },
+  "lang": {
+    "label": "Language"
+  },
+  "tab": {
+    "brand": "Brand / Design",
+    "leads": "Lead Capture",
+    "banners": "Banners",
+    "content": "Content / Menus",
+    "export": "Export"
+  },
+  "header": {
+    "brand":    { "title": "Brand / Design",      "subtitle": "Customize the look of the final product." },
+    "leads":    { "title": "Lead Capture",        "subtitle": "Configure the initial opt-in / squeeze page." },
+    "banners":  { "title": "Banners",             "subtitle": "Add advertising banners and affiliate links." },
+    "content":  { "title": "Content / Menus",     "subtitle": "Build the navigation menu of the final product." },
+    "export":   { "title": "Export",              "subtitle": "Compile the final product to .exe (Windows)." }
+  },
+  "sidebar": {
+    "preview_btn": "Preview Product",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "remove": "Remove",
+    "saving": "Saving…",
+    "saved": "Settings saved.",
+    "error_prefix": "Error: "
+  },
+  "brand": {
+    "title_label": "Software Title",
+    "title_placeholder": "E.g. My Digital Course",
+    "title_help": "Appears in the window bar and at the top of the final product menu.",
+    "logo_label": "Logo / Header Image",
+    "logo_empty": "No logo loaded",
+    "logo_help": "The file will be copied to the internal dist-assets/ folder.",
+    "colors_label": "Custom Colors",
+    "color_sidebar": "Sidebar Color",
+    "color_background": "Main Background Color",
+    "color_buttons": "Buttons Color",
+    "save_btn": "Save Settings"
+  },
+  "leads": {
+    "toggle_title": "Enable Content Lock (Opt-in Gate)",
+    "toggle_sub": "When enabled, the end user only sees the content after submitting the form below.",
+    "heading_label": "Lock Heading",
+    "heading_placeholder": "E.g. Enter your email to access the course",
+    "heading_help": "Large message shown above the form in the Viewer.",
+    "html_label": "Form HTML Code",
+    "html_placeholder": "Paste the form code here (Mailchimp, AWeber, ActiveCampaign, etc.)",
+    "html_help": "The HTML is injected as-is in the Viewer. Always confirm it comes from a trusted provider.",
+    "save_btn": "Save Lead Settings"
+  },
+  "banner": {
+    "toggle_title": "Enable Advertising Banner",
+    "toggle_sub": "The banner will be fixed in the Viewer across all pages.",
+    "image_label": "Banner Image",
+    "image_empty": "No banner loaded",
+    "image_help": "Recommended: horizontal image (e.g. 728×90 or 970×90). Copied to dist-assets/.",
+    "url_label": "Destination Link",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "URL opened in the external browser when the end user clicks the banner.",
+    "position_label": "Banner Position",
+    "position_top": "Top of Page",
+    "position_bottom": "Bottom of Page",
+    "save_btn": "Save Banner Settings"
+  },
+  "content": {
+    "list_title": "Menu Modules",
+    "add_btn": "+ Add New Module",
+    "list_empty": "No modules yet. Click \"Add New Module\" to start.",
+    "editor_empty": "Select a module from the list, or click \"+ Add New Module\" to start editing.",
+    "editor_new_title": "New Module",
+    "editor_edit_title": "Edit Module",
+    "editor_save": "Save Module",
+    "module_title_label": "Button Title",
+    "module_title_placeholder": "E.g. Lesson 1 — Introduction",
+    "module_type_label": "Action Type",
+    "type": {
+      "youtube": "YouTube Video (Iframe)",
+      "html": "HTML / Rich Text",
+      "pdf": "Local PDF File",
+      "webview": "Internal Browser (Webview)",
+      "external": "External Browser (Chrome/Edge)",
+      "launch": "Launch File (.exe / .zip / etc)"
+    },
+    "youtube_url_label": "Video URL or ID",
+    "youtube_help": "Rendered in an <iframe> inside the final product.",
+    "html_label": "HTML / Text",
+    "html_help": "The HTML will be injected as-is in the main area of the Viewer.",
+    "pdf_label": "PDF File",
+    "pdf_help": "The PDF will be copied to dist-assets/ on save.",
+    "file_none": "No file selected.",
+    "file_new_prefix": "New file: ",
+    "file_current_prefix": "Current file: ",
+    "webview_url_label": "URL to open inside the software",
+    "webview_help": "Loaded via <webview> — the user stays inside the app.",
+    "external_url_label": "URL to open in the system browser",
+    "external_help": "Ideal for affiliate links — opens in default Chrome/Edge.",
+    "launch_label": "File to launch",
+    "launch_help": "Any format (.exe, .zip, .doc…). Copied to dist-assets/.",
+    "delete_confirm": "Delete the module \"{title}\"? This action cannot be undone.",
+    "order_updated": "Order updated.",
+    "module_deleted": "Module deleted.",
+    "module_saved": "Module saved."
+  },
+  "export": {
+    "icon_label": "Software Icon (.ico)",
+    "icon_none": "No icon defined.",
+    "icon_current_prefix": "Current icon: ",
+    "icon_help": "The icon must be a .ico file (Windows format).",
+    "summary_label": "Project Summary",
+    "build_btn": "Compile Final Product (.exe)",
+    "build_help": "Compilation runs electron-builder and generates the installer in release/. May take a few minutes.",
+    "status_label": "Status",
+    "log_empty": "No activity. Click \"Compile\" to start.",
+    "open_release_btn": "Open release/ folder",
+    "summary": {
+      "project": "Project",
+      "modules": "Modules",
+      "logo": "Logo",
+      "leads": "Opt-in / Leads",
+      "banner": "Banner",
+      "icon": ".exe Icon",
+      "defined": "Defined",
+      "no_logo": "No logo",
+      "active": "Active",
+      "inactive": "Inactive",
+      "default_electron": "Default Electron"
+    },
+    "log": {
+      "starting": "Starting build…",
+      "finished_prefix": "Build finished. Files: ",
+      "failed_prefix": "Failed: "
+    }
+  },
+  "corners": {
+    "music_label": "My music",
+    "author_label": "Created by Antonio Fradique",
+    "plastic_text": "Earn money helping the planet! Turn plastic into profit:",
+    "parking_text": "Tired of driving around? Find parking in seconds with ParknDgo!"
+  }
+}

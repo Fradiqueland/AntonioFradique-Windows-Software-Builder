@@ -1,11 +1,69 @@
-/* -------- Tab navigation -------- */
-const tabTitles = {
-  brand: { title: 'Marca / Design', subtitle: 'Personalize a aparência do produto final.' },
-  leads: { title: 'Captura de Leads', subtitle: 'Configure o opt-in / squeeze page inicial.' },
-  banners: { title: 'Banners', subtitle: 'Adicione banners de publicidade e links de afiliado.' },
-  content: { title: 'Conteúdo / Menus', subtitle: 'Construa o menu de navegação do produto final.' },
-  export: { title: 'Exportar', subtitle: 'Compile o produto final para .exe (Windows).' }
+/* =========================================================
+ * i18n ENGINE (Tarefa 3)
+ * ========================================================= */
+const I18N = {
+  lang: 'pt',
+  dict: {},
+  ready: false
 };
+
+function tRaw(key) {
+  if (!key) return undefined;
+  return key.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : undefined), I18N.dict);
+}
+function t(key, fallback) {
+  const v = tRaw(key);
+  return (typeof v === 'string') ? v : (fallback !== undefined ? fallback : key);
+}
+
+function applyI18n(root = document) {
+  root.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = tRaw(el.getAttribute('data-i18n'));
+    if (typeof v === 'string') el.textContent = v;
+  });
+  root.querySelectorAll('[data-i18n-html]').forEach((el) => {
+    const v = tRaw(el.getAttribute('data-i18n-html'));
+    if (typeof v === 'string') el.innerHTML = v;
+  });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    const v = tRaw(el.getAttribute('data-i18n-placeholder'));
+    if (typeof v === 'string') el.setAttribute('placeholder', v);
+  });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const v = tRaw(el.getAttribute('data-i18n-title'));
+    if (typeof v === 'string') el.setAttribute('title', v);
+  });
+  // Refresh current tab header (it was set imperatively).
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab) refreshTabHeader(activeTab.dataset.tab);
+  // Update <html lang>.
+  document.documentElement.setAttribute('lang', I18N.lang);
+}
+
+async function setLanguage(lang, { persist = true } = {}) {
+  try {
+    const { lang: applied, dict } = await window.icurator.loadLocale(lang);
+    I18N.lang = applied;
+    I18N.dict = dict;
+    I18N.ready = true;
+    applyI18n();
+    const sel = document.getElementById('lang-select');
+    if (sel && sel.value !== applied) sel.value = applied;
+    if (persist) {
+      try { await window.icurator.saveLanguage(applied); } catch (e) { console.warn('Falha a persistir idioma:', e); }
+    }
+  } catch (err) {
+    console.error('Falha a carregar idioma', lang, err);
+  }
+}
+
+/* -------- Tab navigation -------- */
+function refreshTabHeader(target) {
+  const title = t('header.' + target + '.title');
+  const subtitle = t('header.' + target + '.subtitle');
+  if (pageTitle) pageTitle.textContent = title;
+  if (pageSubtitle) pageSubtitle.textContent = subtitle;
+}
 
 const tabs = document.querySelectorAll('.tab');
 const panels = document.querySelectorAll('.panel');
@@ -15,13 +73,25 @@ const pageSubtitle = document.getElementById('page-subtitle');
 tabs.forEach((tab) => {
   tab.addEventListener('click', () => {
     const target = tab.dataset.tab;
-    tabs.forEach((t) => t.classList.toggle('active', t === tab));
+    tabs.forEach((t2) => t2.classList.toggle('active', t2 === tab));
     panels.forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== target));
-    const meta = tabTitles[target];
-    if (meta) {
-      pageTitle.textContent = meta.title;
-      pageSubtitle.textContent = meta.subtitle;
-    }
+    refreshTabHeader(target);
+  });
+});
+
+/* -------- Language dropdown + corner links -------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.addEventListener('change', (e) => setLanguage(e.target.value));
+
+  document.querySelectorAll('.corner-link[data-ext]').forEach((a) => {
+    a.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const url = a.getAttribute('data-ext');
+      if (url && window.icurator && window.icurator.openExternal) {
+        window.icurator.openExternal(url);
+      }
+    });
   });
 });
 
@@ -129,7 +199,7 @@ logoRemoveBtn.addEventListener('click', () => {
 brandForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   brandSaveBtn.disabled = true;
-  showBrandStatus('A guardar…', '');
+  showBrandStatus(t('common.saving'), '');
   try {
     const updated = await window.icurator.saveBrandConfig({
       title: titleInput.value,
@@ -148,10 +218,10 @@ brandForm.addEventListener('submit', async (e) => {
     const abs = brandState.currentLogoRelative
       ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative) : null;
     setImagePreview(logoPreview, logoEmpty, abs);
-    showBrandStatus('Definições guardadas em project-config.json', 'success');
+    showBrandStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);
-    showBrandStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
+    showBrandStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     brandSaveBtn.disabled = false;
   }
@@ -170,17 +240,17 @@ const showLeadsStatus = makeStatus(document.getElementById('leads-status'));
 leadsForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   leadsSaveBtn.disabled = true;
-  showLeadsStatus('A guardar…', '');
+  showLeadsStatus(t('common.saving'), '');
   try {
     await window.icurator.saveLeadsConfig({
       enabled: leadsEnabled.checked,
       heading: leadsHeading.value,
       formHtml: leadsHtml.value
     });
-    showLeadsStatus('Definições de leads guardadas.', 'success');
+    showLeadsStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);
-    showLeadsStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
+    showLeadsStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     leadsSaveBtn.disabled = false;
   }
@@ -222,7 +292,7 @@ bannerImageRemoveBtn.addEventListener('click', () => {
 bannerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   bannerSaveBtn.disabled = true;
-  showBannerStatus('A guardar…', '');
+  showBannerStatus(t('common.saving'), '');
   try {
     const updated = await window.icurator.saveBannerConfig({
       enabled: bannerEnabled.checked,
@@ -238,10 +308,10 @@ bannerForm.addEventListener('submit', async (e) => {
     const abs = bannerState.currentImageRelative
       ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative) : null;
     setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
-    showBannerStatus('Definições de banners guardadas.', 'success');
+    showBannerStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);
-    showBannerStatus('Erro ao guardar: ' + (err && err.message ? err.message : err), 'error');
+    showBannerStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     bannerSaveBtn.disabled = false;
   }
@@ -318,8 +388,8 @@ function clearEditor() {
   dyn.external.url.value = '';
   dyn.pdf.file.value = '';
   dyn.launch.file.value = '';
-  setFileCurrentText('pdf', 'Nenhum ficheiro selecionado.', false);
-  setFileCurrentText('launch', 'Nenhum ficheiro selecionado.', false);
+  setFileCurrentText('pdf', t('content.file_none'), false);
+  setFileCurrentText('launch', t('content.file_none'), false);
   showDynamicGroup('youtube');
 }
 
@@ -333,7 +403,7 @@ function hideEditor() {
 
 function openEditorForNew() {
   clearEditor();
-  contentEditorTitle.textContent = 'Novo Módulo';
+  contentEditorTitle.textContent = t('content.editor_new_title');
   contentEditorEmpty.classList.add('hidden');
   contentForm.classList.remove('hidden');
   moduleTitle.focus();
@@ -345,7 +415,7 @@ function openEditorForEdit(id) {
   if (!mod) return;
   clearEditor();
   editingId = mod.id;
-  contentEditorTitle.textContent = 'Editar Módulo';
+  contentEditorTitle.textContent = t('content.editor_edit_title');
   contentEditorEmpty.classList.add('hidden');
   contentForm.classList.remove('hidden');
 
@@ -360,9 +430,9 @@ function openEditorForEdit(id) {
   else if (mod.type === 'external') dyn.external.url.value = d.url || '';
   else if (mod.type === 'pdf' || mod.type === 'launch') {
     if (d.file) {
-      setFileCurrentText(mod.type, 'Ficheiro atual: ' + (d.fileName || d.file), true);
+      setFileCurrentText(mod.type, t('content.file_current_prefix') + (d.fileName || d.file), true);
     } else {
-      setFileCurrentText(mod.type, 'Nenhum ficheiro selecionado.', false);
+      setFileCurrentText(mod.type, t('content.file_none'), false);
     }
   }
 
@@ -464,7 +534,7 @@ async function moveModule(id, delta) {
   const [item] = contentModules.splice(idx, 1);
   contentModules.splice(newIdx, 0, item);
   try {
-    await persistContent('Ordem atualizada.');
+    await persistContent(t('content.order_updated'));
   } catch (err) {
     console.error(err);
     showContentStatus('Erro ao reordenar: ' + err.message, 'error');
@@ -474,12 +544,12 @@ async function moveModule(id, delta) {
 async function deleteModule(id) {
   const mod = contentModules.find((m) => m.id === id);
   if (!mod) return;
-  if (!confirm(`Eliminar o módulo "${mod.title}"? Esta ação não pode ser desfeita.`)) return;
+  if (!confirm(t('content.delete_confirm').replace('{title}', mod.title))) return;
 
   contentModules = contentModules.filter((m) => m.id !== id);
   if (editingId === id) hideEditor();
   try {
-    await persistContent('Módulo eliminado.');
+    await persistContent(t('content.module_deleted'));
   } catch (err) {
     console.error(err);
     showContentStatus('Erro ao eliminar: ' + err.message, 'error');
@@ -504,7 +574,7 @@ function bindFilePicker(type) {
     pendingFileSourcePath = file.path || null;
     pendingFileName = file.name || null;
     if (pendingFileSourcePath) {
-      setFileCurrentText(type, 'Novo ficheiro: ' + (pendingFileName || pendingFileSourcePath), true);
+      setFileCurrentText(type, t('content.file_new_prefix') + (pendingFileName || pendingFileSourcePath), true);
     }
   });
 }
@@ -555,7 +625,7 @@ contentForm.addEventListener('submit', async (e) => {
   }
 
   try {
-    await persistContent('Módulo guardado.');
+    await persistContent(t('content.module_saved'));
     // After save, re-open the editor on the (now updated) module so the user
     // sees the persisted state (e.g. the new file path).
     const savedId = editingId;
@@ -563,7 +633,7 @@ contentForm.addEventListener('submit', async (e) => {
     if (savedId) openEditorForEdit(savedId);
   } catch (err) {
     console.error(err);
-    showContentStatus('Erro ao guardar módulo: ' + err.message, 'error');
+    showContentStatus(t('common.error_prefix') + err.message, 'error');
   }
 });
 
@@ -618,12 +688,18 @@ async function loadInitialConfig() {
     updateExportSummary(config);
     const iconPath = config.export && config.export.iconPath;
     if (iconPath) {
-      exportIconCurrent.textContent = 'Ícone atual: ' + iconPath;
+      exportIconCurrent.textContent = t('export.icon_current_prefix') + iconPath;
       exportIconCurrent.classList.add('has-file');
     } else {
-      exportIconCurrent.textContent = 'Nenhum ícone definido.';
+      exportIconCurrent.textContent = t('export.icon_none');
       exportIconCurrent.classList.remove('has-file');
     }
+
+    // --- i18n: apply saved language (do NOT persist again — it's already saved).
+    const savedLang = config.language || 'pt';
+    await setLanguage(savedLang, { persist: false });
+    // Re-render the export summary so its labels respect the new language.
+    updateExportSummary(config);
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
   }
@@ -647,17 +723,18 @@ function updateExportSummary(config) {
   const hasLogo = !!(config.brand && config.brand.logo);
   const hasIcon = !!(config.export && config.export.iconPath);
 
+  const S = (k) => t('export.summary.' + k);
   exportSummaryEl.innerHTML = `
-    <div class="summary-row"><span class="summary-label">Projeto</span><span class="summary-value"></span></div>
-    <div class="summary-row"><span class="summary-label">Módulos</span><span class="summary-value">${moduleCount}</span></div>
-    <div class="summary-row"><span class="summary-label">Logo</span>
-      <span class="pill ${hasLogo ? 'on' : 'off'}">${hasLogo ? 'Definido' : 'Sem logo'}</span></div>
-    <div class="summary-row"><span class="summary-label">Opt-in / Leads</span>
-      <span class="pill ${leadsOn ? 'on' : 'off'}">${leadsOn ? 'Ativo' : 'Inativo'}</span></div>
-    <div class="summary-row"><span class="summary-label">Banner</span>
-      <span class="pill ${bannerOn ? 'on' : 'off'}">${bannerOn ? 'Ativo' : 'Inativo'}</span></div>
-    <div class="summary-row"><span class="summary-label">Ícone .exe</span>
-      <span class="pill ${hasIcon ? 'on' : 'off'}">${hasIcon ? 'Definido' : 'Default Electron'}</span></div>
+    <div class="summary-row"><span class="summary-label">${S('project')}</span><span class="summary-value"></span></div>
+    <div class="summary-row"><span class="summary-label">${S('modules')}</span><span class="summary-value">${moduleCount}</span></div>
+    <div class="summary-row"><span class="summary-label">${S('logo')}</span>
+      <span class="pill ${hasLogo ? 'on' : 'off'}">${hasLogo ? S('defined') : S('no_logo')}</span></div>
+    <div class="summary-row"><span class="summary-label">${S('leads')}</span>
+      <span class="pill ${leadsOn ? 'on' : 'off'}">${leadsOn ? S('active') : S('inactive')}</span></div>
+    <div class="summary-row"><span class="summary-label">${S('banner')}</span>
+      <span class="pill ${bannerOn ? 'on' : 'off'}">${bannerOn ? S('active') : S('inactive')}</span></div>
+    <div class="summary-row"><span class="summary-label">${S('icon')}</span>
+      <span class="pill ${hasIcon ? 'on' : 'off'}">${hasIcon ? S('defined') : S('default_electron')}</span></div>
   `;
   exportSummaryEl.querySelector('.summary-row .summary-value').textContent = title;
 }
@@ -672,12 +749,12 @@ exportIconInput.addEventListener('change', async (e) => {
   }
   try {
     const updated = await window.icurator.saveIcon({ sourcePath: file.path });
-    exportIconCurrent.textContent = 'Ícone atual: ' + updated.export.iconPath;
+    exportIconCurrent.textContent = t('export.icon_current_prefix') + updated.export.iconPath;
     exportIconCurrent.classList.add('has-file');
     updateExportSummary(updated);
     exportIconInput.value = '';
   } catch (err) {
-    alert('Erro ao guardar ícone: ' + err.message);
+    alert(t('common.error_prefix') + err.message);
   }
 });
 
@@ -700,12 +777,12 @@ if (window.icurator && window.icurator.onExportLog) {
 exportBuildBtn.addEventListener('click', async () => {
   exportBuildBtn.disabled = true;
   exportLogEl.innerHTML = '';
-  appendExportLog('A iniciar compilação…');
+  appendExportLog(t('export.log.starting'));
   try {
     const result = await window.icurator.buildProduct();
-    appendExportLog('Compilação terminada. Ficheiros: ' + (result.files || []).length, 'success');
+    appendExportLog(t('export.log.finished_prefix') + (result.files || []).length, 'success');
   } catch (err) {
-    appendExportLog('Falhou: ' + (err && err.message ? err.message : err), 'error');
+    appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     exportBuildBtn.disabled = false;
   }

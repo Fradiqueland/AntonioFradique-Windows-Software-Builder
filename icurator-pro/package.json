@@ -27,6 +27,7 @@
       "preload.js",
       "preload-viewer.js",
       "src/**/*",
+      "locales/**/*",
       "assets/**/*"
     ],
     "win": {

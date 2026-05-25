@@ -27,7 +27,11 @@ const ICON_DEST_PATH = path.join(PROJECT_ROOT, 'data', 'icon.ico');
 const FILE_TYPES = new Set(['pdf', 'launch']);
 const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
 
+const LOCALES_DIR = path.join(__dirname, 'locales');
+const ALLOWED_LANGS = new Set(['pt', 'en']);
+
 const DEFAULT_CONFIG = {
+  language: 'pt',
   brand: {
     title: 'LaunchBox Pro',
     logo: null,
@@ -485,6 +489,26 @@ ipcMain.handle('export:build', async (event) => {
       send('Aviso: não foi possível remover course-mode.flag: ' + cleanupErr.message, 'error');
     }
   }
+});
+
+/* -------- IPC: i18n -------- */
+
+ipcMain.handle('i18n:loadLocale', (_event, lang) => {
+  const safeLang = ALLOWED_LANGS.has(lang) ? lang : 'pt';
+  const filePath = path.join(LOCALES_DIR, safeLang + '.json');
+  if (!fs.existsSync(filePath)) {
+    throw new Error('Ficheiro de tradução em falta: ' + safeLang);
+  }
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return { lang: safeLang, dict: JSON.parse(raw) };
+});
+
+ipcMain.handle('language:save', (_event, lang) => {
+  const safeLang = ALLOWED_LANGS.has(lang) ? lang : 'pt';
+  const current = readConfig();
+  const updated = { ...current, language: safeLang };
+  writeConfig(updated);
+  return updated;
 });
 
 ipcMain.handle('export:openReleaseFolder', () => {

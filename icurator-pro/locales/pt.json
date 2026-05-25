@@ -1,0 +1,149 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "Construtor"
+  },
+  "lang": {
+    "label": "Idioma"
+  },
+  "tab": {
+    "brand": "Marca / Design",
+    "leads": "Captura de Leads",
+    "banners": "Banners",
+    "content": "Conteúdo / Menus",
+    "export": "Exportar"
+  },
+  "header": {
+    "brand":    { "title": "Marca / Design",     "subtitle": "Personalize a aparência do produto final." },
+    "leads":    { "title": "Captura de Leads",   "subtitle": "Configure o opt-in / squeeze page inicial." },
+    "banners":  { "title": "Banners",            "subtitle": "Adicione banners de publicidade e links de afiliado." },
+    "content":  { "title": "Conteúdo / Menus",   "subtitle": "Construa o menu de navegação do produto final." },
+    "export":   { "title": "Exportar",           "subtitle": "Compile o produto final para .exe (Windows)." }
+  },
+  "sidebar": {
+    "preview_btn": "Pré-visualizar Produto",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "remove": "Remover",
+    "saving": "A guardar…",
+    "saved": "Definições guardadas.",
+    "error_prefix": "Erro: "
+  },
+  "brand": {
+    "title_label": "Título do Software",
+    "title_placeholder": "Ex: O Meu Curso Digital",
+    "title_help": "Aparece na barra da janela e no cabeçalho do menu do produto final.",
+    "logo_label": "Logo / Imagem de Cabeçalho",
+    "logo_empty": "Sem logo carregado",
+    "logo_help": "O ficheiro será copiado para a pasta interna dist-assets/.",
+    "colors_label": "Cores Customizadas",
+    "color_sidebar": "Cor do Menu Lateral",
+    "color_background": "Cor de Fundo Principal",
+    "color_buttons": "Cor dos Botões",
+    "save_btn": "Guardar Definições"
+  },
+  "leads": {
+    "toggle_title": "Ativar Bloqueio de Conteúdo (Opt-in Gate)",
+    "toggle_sub": "Se ativado, o cliente final só verá o conteúdo depois de submeter o formulário abaixo.",
+    "heading_label": "Título do Bloqueio",
+    "heading_placeholder": "Ex: Insira o seu email para aceder ao curso",
+    "heading_help": "Mensagem grande mostrada por cima do formulário no Visualizador.",
+    "html_label": "Código HTML do Formulário",
+    "html_placeholder": "Cole aqui o código do formulário (Mailchimp, AWeber, ActiveCampaign, etc.)",
+    "html_help": "O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.",
+    "save_btn": "Guardar Definições de Leads"
+  },
+  "banner": {
+    "toggle_title": "Ativar Banner de Publicidade",
+    "toggle_sub": "O banner ficará fixo no Visualizador, em todas as páginas.",
+    "image_label": "Imagem do Banner",
+    "image_empty": "Sem banner carregado",
+    "image_help": "Recomendado: imagem horizontal (ex: 728×90 ou 970×90). Copiada para dist-assets/.",
+    "url_label": "Link de Destino",
+    "url_placeholder": "https://exemplo.com/o-meu-link-afiliado",
+    "url_help": "URL aberto no browser externo quando o cliente final clicar no banner.",
+    "position_label": "Posição do Banner",
+    "position_top": "Topo da Página",
+    "position_bottom": "Rodapé da Página",
+    "save_btn": "Guardar Definições de Banners"
+  },
+  "content": {
+    "list_title": "Módulos do Menu",
+    "add_btn": "+ Adicionar Novo Módulo",
+    "list_empty": "Ainda não existem módulos. Clique em \"Adicionar Novo Módulo\" para começar.",
+    "editor_empty": "Selecione um módulo na lista, ou clique em \"+ Adicionar Novo Módulo\" para começar a editar.",
+    "editor_new_title": "Novo Módulo",
+    "editor_edit_title": "Editar Módulo",
+    "editor_save": "Guardar Módulo",
+    "module_title_label": "Título do Botão",
+    "module_title_placeholder": "Ex: Aula 1 — Introdução",
+    "module_type_label": "Tipo de Ação",
+    "type": {
+      "youtube": "Vídeo YouTube (Iframe)",
+      "html": "HTML / Texto Rico",
+      "pdf": "Ficheiro PDF Local",
+      "webview": "Browser Interno (Webview)",
+      "external": "Browser Externo (Chrome/Edge)",
+      "launch": "Lançar Ficheiro (.exe / .zip / etc)"
+    },
+    "youtube_url_label": "URL ou ID do vídeo",
+    "youtube_help": "Renderizado num <iframe> dentro do produto final.",
+    "html_label": "HTML / Texto",
+    "html_help": "O HTML será injetado tal e qual na área principal do Visualizador.",
+    "pdf_label": "Ficheiro PDF",
+    "pdf_help": "O PDF será copiado para dist-assets/ ao guardar.",
+    "file_none": "Nenhum ficheiro selecionado.",
+    "file_new_prefix": "Novo ficheiro: ",
+    "file_current_prefix": "Ficheiro atual: ",
+    "webview_url_label": "URL para abrir dentro do software",
+    "webview_help": "Carregado via <webview> — o utilizador fica dentro da app.",
+    "external_url_label": "URL para abrir no browser do sistema",
+    "external_help": "Ideal para links de afiliado — abre no Chrome/Edge padrão.",
+    "launch_label": "Ficheiro a lançar",
+    "launch_help": "Qualquer formato (.exe, .zip, .doc…). Copiado para dist-assets/.",
+    "delete_confirm": "Eliminar o módulo \"{title}\"? Esta ação não pode ser desfeita.",
+    "order_updated": "Ordem atualizada.",
+    "module_deleted": "Módulo eliminado.",
+    "module_saved": "Módulo guardado."
+  },
+  "export": {
+    "icon_label": "Ícone do Software (.ico)",
+    "icon_none": "Nenhum ícone definido.",
+    "icon_current_prefix": "Ícone atual: ",
+    "icon_help": "O ícone tem de ser obrigatoriamente um ficheiro .ico (formato Windows).",
+    "summary_label": "Resumo do Projeto",
+    "build_btn": "Compilar Produto Final (.exe)",
+    "build_help": "A compilação corre o electron-builder e gera o instalador em release/. Pode demorar alguns minutos.",
+    "status_label": "Status",
+    "log_empty": "Sem atividade. Clique em \"Compilar\" para começar.",
+    "open_release_btn": "Abrir pasta release/",
+    "summary": {
+      "project": "Projeto",
+      "modules": "Módulos",
+      "logo": "Logo",
+      "leads": "Opt-in / Leads",
+      "banner": "Banner",
+      "icon": "Ícone .exe",
+      "defined": "Definido",
+      "no_logo": "Sem logo",
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "default_electron": "Default Electron"
+    },
+    "log": {
+      "starting": "A iniciar compilação…",
+      "finished_prefix": "Compilação terminada. Ficheiros: ",
+      "failed_prefix": "Falhou: "
+    }
+  },
+  "corners": {
+    "music_label": "Minha música",
+    "author_label": "Criado por António Fradique",
+    "plastic_text": "Ganhe dinheiro ajudando o planeta! Prospere transformando plástico em lucro:",
+    "parking_text": "Farto de dar voltas? Encontra estacionamento em segundos com a ParknDgo!"
+  }
+}

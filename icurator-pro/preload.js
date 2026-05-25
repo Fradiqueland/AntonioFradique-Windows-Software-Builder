@@ -16,5 +16,8 @@ contextBridge.exposeInMainWorld('icurator', {
     const listener = (_e, payload) => cb(payload);
     ipcRenderer.on('export:log', listener);
     return () => ipcRenderer.removeListener('export:log', listener);
-  }
+  },
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  loadLocale: (lang) => ipcRenderer.invoke('i18n:loadLocale', lang),
+  saveLanguage: (lang) => ipcRenderer.invoke('language:save', lang)
 });
