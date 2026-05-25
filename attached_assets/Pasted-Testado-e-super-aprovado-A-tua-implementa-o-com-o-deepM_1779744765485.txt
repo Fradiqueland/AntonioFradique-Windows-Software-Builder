@@ -1,0 +1,39 @@
+Testado e super aprovado! A tua implementação com o `deepMerge` e a gestão inteligente de ficheiros (`dist-assets/`) foi brilhante. O `project-config.json` está perfeito. 
+
+Vamos agora avançar para o "coração" do software: o **PASSO 4 - Conteúdo / Menus**. 
+Neste separador, o utilizador vai criar os botões que aparecerão no menu lateral do produto final, e definir a ação que cada botão faz.
+
+Guarda os dados no `project-config.json` dentro de um array chamado `content: []`. (Exemplo: `{ id, title, type, data }`).
+
+### 1. UI - Estrutura do Separador (Gestor de Lista)
+Divide a área deste separador em duas colunas/partes:
+* **Esquerda (Lista de Botões):** Uma lista (ul/li) que mostra os módulos já criados. 
+    * Deve ter um botão "Adicionar Novo Módulo" no topo.
+    * Cada item da lista deve mostrar o seu título, um botão de "Editar", "Eliminar", e setas para "Subir/Descer" (para reordenar o menu).
+* **Direita (Editor do Módulo):** Quando o utilizador clica em "Adicionar" ou "Editar", aparece um formulário aqui.
+
+### 2. UI - O Formulário do Editor
+O editor de um módulo deve ter os seguintes campos:
+* **Título do Botão:** Campo de texto.
+* **Tipo de Ação:** Um `<select>` (Dropdown) com as 6 opções abaixo. O formulário deve ser dinâmico: a área de input (abaixo do dropdown) **muda** dependendo do tipo selecionado.
+
+**As 6 opções do Dropdown e os seus inputs dinâmicos:**
+1.  **Vídeo YouTube (Iframe):** Mostra um input de texto para colar o URL ou ID do vídeo.
+2.  **HTML / Texto Rico:** Mostra uma grande `<textarea>` para o criador escrever código HTML ou texto.
+3.  **Ficheiro PDF Local:** Mostra um `<input type="file" accept=".pdf">` (e o nome do ficheiro atualmente selecionado).
+4.  **Browser Interno (Webview):** Mostra um input de texto para colar um URL.
+5.  **Browser Externo (Chrome/Edge):** Mostra um input de texto para colar um URL.
+6.  **Lançar Ficheiro (.exe / .zip / etc):** Mostra um `<input type="file">` (sem restrição de formato) para o utilizador escolher o ficheiro que quer anexar.
+
+* No final do editor, um botão **"Guardar Módulo"** que atualiza o array `content` e limpa o formulário/atualiza a lista.
+
+### 3. Lógica Backend e Gestão de Ficheiros (`main.js` e `preload.js`)
+Isto é crucial! Tal como fizeste para as imagens:
+* Cria um handler `content:save` (e funções de load) no IPC.
+* **Ficheiros Locais (Tipos 3 e 6):** Se o módulo for do tipo "PDF" ou "Lançar Ficheiro", e o utilizador tiver selecionado um ficheiro do PC local, o `main.js` **TEM DE COPIAR** esse ficheiro para a pasta `/dist-assets/` com um timestamp (ex: `file-<timestamp>-<nome>.<ext>`) e guardar apenas o **caminho relativo** (`dist-assets/...`) na propriedade `data` do objeto desse módulo.
+* Se um ficheiro PDF ou EXE antigo for substituído, ou se o utilizador clicar em "Eliminar" no módulo, o backend deve apagar o ficheiro correspondente da pasta `/dist-assets/` para não acumular "lixo".
+
+### 4. Persistência 
+* Garante que ao arrancar (`loadInitialConfig()`), o array `content` é carregado e a lista (na coluna da esquerda) é preenchida corretamente.
+
+Executa apenas este Passo 4. Foca-te em garantir que a lista de módulos (adicionar, editar, eliminar, reordenar) funciona bem, que a UI é dinâmica consoante o dropdown, e que os ficheiros locais (PDF/Exe) são copiados com sucesso para a pasta de assets. Avisa-me quando estiver pronto para testar!

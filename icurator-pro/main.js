@@ -1,35 +1,27 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const PROJECT_ROOT = __dirname;
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const ASSETS_DIR = path.join(PROJECT_ROOT, 'dist-assets');
 const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
 
+const FILE_TYPES = new Set(['pdf', 'launch']);
+const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
+
 const DEFAULT_CONFIG = {
   brand: {
     title: 'iCurator Pro',
     logo: null,
-    colors: {
-      sidebar: '#111827',
-      background: '#f8fafc',
-      buttons: '#2563eb'
-    }
+    colors: { sidebar: '#111827', background: '#f8fafc', buttons: '#2563eb' }
   },
   marketing: {
-    leads: {
-      enabled: false,
-      heading: 'Insira o seu email para aceder ao conteúdo',
-      formHtml: ''
-    },
-    banner: {
-      enabled: false,
-      image: null,
-      url: '',
-      position: 'bottom' // 'top' | 'bottom'
-    }
-  }
+    leads: { enabled: false, heading: 'Insira o seu email para aceder ao conteúdo', formHtml: '' },
+    banner: { enabled: false, image: null, url: '', position: 'bottom' }
+  },
+  content: []
 };
 
 let builderWindow = null;
@@ -52,7 +44,6 @@ function deepMerge(defaults, override) {
       out[key] = structuredClone(defaults[key]);
     }
   }
-  // Keep any extra keys the override may carry.
   if (override && typeof override === 'object') {
     for (const key of Object.keys(override)) {
       if (!(key in out)) out[key] = override[key];
@@ -125,10 +116,7 @@ function createBuilderWindow() {
 
   builderWindow.setMenuBarVisibility(false);
   builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
-
-  builderWindow.on('closed', () => {
-    builderWindow = null;
-  });
+  builderWindow.on('closed', () => { builderWindow = null; });
 }
 
 /* -------- IPC: config + brand -------- */
@@ -164,7 +152,6 @@ ipcMain.handle('brand:save', (_event, payload) => {
       }
     }
   };
-
   writeConfig(updated);
   return updated;
 });
@@ -174,7 +161,7 @@ ipcMain.handle('asset:resolve', (_event, relativePath) => {
   return path.join(PROJECT_ROOT, relativePath);
 });
 
-/* -------- IPC: marketing (Leads + Banner) -------- */
+/* -------- IPC: marketing -------- */
 
 ipcMain.handle('marketing:saveLeads', (_event, payload) => {
   const current = readConfig();
@@ -185,11 +172,9 @@ ipcMain.handle('marketing:saveLeads', (_event, payload) => {
       leads: {
         enabled: !!(payload && payload.enabled),
         heading: (payload && typeof payload.heading === 'string')
-          ? payload.heading.trim()
-          : current.marketing.leads.heading,
+          ? payload.heading.trim() : current.marketing.leads.heading,
         formHtml: (payload && typeof payload.formHtml === 'string')
-          ? payload.formHtml
-          : current.marketing.leads.formHtml
+          ? payload.formHtml : current.marketing.leads.formHtml
       }
     }
   };
@@ -212,9 +197,7 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
     bannerRelative = null;
   }
 
-  const positionRaw = payload && payload.position;
-  const position = positionRaw === 'top' ? 'top' : 'bottom';
-
+  const position = (payload && payload.position) === 'top' ? 'top' : 'bottom';
   const updated = {
     ...current,
     marketing: {
@@ -227,7 +210,106 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
       }
     }
   };
+  writeConfig(updated);
+  return updated;
+});
 
+/* -------- IPC: content / menus (Passo 4) --------
+ *
+ * Each module shape persisted in project-config.json:
+ *   { id: string, title: string, type: string, data: object }
+ *
+ * For file-backed types (pdf, launch), data looks like:
+ *   { file: 'dist-assets/file-<ts>-<name>.ext', fileName: 'original.ext' }
+ *
+ * The renderer may send incoming modules with extra `data.sourcePath`
+ * (absolute path picked via <input type="file">). When present, main.js
+ * copies that file into dist-assets/, replaces any previous file for that
+ * module id, and persists only the relative `file` path.
+ */
+
+function sanitizeModule(mod) {
+  if (!mod || typeof mod !== 'object') return null;
+  const type = ALL_TYPES.has(mod.type) ? mod.type : null;
+  if (!type) return null;
+  const id = (typeof mod.id === 'string' && mod.id.trim())
+    ? mod.id.trim()
+    : crypto.randomUUID();
+  const title = (typeof mod.title === 'string' && mod.title.trim()) ? mod.title.trim() : 'Sem título';
+  const data = (mod.data && typeof mod.data === 'object') ? { ...mod.data } : {};
+  return { id, title, type, data };
+}
+
+function findModuleById(list, id) {
+  return list.find((m) => m && m.id === id) || null;
+}
+
+ipcMain.handle('content:save', (_event, payload) => {
+  const current = readConfig();
+  const previous = Array.isArray(current.content) ? current.content : [];
+  const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
+
+  const nextModules = [];
+
+  for (const raw of incoming) {
+    const mod = sanitizeModule(raw);
+    if (!mod) continue;
+
+    const prev = findModuleById(previous, mod.id);
+
+    if (FILE_TYPES.has(mod.type)) {
+      const sourcePath = mod.data && typeof mod.data.sourcePath === 'string' ? mod.data.sourcePath : null;
+
+      if (sourcePath) {
+        if (!fs.existsSync(sourcePath)) {
+          throw new Error('Ficheiro não encontrado: ' + sourcePath);
+        }
+        // Replacing: drop the previous file for this module, if any.
+        if (prev && prev.data && prev.data.file) deleteAssetIfInside(prev.data.file);
+        const prefix = mod.type === 'pdf' ? 'pdf' : 'file';
+        const relative = copyAssetToProject(sourcePath, prefix);
+        mod.data = {
+          file: relative,
+          fileName: path.basename(sourcePath)
+        };
+      } else {
+        // No new file picked — keep whatever was previously stored for this module.
+        const prevFile = (prev && prev.data && prev.data.file) || null;
+        const prevName = (prev && prev.data && prev.data.fileName) || null;
+        mod.data = {
+          file: prevFile,
+          fileName: prevName
+        };
+      }
+    } else {
+      // Non-file types: normalise per type and drop any stray sourcePath.
+      const d = mod.data || {};
+      if (mod.type === 'youtube' || mod.type === 'webview' || mod.type === 'external') {
+        mod.data = { url: typeof d.url === 'string' ? d.url.trim() : '' };
+      } else if (mod.type === 'html') {
+        mod.data = { html: typeof d.html === 'string' ? d.html : '' };
+      }
+    }
+
+    nextModules.push(mod);
+  }
+
+  // Garbage collection: any file in the previous list that no longer
+  // appears in the new list (module deleted, or file replaced) gets removed.
+  const keptFiles = new Set(
+    nextModules
+      .filter((m) => FILE_TYPES.has(m.type) && m.data && m.data.file)
+      .map((m) => m.data.file)
+  );
+  for (const prev of previous) {
+    if (!prev || !FILE_TYPES.has(prev.type)) continue;
+    const prevFile = prev.data && prev.data.file;
+    if (prevFile && !keptFiles.has(prevFile)) {
+      deleteAssetIfInside(prevFile);
+    }
+  }
+
+  const updated = { ...current, content: nextModules };
   writeConfig(updated);
   return updated;
 });
@@ -238,7 +320,6 @@ app.whenReady().then(() => {
   ensureDirs();
   readConfig();
   createBuilderWindow();
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createBuilderWindow();
   });

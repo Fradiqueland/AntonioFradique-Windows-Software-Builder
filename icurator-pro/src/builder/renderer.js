@@ -56,6 +56,13 @@ function setImagePreview(imgEl, emptyEl, absPath) {
   if (emptyEl) emptyEl.classList.add('hidden');
 }
 
+function uuid() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return 'm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+}
+
 /* =========================================================
  * BRAND FORM (Passo 2)
  * ========================================================= */
@@ -78,11 +85,7 @@ const colorHexLabels = {
 const brandSaveBtn = document.getElementById('brand-save');
 const showBrandStatus = makeStatus(document.getElementById('save-status'));
 
-const brandState = {
-  pendingLogoSourcePath: null,
-  pendingRemoveLogo: false,
-  currentLogoRelative: null
-};
+const brandState = { pendingLogoSourcePath: null, pendingRemoveLogo: false, currentLogoRelative: null };
 
 Object.keys(colorInputs).forEach((key) => {
   colorInputs[key].addEventListener('input', (e) => {
@@ -127,8 +130,7 @@ brandForm.addEventListener('submit', async (e) => {
     brandState.currentLogoRelative = updated.brand.logo || null;
     logoInput.value = '';
     const abs = brandState.currentLogoRelative
-      ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative)
-      : null;
+      ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative) : null;
     setImagePreview(logoPreview, logoEmpty, abs);
     showBrandStatus('Definições guardadas em project-config.json', 'success');
   } catch (err) {
@@ -182,11 +184,7 @@ const bannerPositionSelect = document.getElementById('banner-position');
 const bannerSaveBtn = document.getElementById('banner-save');
 const showBannerStatus = makeStatus(document.getElementById('banner-status'));
 
-const bannerState = {
-  pendingImageSourcePath: null,
-  pendingRemoveImage: false,
-  currentImageRelative: null
-};
+const bannerState = { pendingImageSourcePath: null, pendingRemoveImage: false, currentImageRelative: null };
 
 bannerImageInput.addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
@@ -222,8 +220,7 @@ bannerForm.addEventListener('submit', async (e) => {
     bannerState.currentImageRelative = updated.marketing.banner.image || null;
     bannerImageInput.value = '';
     const abs = bannerState.currentImageRelative
-      ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative)
-      : null;
+      ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative) : null;
     setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
     showBannerStatus('Definições de banners guardadas.', 'success');
   } catch (err) {
@@ -235,7 +232,327 @@ bannerForm.addEventListener('submit', async (e) => {
 });
 
 /* =========================================================
- * Initial load — populate all forms from project-config.json
+ * CONTENT / MENUS (Passo 4)
+ * ========================================================= */
+
+const TYPE_LABELS = {
+  youtube: 'YouTube',
+  html: 'HTML / Texto',
+  pdf: 'PDF Local',
+  webview: 'Browser Interno',
+  external: 'Browser Externo',
+  launch: 'Lançar Ficheiro'
+};
+
+const contentList = document.getElementById('content-list');
+const contentListEmpty = document.getElementById('content-list-empty');
+const contentAddBtn = document.getElementById('content-add');
+const contentForm = document.getElementById('content-form');
+const contentEditorEmpty = document.getElementById('content-editor-empty');
+const contentEditorTitle = document.getElementById('content-editor-title');
+const contentEditorClose = document.getElementById('content-editor-close');
+const contentEditorCancel = document.getElementById('content-editor-cancel');
+const moduleTitle = document.getElementById('module-title');
+const moduleType = document.getElementById('module-type');
+const dynGroups = document.querySelectorAll('[data-dyn]');
+const showContentStatus = makeStatus(document.getElementById('content-status'));
+
+const dyn = {
+  youtube: { url: document.getElementById('dyn-youtube-url') },
+  html: { code: document.getElementById('dyn-html-code') },
+  pdf: {
+    file: document.getElementById('dyn-pdf-file'),
+    current: document.getElementById('dyn-pdf-current')
+  },
+  webview: { url: document.getElementById('dyn-webview-url') },
+  external: { url: document.getElementById('dyn-external-url') },
+  launch: {
+    file: document.getElementById('dyn-launch-file'),
+    current: document.getElementById('dyn-launch-current')
+  }
+};
+
+// In-memory mirror of the saved content array. Always kept in sync with disk.
+let contentModules = [];
+// Editor state
+let editingId = null;        // id of module being edited (null = creating new)
+let pendingFileSourcePath = null;  // absolute path picked in <input type=file> for current edit
+let pendingFileName = null;
+
+function showDynamicGroup(type) {
+  dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
+}
+
+function setFileCurrentText(type, text, hasFile) {
+  const el = dyn[type] && dyn[type].current;
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('has-file', !!hasFile);
+}
+
+function clearEditor() {
+  editingId = null;
+  pendingFileSourcePath = null;
+  pendingFileName = null;
+  moduleTitle.value = '';
+  moduleType.value = 'youtube';
+  dyn.youtube.url.value = '';
+  dyn.html.code.value = '';
+  dyn.webview.url.value = '';
+  dyn.external.url.value = '';
+  dyn.pdf.file.value = '';
+  dyn.launch.file.value = '';
+  setFileCurrentText('pdf', 'Nenhum ficheiro selecionado.', false);
+  setFileCurrentText('launch', 'Nenhum ficheiro selecionado.', false);
+  showDynamicGroup('youtube');
+}
+
+function hideEditor() {
+  clearEditor();
+  contentForm.classList.add('hidden');
+  contentEditorEmpty.classList.remove('hidden');
+  // Clear active highlight in list
+  contentList.querySelectorAll('.content-list-item.active').forEach((el) => el.classList.remove('active'));
+}
+
+function openEditorForNew() {
+  clearEditor();
+  contentEditorTitle.textContent = 'Novo Módulo';
+  contentEditorEmpty.classList.add('hidden');
+  contentForm.classList.remove('hidden');
+  moduleTitle.focus();
+  contentList.querySelectorAll('.content-list-item.active').forEach((el) => el.classList.remove('active'));
+}
+
+function openEditorForEdit(id) {
+  const mod = contentModules.find((m) => m.id === id);
+  if (!mod) return;
+  clearEditor();
+  editingId = mod.id;
+  contentEditorTitle.textContent = 'Editar Módulo';
+  contentEditorEmpty.classList.add('hidden');
+  contentForm.classList.remove('hidden');
+
+  moduleTitle.value = mod.title || '';
+  moduleType.value = mod.type;
+  showDynamicGroup(mod.type);
+
+  const d = mod.data || {};
+  if (mod.type === 'youtube') dyn.youtube.url.value = d.url || '';
+  else if (mod.type === 'html') dyn.html.code.value = d.html || '';
+  else if (mod.type === 'webview') dyn.webview.url.value = d.url || '';
+  else if (mod.type === 'external') dyn.external.url.value = d.url || '';
+  else if (mod.type === 'pdf' || mod.type === 'launch') {
+    if (d.file) {
+      setFileCurrentText(mod.type, 'Ficheiro atual: ' + (d.fileName || d.file), true);
+    } else {
+      setFileCurrentText(mod.type, 'Nenhum ficheiro selecionado.', false);
+    }
+  }
+
+  // Highlight active item
+  contentList.querySelectorAll('.content-list-item').forEach((el) => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+}
+
+function renderContentList() {
+  contentList.innerHTML = '';
+  if (contentModules.length === 0) {
+    contentListEmpty.classList.remove('hidden');
+    return;
+  }
+  contentListEmpty.classList.add('hidden');
+
+  contentModules.forEach((mod, index) => {
+    const li = document.createElement('li');
+    li.className = 'content-list-item';
+    if (mod.id === editingId) li.classList.add('active');
+    li.dataset.id = mod.id;
+
+    const info = document.createElement('div');
+    info.className = 'content-item-info';
+    info.title = 'Clique para editar';
+    info.innerHTML = `
+      <span class="content-item-title"></span>
+      <span class="content-item-type"></span>
+    `;
+    info.querySelector('.content-item-title').textContent = mod.title;
+    info.querySelector('.content-item-type').textContent = TYPE_LABELS[mod.type] || mod.type;
+    info.addEventListener('click', () => openEditorForEdit(mod.id));
+
+    const actions = document.createElement('div');
+    actions.className = 'content-item-actions';
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'icon-btn';
+    upBtn.title = 'Subir';
+    upBtn.textContent = '▲';
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener('click', () => moveModule(mod.id, -1));
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'icon-btn';
+    downBtn.title = 'Descer';
+    downBtn.textContent = '▼';
+    downBtn.disabled = index === contentModules.length - 1;
+    downBtn.addEventListener('click', () => moveModule(mod.id, 1));
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'icon-btn';
+    editBtn.title = 'Editar';
+    editBtn.textContent = '✎';
+    editBtn.addEventListener('click', () => openEditorForEdit(mod.id));
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'icon-btn danger';
+    delBtn.title = 'Eliminar';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', () => deleteModule(mod.id));
+
+    actions.append(upBtn, downBtn, editBtn, delBtn);
+    li.append(info, actions);
+    contentList.append(li);
+  });
+}
+
+async function persistContent(successMessage) {
+  // Send the in-memory list to main; for the module being edited, pendingFileSourcePath
+  // (if any) is already attached inside its data.sourcePath.
+  const payload = {
+    modules: contentModules.map((m) => ({
+      id: m.id,
+      title: m.title,
+      type: m.type,
+      data: m.data || {}
+    }))
+  };
+  const updated = await window.icurator.saveContent(payload);
+  contentModules = Array.isArray(updated.content) ? updated.content : [];
+  // After persistence, sourcePath has been consumed — clear pending.
+  pendingFileSourcePath = null;
+  pendingFileName = null;
+  renderContentList();
+  if (successMessage) showContentStatus(successMessage, 'success');
+}
+
+async function moveModule(id, delta) {
+  const idx = contentModules.findIndex((m) => m.id === id);
+  if (idx < 0) return;
+  const newIdx = idx + delta;
+  if (newIdx < 0 || newIdx >= contentModules.length) return;
+  const [item] = contentModules.splice(idx, 1);
+  contentModules.splice(newIdx, 0, item);
+  try {
+    await persistContent('Ordem atualizada.');
+  } catch (err) {
+    console.error(err);
+    showContentStatus('Erro ao reordenar: ' + err.message, 'error');
+  }
+}
+
+async function deleteModule(id) {
+  const mod = contentModules.find((m) => m.id === id);
+  if (!mod) return;
+  if (!confirm(`Eliminar o módulo "${mod.title}"? Esta ação não pode ser desfeita.`)) return;
+
+  contentModules = contentModules.filter((m) => m.id !== id);
+  if (editingId === id) hideEditor();
+  try {
+    await persistContent('Módulo eliminado.');
+  } catch (err) {
+    console.error(err);
+    showContentStatus('Erro ao eliminar: ' + err.message, 'error');
+  }
+}
+
+/* ---- Editor wiring ---- */
+
+contentAddBtn.addEventListener('click', () => openEditorForNew());
+contentEditorClose.addEventListener('click', () => hideEditor());
+contentEditorCancel.addEventListener('click', () => hideEditor());
+
+moduleType.addEventListener('change', () => {
+  showDynamicGroup(moduleType.value);
+});
+
+function bindFilePicker(type) {
+  const input = dyn[type].file;
+  input.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    pendingFileSourcePath = file.path || null;
+    pendingFileName = file.name || null;
+    if (pendingFileSourcePath) {
+      setFileCurrentText(type, 'Novo ficheiro: ' + (pendingFileName || pendingFileSourcePath), true);
+    }
+  });
+}
+bindFilePicker('pdf');
+bindFilePicker('launch');
+
+contentForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const title = moduleTitle.value.trim();
+  const type = moduleType.value;
+  if (!title) { moduleTitle.focus(); return; }
+  if (!TYPE_LABELS[type]) return;
+
+  // Build the data object for this module
+  let data = {};
+  if (type === 'youtube') data = { url: dyn.youtube.url.value.trim() };
+  else if (type === 'html') data = { html: dyn.html.code.value };
+  else if (type === 'webview') data = { url: dyn.webview.url.value.trim() };
+  else if (type === 'external') data = { url: dyn.external.url.value.trim() };
+  else if (type === 'pdf' || type === 'launch') {
+    if (pendingFileSourcePath) {
+      data = { sourcePath: pendingFileSourcePath };
+    } else {
+      // Keep whatever was there (main.js falls back to previous file when no sourcePath)
+      data = {};
+    }
+  }
+
+  // Update or insert in the local list
+  if (editingId) {
+    const idx = contentModules.findIndex((m) => m.id === editingId);
+    if (idx >= 0) {
+      // If editing and changing type, drop the old file association so GC kicks in.
+      const old = contentModules[idx];
+      const typeChanged = old.type !== type;
+      contentModules[idx] = {
+        id: old.id,
+        title,
+        type,
+        data: typeChanged ? data : data
+      };
+    }
+  } else {
+    const newMod = { id: uuid(), title, type, data };
+    contentModules.push(newMod);
+    editingId = newMod.id;
+  }
+
+  try {
+    await persistContent('Módulo guardado.');
+    // After save, re-open the editor on the (now updated) module so the user
+    // sees the persisted state (e.g. the new file path).
+    const savedId = editingId;
+    hideEditor();
+    if (savedId) openEditorForEdit(savedId);
+  } catch (err) {
+    console.error(err);
+    showContentStatus('Erro ao guardar módulo: ' + err.message, 'error');
+  }
+});
+
+/* =========================================================
+ * Initial load
  * ========================================================= */
 async function loadInitialConfig() {
   try {
@@ -258,13 +575,13 @@ async function loadInitialConfig() {
       setImagePreview(logoPreview, logoEmpty, null);
     }
 
-    // --- Marketing: Leads
+    // --- Leads
     const leads = (config.marketing && config.marketing.leads) || {};
     leadsEnabled.checked = !!leads.enabled;
     leadsHeading.value = leads.heading || '';
     leadsHtml.value = leads.formHtml || '';
 
-    // --- Marketing: Banner
+    // --- Banner
     const banner = (config.marketing && config.marketing.banner) || {};
     bannerEnabled.checked = !!banner.enabled;
     bannerUrlInput.value = banner.url || '';
@@ -276,6 +593,10 @@ async function loadInitialConfig() {
     } else {
       setImagePreview(bannerImagePreview, bannerImageEmpty, null);
     }
+
+    // --- Content / menus
+    contentModules = Array.isArray(config.content) ? config.content : [];
+    renderContentList();
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
   }

@@ -194,10 +194,107 @@
           </form>
         </section>
 
+        <!-- PASSO 4 — Conteúdo / Menus -->
         <section class="panel hidden" data-panel="content">
-          <div class="placeholder">
-            <h2>Separador 4 — Conteúdo / Menus</h2>
-            <p>A ser implementado no <strong>Passo 4</strong>.</p>
+          <div class="content-layout">
+            <!-- Lista de módulos -->
+            <div class="content-list-wrap">
+              <div class="content-list-header">
+                <h3>Módulos do Menu</h3>
+                <button type="button" class="btn btn-primary btn-sm" id="content-add">+ Adicionar Novo Módulo</button>
+              </div>
+              <ul class="content-list" id="content-list">
+                <!-- itens injetados dinamicamente -->
+              </ul>
+              <div class="content-list-empty" id="content-list-empty">
+                Ainda não existem módulos. Clique em "Adicionar Novo Módulo" para começar.
+              </div>
+              <div class="content-list-footer">
+                <span class="save-status" id="content-status"></span>
+              </div>
+            </div>
+
+            <!-- Editor do módulo -->
+            <div class="content-editor-wrap">
+              <div class="content-editor-empty" id="content-editor-empty">
+                <p>Selecione um módulo na lista, ou clique em <strong>"+ Adicionar Novo Módulo"</strong> para começar a editar.</p>
+              </div>
+
+              <form id="content-form" class="form-card hidden" autocomplete="off">
+                <div class="content-editor-header">
+                  <h3 id="content-editor-title">Novo Módulo</h3>
+                  <button type="button" class="btn btn-ghost btn-sm" id="content-editor-close">Fechar</button>
+                </div>
+
+                <div class="form-group">
+                  <label for="module-title">Título do Botão</label>
+                  <input type="text" id="module-title" maxlength="80" required
+                         placeholder="Ex: Aula 1 — Introdução" />
+                </div>
+
+                <div class="form-group">
+                  <label for="module-type">Tipo de Ação</label>
+                  <select id="module-type" class="select">
+                    <option value="youtube">Vídeo YouTube (Iframe)</option>
+                    <option value="html">HTML / Texto Rico</option>
+                    <option value="pdf">Ficheiro PDF Local</option>
+                    <option value="webview">Browser Interno (Webview)</option>
+                    <option value="external">Browser Externo (Chrome/Edge)</option>
+                    <option value="launch">Lançar Ficheiro (.exe / .zip / etc)</option>
+                  </select>
+                </div>
+
+                <!-- Sub-form dinâmico -->
+                <div class="form-group" id="dyn-youtube" data-dyn="youtube">
+                  <label for="dyn-youtube-url">URL ou ID do vídeo</label>
+                  <input type="text" id="dyn-youtube-url"
+                         placeholder="https://www.youtube.com/watch?v=... ou só o ID" />
+                  <small>Renderizado num <code>&lt;iframe&gt;</code> dentro do produto final.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-html" data-dyn="html">
+                  <label for="dyn-html-code">HTML / Texto</label>
+                  <textarea id="dyn-html-code" class="code-area" rows="12"
+                            placeholder="<h1>Bem-vindo</h1>&#10;<p>O seu conteúdo aqui…</p>"></textarea>
+                  <small>O HTML será injetado tal e qual na área principal do Visualizador.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-pdf" data-dyn="pdf">
+                  <label>Ficheiro PDF</label>
+                  <div class="file-row">
+                    <input type="file" id="dyn-pdf-file" accept=".pdf,application/pdf" />
+                  </div>
+                  <div class="file-current" id="dyn-pdf-current">Nenhum ficheiro selecionado.</div>
+                  <small>O PDF será copiado para <code>dist-assets/</code> ao guardar.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-webview" data-dyn="webview">
+                  <label for="dyn-webview-url">URL para abrir dentro do software</label>
+                  <input type="text" id="dyn-webview-url" placeholder="https://exemplo.com" />
+                  <small>Carregado via <code>&lt;webview&gt;</code> — o utilizador fica dentro da app.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-external" data-dyn="external">
+                  <label for="dyn-external-url">URL para abrir no browser do sistema</label>
+                  <input type="text" id="dyn-external-url" placeholder="https://exemplo.com/afiliado" />
+                  <small>Ideal para links de afiliado — abre no Chrome/Edge padrão.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-launch" data-dyn="launch">
+                  <label>Ficheiro a lançar</label>
+                  <div class="file-row">
+                    <input type="file" id="dyn-launch-file" />
+                  </div>
+                  <div class="file-current" id="dyn-launch-current">Nenhum ficheiro selecionado.</div>
+                  <small>Qualquer formato (.exe, .zip, .doc…). Copiado para <code>dist-assets/</code>.</small>
+                </div>
+
+                <div class="form-actions">
+                  <button type="button" class="btn btn-ghost" id="content-editor-cancel">Cancelar</button>
+                  <button type="submit" class="btn btn-primary" id="content-editor-save">Guardar Módulo</button>
+                </div>
+              </form>
+            </div>
           </div>
         </section>
 
