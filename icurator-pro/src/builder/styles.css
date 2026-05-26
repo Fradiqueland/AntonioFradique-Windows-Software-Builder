@@ -769,10 +769,12 @@ select.select:focus {
 }
 .corner .corner-link:hover { text-decoration: underline; color: #bfdbfe; }
 
-/* top-left fica abaixo da .brand (40px brand-mark + 20+20 padding ≈ 82px)
- * e do separador, alinhado com o padding interno da sidebar (18px). */
-.corner-tl { top: 92px;   left: 18px; max-width: 224px; }
-.corner-tr { top: 6px;    right: 6px; text-align: right; }
+/* Ambos os blocos de branding vivem agora no topo direito, lado a lado,
+ * fora da sidebar — assim deixa de haver conflito com o menu e com o
+ * selector de idiomas. .corner-tl fica à esquerda do .corner-tr, com uma
+ * margem elegante entre os dois. */
+.corner-tl { top: 15px; right: 230px; max-width: 260px; text-align: right; }
+.corner-tr { top: 6px;  right: 6px;   text-align: right; }
 /* Bottom-left empurrado para a direita para NÃO tapar o botão azul
  * "Pré-visualizar Produto" da sidebar (~280px de largura). */
 .corner-bl { bottom: 6px; left: 300px; max-width: 320px; }
