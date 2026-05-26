@@ -1,0 +1,27 @@
+Atenção: Mudança crucial de requisitos para Fricção Zero Absoluta. O utilizador final não quer ficheiros de projeto (.lbpro), nem quer pastas adjacentes, nem quer instalar um Viewer separado. 
+
+O Construtor TEM de exportar um ÚNICO ficheiro `.exe` independente (ex: `Curso.exe`). Quando o aluno abrir esse `.exe`, o curso deve rodar imediatamente (com os 4 cantos promocionais do António Fradique cravados).
+
+Para conseguir isto sem depender do Node.js no PC do utilizador, vamos usar a estratégia de "Executável de Extração Automática Silenciosa" (SFX / Self-Extracting Archive).
+
+Por favor, programa o seguinte fluxo no `main.js` do Construtor:
+
+### 1. Preparação do "Template Embutido" (Para mim, António)
+* No `package.json`, o script `"build:viewer-template"` deve compilar o Viewer e colocar a estrutura completa e mastigada do Electron (o .exe do viewer, as DLLs, o app.asar, etc.) dentro de uma pasta de recursos do Construtor em `src/builder/templates/viewer-core/`.
+
+### 2. Ação de Exportação no Construtor (No PC do Utilizador):
+Quando o utilizador clica em "Exportar Produto Final (.exe)":
+1. Abre o diálogo "Guardar Como" do Windows para ele escolher onde quer o executável (ex: `C:\Ambiente de Trabalho\Curso_De_Ingles.exe`).
+2. O Construtor cria uma pasta temporária em background e:
+   - Copia todos os ficheiros do `src/builder/templates/viewer-core/` para lá.
+   - Escreve o `project-config.json` atualizado na pasta `data/` dessa estrutura temporária.
+   - Copia todos os assets (PDFs, imagens) do utilizador para a pasta `dist-assets/` dessa estrutura temporária.
+3. **A Magia do Executável Único:** O `main.js` vai usar uma biblioteca leve de compressão (como `archiver` ou um utilitário SFX básico em JS) para empacotar toda essa pasta temporária num arquivo executável auto-extratível (.exe SFX).
+4. O ficheiro de saída será apenas O EXECUTÁVEL ÚNICO com o nome do curso no local escolhido pelo utilizador.
+
+### 3. Comportamento do Executável Único (No PC do Aluno):
+* Quando o aluno clica no `Curso_De_Ingles.exe`, o arquivo descompacta-se silenciosamente na pasta de ficheiros temporários do Windows (`%TEMP%`) e executa o motor do Viewer automaticamente em background.
+* O Viewer abre diretamente o curso em ecrã inteiro. Os 4 cantos promocionais do António Fradique aparecem imediatamente por cima de tudo.
+* Ao fechar a janela, o processo limpa os ficheiros temporários.
+
+Altera o ecossistema de exportação para esta versão de Ficheiro Único (.exe). Avisa-me quando o motor SFX estiver integrado no Construtor!
