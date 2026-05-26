@@ -14,11 +14,26 @@
     "export": "Export"
   },
   "header": {
-    "brand":    { "title": "Brand / Design",      "subtitle": "Customize the look of the final product." },
-    "leads":    { "title": "Lead Capture",        "subtitle": "Configure the initial opt-in / squeeze page." },
-    "banners":  { "title": "Banners",             "subtitle": "Add advertising banners and affiliate links." },
-    "content":  { "title": "Content / Menus",     "subtitle": "Build the navigation menu of the final product." },
-    "export":   { "title": "Export",              "subtitle": "Compile the final product to .exe (Windows)." }
+    "brand": {
+      "title": "Brand / Design",
+      "subtitle": "Customize the look of the final product."
+    },
+    "leads": {
+      "title": "Lead Capture",
+      "subtitle": "Configure the initial opt-in / squeeze page."
+    },
+    "banners": {
+      "title": "Banners",
+      "subtitle": "Add advertising banners and affiliate links."
+    },
+    "content": {
+      "title": "Content / Menus",
+      "subtitle": "Build the navigation menu of the final product."
+    },
+    "export": {
+      "title": "Export",
+      "subtitle": "Compile the final product to .exe (Windows)."
+    }
   },
   "sidebar": {
     "preview_btn": "Preview Product",
@@ -167,7 +182,7 @@
     "config_error_prefix": "Error loading configuration: ",
     "empty_heading": "Welcome",
     "empty_text": "Select an option from the menu to start.",
-    "optin_default_heading": "Enter your email to access",
+    "optin_default_heading": "Enter your email to access the content",
     "optin_bypass": "Close / Bypass Gate (test)"
   },
   "corners": {

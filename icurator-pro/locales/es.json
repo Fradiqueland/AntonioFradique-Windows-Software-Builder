@@ -14,11 +14,26 @@
     "export": "Exportar"
   },
   "header": {
-    "brand":    { "title": "Marca / Diseño",        "subtitle": "Personaliza la apariencia del producto final." },
-    "leads":    { "title": "Captura de Leads",      "subtitle": "Configura el opt-in / squeeze page inicial." },
-    "banners":  { "title": "Banners",               "subtitle": "Añade banners publicitarios y enlaces de afiliado." },
-    "content":  { "title": "Contenido / Menús",     "subtitle": "Construye el menú de navegación del producto final." },
-    "export":   { "title": "Exportar",              "subtitle": "Compila el producto final a .exe (Windows)." }
+    "brand": {
+      "title": "Marca / Diseño",
+      "subtitle": "Personaliza la apariencia del producto final."
+    },
+    "leads": {
+      "title": "Captura de Leads",
+      "subtitle": "Configura el opt-in / squeeze page inicial."
+    },
+    "banners": {
+      "title": "Banners",
+      "subtitle": "Añade banners publicitarios y enlaces de afiliado."
+    },
+    "content": {
+      "title": "Contenido / Menús",
+      "subtitle": "Construye el menú de navegación del producto final."
+    },
+    "export": {
+      "title": "Exportar",
+      "subtitle": "Compila el producto final a .exe (Windows)."
+    }
   },
   "sidebar": {
     "preview_btn": "Previsualizar Producto",
@@ -167,7 +182,7 @@
     "config_error_prefix": "Error al cargar la configuración: ",
     "empty_heading": "Bienvenido",
     "empty_text": "Selecciona una opción del menú para comenzar.",
-    "optin_default_heading": "Introduce tu email para acceder",
+    "optin_default_heading": "Introduzca su correo electrónico para acceder al contenido",
     "optin_bypass": "Cerrar / Omitir Bloqueo (prueba)"
   },
   "corners": {

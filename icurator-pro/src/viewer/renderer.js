@@ -37,6 +37,21 @@ function tr(key, fallback) {
   return typeof cur === 'string' ? cur : (fallback !== undefined ? fallback : key);
 }
 
+/* Apply translations to any element marked with data-i18n attributes.
+ * Called once on boot after the locale dictionary is loaded — keeps the
+ * static markup (corners, optin heading, etc.) in sync with the chosen
+ * language without each piece of code needing to set textContent manually. */
+function applyI18n(root = document) {
+  root.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = tr(el.getAttribute('data-i18n'), null);
+    if (typeof v === 'string') el.textContent = v;
+  });
+  root.querySelectorAll('[data-i18n-html]').forEach((el) => {
+    const v = tr(el.getAttribute('data-i18n-html'), null);
+    if (typeof v === 'string') el.innerHTML = v;
+  });
+}
+
 /* -------- Helpers -------- */
 
 function applyTheme(brand) {
@@ -231,7 +246,7 @@ async function renderBanner(banner) {
 /* -------- Opt-in gate -------- */
 
 function showOptinGate(leads) {
-  optinHeading.textContent = leads.heading || tr('viewer.optin_default_heading', 'Insira o seu email para aceder');
+  optinHeading.textContent = leads.heading || tr('viewer.optin_default_heading', 'Insira o seu email para aceder ao conteúdo');
   optinFormHtml.innerHTML = leads.formHtml || '<p style="color:#64748b;text-align:center">(Sem formulário definido.)</p>';
   optinOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -261,6 +276,10 @@ async function boot() {
     const { dict } = await window.viewer.loadLocale(lang);
     i18nDict = dict || {};
   } catch (_) { i18nDict = {}; }
+
+  // Translate every static element marked with data-i18n (corners, optin
+  // heading, etc.) now that the dictionary is loaded.
+  applyI18n();
 
   applyTheme(config.brand);
   const title = (config.brand && config.brand.title) || 'LaunchBox Pro';
