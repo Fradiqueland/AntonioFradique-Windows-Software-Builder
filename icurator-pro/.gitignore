@@ -3,12 +3,6 @@ release/
 dist/
 out/
 
-# Binários SFX 7-Zip descarregados por scripts/fetch-sfx.js — não comitar.
-# O lockfile scripts/sfx-hashes.json (pinning SHA-256) É comitado.
-src/builder/bin/*.exe
-src/builder/bin/*.sfx
-
-# Template do Viewer gerado por electron-builder (build:viewer-template).
 src/builder/templates/
 
 # Conteúdo do utilizador em runtime (Builder em dev).

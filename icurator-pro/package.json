@@ -8,7 +8,6 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging",
-    "setup:sfx": "node scripts/fetch-sfx.js",
     "build:viewer-template": "electron-builder --config build-configs/viewer-template.json --win --x64 && node scripts/prune-viewer-template.js",
     "prune:viewer-template": "node scripts/prune-viewer-template.js",
     "build:builder": "electron-builder --config build-configs/builder.json --win --x64"

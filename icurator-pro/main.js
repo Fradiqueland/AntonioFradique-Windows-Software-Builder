@@ -522,7 +522,7 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     // Pre-flight checks with very specific error messages — these are the
     // most common reasons exports fail on a fresh dev setup.
     if (!fs.existsSync(sevenZipExe)) {
-      throw new Error('Binário 7za.exe em falta em ' + sfxBinDir + '. Corra "npm run setup:sfx" ou siga as instruções em src/builder/bin/README.md');
+      throw new Error('Binário 7za.exe em falta em ' + sfxBinDir + '. Verifique src/builder/bin/ — os binários SFX são commitados no repositório (ver src/builder/bin/README.md).');
     }
     if (!fs.existsSync(sfxStub)) {
       throw new Error('SFX 7zsd_All_x64.sfx em falta em ' + sfxBinDir + '. Siga as instruções em src/builder/bin/README.md');
