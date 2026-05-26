@@ -1,42 +1,22 @@
 {
   "name": "launchbox-pro",
   "version": "0.1.0",
-  "description": "LaunchBox Pro — Dashboard Creator / Content Packager (Electron)",
+  "description": "LaunchBox Pro — Dashboard Creator + Universal Viewer (Electron)",
   "main": "main.js",
   "author": "LaunchBox Pro",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
+    "start:viewer": "electron .",
     "dev": "electron . --enable-logging",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win --x64",
-    "build:master": "electron-builder --win"
+    "build:builder": "electron-builder --config build-configs/builder.json --win --x64",
+    "build:viewer": "electron-builder --config build-configs/viewer.json --win --x64"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10"
   },
   "devDependencies": {
     "electron": "^32.0.0",
     "electron-builder": "^25.0.0"
-  },
-  "build": {
-    "appId": "com.launchbox.pro",
-    "productName": "LaunchBox Pro",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "preload-viewer.js",
-      "src/**/*",
-      "locales/**/*",
-      "assets/**/*"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
   }
 }

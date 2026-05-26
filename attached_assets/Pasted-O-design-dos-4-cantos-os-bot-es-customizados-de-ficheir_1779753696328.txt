@@ -1,0 +1,24 @@
+O design dos 4 cantos, os botões customizados de ficheiro e o sistema multi-idioma (PT/EN/ES/FR) ficaram absolutamente perfeitos! Excelente trabalho de refatorização.
+
+Agora vamos resolver o último desafio técnico antes do lançamento: o utilizador final não tem o Node.js instalado no PC dele, por isso o `electron-builder` falha ao tentar compilar um .exe a partir de um Construtor já instalado. Vamos adotar a estratégia de "Visualizador Universal + Ficheiro de Projeto", que é muito mais leve e infalível.
+
+Por favor, altera a lógica do separador "Exportar" e do Viewer para o seguinte comportamento:
+
+### 1. No Construtor (Separador Exportar):
+* Altera o botão principal para: "Exportar Ficheiro de Projeto (.lbpro)".
+* Quando clicado, em vez de disparar o `electron-builder`, o `main.js` deve usar o módulo `adm-zip` (ou criar uma pasta estruturada) para compactar num único ficheiro ZIP (mas com a extensão `.lbpro`) os seguintes elementos:
+  - O `project-config.json` atualizado.
+  - A pasta `dist-assets/` com todos os PDFs, imagens e banners do criador.
+* O software deve abrir uma janela nativa do Windows para o utilizador escolher onde quer guardar o ficheiro `seu-curso.lbpro`.
+
+### 2. No Modo Visualizador (Viewer):
+* Se o Viewer for aberto e NÃO encontrar um ficheiro `project-config.json` na sua pasta de resources (o que significa que é o Visualizador Universal limpo), ele deve mostrar um ecrã inicial elegante (com suporte i18n): "Bem-vindo ao LaunchBox Viewer. Por favor, selecione o seu ficheiro de projeto .lbpro para começar."
+* Adiciona um botão "Carregar Projeto". Quando o cliente clica, abre um `dialog.showOpenDialog` para selecionar o ficheiro `.lbpro`.
+* Ao selecionar, o `main.js` descompacta temporariamente o ficheiro para a diretoria local e o Viewer carrega o curso instantaneamente (mantendo os meus 4 cantos promocionais fixos no ecrã).
+
+### 3. Scripts de Compilação Finais no package.json:
+Garante que temos dois comandos de build claros para mim no terminal:
+1. `"build:builder"` -> Compila o Construtor em .exe (que eu vou oferecer gratuitamente para as pessoas criarem os cursos e exportarem em .lbpro).
+2. `"build:viewer"` -> Compila o Visualizador Universal em .exe (que os criadores vão enviar aos clientes deles junto com o ficheiro .lbpro do curso).
+
+Implementa esta lógica de empacotamento e avisa-me quando o sistema de exportação .lbpro estiver concluído!

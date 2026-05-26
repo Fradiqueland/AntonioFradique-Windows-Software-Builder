@@ -1,54 +1,67 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const AdmZip = require('adm-zip');
 
 /* =========================================================
- * PATHS: dev vs packaged, Builder vs Course
+ * APP MODE: Builder vs Viewer
  * =========================================================
  *
- * The Windows installer puts the app under Program Files which is read-only
- * for the standard user. Writing inside `process.resourcesPath` from there
- * throws EPERM and crashes the app on first save. To avoid that:
+ * Two separate Windows .exe builds share this codebase:
  *
- *  - COURSE (packaged with bundled flag) → read-only resources. Viewer never
- *    writes, so this is fine.
- *  - BUILDER (packaged WITHOUT flag)     → `app.getPath('userData')`, which
- *    on Windows is `%AppData%\LaunchBox Pro` and is always writable.
- *  - DEV (not packaged, either mode)     → next to main.js as before.
+ *   - Builder (.exe) — the creator's tool. Edits project-config.json and
+ *     copies assets into dist-assets/. Exports the whole project as a
+ *     single .lbpro file (ZIP) that the creator emails / uploads to clients.
  *
- * The course-mode flag is detected ONLY in the bundled resources path. We
- * never check userData for it — otherwise a stale flag left in the Builder's
- * writable dir (e.g. after a failed export) would permanently turn the
- * installed Builder into a Viewer.
+ *   - Viewer  (.exe) — a universal player. Ships empty. On first launch it
+ *     asks the user to pick a .lbpro file, extracts it into userData, then
+ *     plays the course. Same .exe can be re-used for any course.
+ *
+ * Mode is decided by `app-mode.json`, injected as an extraResource by each
+ * build config (build-configs/builder.json vs build-configs/viewer.json).
+ * In dev we default to Builder; set LAUNCHBOX_MODE=viewer to test the
+ * Viewer welcome flow in dev.
  */
+function detectMode() {
+  if (app.isPackaged) {
+    const flagPath = path.join(process.resourcesPath, 'app-mode.json');
+    try {
+      const parsed = JSON.parse(fs.readFileSync(flagPath, 'utf-8'));
+      return parsed && parsed.mode === 'viewer' ? 'viewer' : 'builder';
+    } catch (err) {
+      return 'builder';
+    }
+  }
+  return process.env.LAUNCHBOX_MODE === 'viewer' ? 'viewer' : 'builder';
+}
+
+const APP_MODE = detectMode();
+const isViewer = APP_MODE === 'viewer';
+
+// Give each mode its own userData directory so the Builder and the Viewer
+// installed side-by-side never share/overwrite each other's state. MUST be
+// called before any app.getPath('userData') access.
+app.setName(isViewer ? 'LaunchBox Viewer' : 'LaunchBox Builder');
+
+/* =========================================================
+ * PATHS — always writable.
+ *
+ * Packaged: app.getPath('userData') (per-mode, see app.setName above) —
+ *           e.g. %AppData%\LaunchBox Builder vs %AppData%\LaunchBox Viewer.
+ * Dev:      next to main.js, as before.
+ *
+ * The Viewer extracts a .lbpro into WRITE_BASE; the Builder edits and packs
+ * from WRITE_BASE. No more read-only resource paths involved — the EPERM
+ * class of bug from earlier is gone for both modes.
+ * ========================================================= */
 const PROJECT_ROOT = __dirname;
-
-const BUNDLED_BASE = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
-const BUNDLED_FLAG_PATH = path.join(BUNDLED_BASE, 'data', 'course-mode.flag');
-const isCourse = fs.existsSync(BUNDLED_FLAG_PATH);
-
-// Writable base for the active mode (Builder uses userData when packaged).
-const WRITE_BASE = app.isPackaged
-  ? (isCourse ? process.resourcesPath : app.getPath('userData'))
-  : PROJECT_ROOT;
+const WRITE_BASE = app.isPackaged ? app.getPath('userData') : PROJECT_ROOT;
 
 const DATA_DIR = path.join(WRITE_BASE, 'data');
 const ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
 const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
 const ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
-// Flag staged inside the Builder's writable data dir during export:build, so
-// it gets picked up by extraResources and travels into the new course .exe.
-// Always removed in the `finally` block after the build.
-const COURSE_FLAG_PATH = path.join(DATA_DIR, 'course-mode.flag');
-
-// Build artifacts (Builder-only) live in writable locations.
-const BUILD_CONFIG_PATH = app.isPackaged
-  ? path.join(app.getPath('userData'), 'build-config.json')
-  : path.join(PROJECT_ROOT, 'build-config.json');
-const RELEASE_DIR = app.isPackaged
-  ? path.join(app.getPath('documents'), 'LaunchBox Pro Builds')
-  : path.join(PROJECT_ROOT, 'release');
 
 const FILE_TYPES = new Set(['pdf', 'launch']);
 const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
@@ -68,7 +81,7 @@ const DEFAULT_CONFIG = {
     banner: { enabled: false, image: null, url: '', position: 'bottom' }
   },
   content: [],
-  export: { iconPath: null } // 'data/icon.ico' when set
+  export: { iconPath: null }
 };
 
 let builderWindow = null;
@@ -77,12 +90,12 @@ let viewerWindow = null;
 /* -------- FS helpers -------- */
 
 function ensureDirs() {
-  // Skip in Course mode — DATA_DIR/ASSETS_DIR are inside read-only resources
-  // and already exist (bundled by electron-builder). Trying to mkdir there
-  // would throw EPERM on a clean install.
-  if (isCourse) return;
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(ASSETS_DIR)) fs.mkdirSync(ASSETS_DIR, { recursive: true });
+}
+
+function hasProject() {
+  return fs.existsSync(CONFIG_PATH);
 }
 
 function deepMerge(defaults, override) {
@@ -105,15 +118,17 @@ function deepMerge(defaults, override) {
 }
 
 function readConfig() {
-  ensureDirs();
+  // In Viewer mode, NEVER auto-create defaults — that would mask the "no
+  // project loaded" state. Return defaults in-memory only.
   if (!fs.existsSync(CONFIG_PATH)) {
+    if (isViewer) return structuredClone(DEFAULT_CONFIG);
+    ensureDirs();
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
     return structuredClone(DEFAULT_CONFIG);
   }
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return deepMerge(DEFAULT_CONFIG, parsed);
+    return deepMerge(DEFAULT_CONFIG, JSON.parse(raw));
   } catch (err) {
     console.error('Failed to read config, returning defaults:', err);
     return structuredClone(DEFAULT_CONFIG);
@@ -121,6 +136,7 @@ function readConfig() {
 }
 
 function writeConfig(config) {
+  if (isViewer) throw new Error('Viewer não pode escrever configuração.');
   ensureDirs();
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 }
@@ -181,9 +197,10 @@ function createViewerWindow({ standalone = false } = {}) {
     return viewerWindow;
   }
 
-  const config = readConfig();
-  const title = (config.brand && config.brand.title) ? config.brand.title : 'LaunchBox Pro';
-  const bgColor = (config.brand && config.brand.colors && config.brand.colors.background) || '#f8fafc';
+  const projectExists = hasProject();
+  const config = projectExists ? readConfig() : null;
+  const title = (config && config.brand && config.brand.title) || 'LaunchBox Viewer';
+  const bgColor = (config && config.brand && config.brand.colors && config.brand.colors.background) || '#f8fafc';
 
   viewerWindow = new BrowserWindow({
     width: 1280,
@@ -218,9 +235,14 @@ function createViewerWindow({ standalone = false } = {}) {
 ipcMain.handle('config:load', () => readConfig());
 ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
 
-/* -------- IPC: brand -------- */
+/* -------- IPC: brand (Builder only) -------- */
+
+function assertBuilder() {
+  if (isViewer) throw new Error('Operação não disponível no Viewer.');
+}
 
 ipcMain.handle('brand:save', (_event, payload) => {
+  assertBuilder();
   const current = readConfig();
   let logoRelative = current.brand.logo || null;
 
@@ -252,9 +274,10 @@ ipcMain.handle('brand:save', (_event, payload) => {
   return updated;
 });
 
-/* -------- IPC: marketing -------- */
+/* -------- IPC: marketing (Builder only) -------- */
 
 ipcMain.handle('marketing:saveLeads', (_event, payload) => {
+  assertBuilder();
   const current = readConfig();
   const updated = {
     ...current,
@@ -274,6 +297,7 @@ ipcMain.handle('marketing:saveLeads', (_event, payload) => {
 });
 
 ipcMain.handle('marketing:saveBanners', (_event, payload) => {
+  assertBuilder();
   const current = readConfig();
   let bannerRelative = current.marketing.banner.image || null;
 
@@ -305,7 +329,7 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
   return updated;
 });
 
-/* -------- IPC: content -------- */
+/* -------- IPC: content (Builder only) -------- */
 
 function sanitizeModule(mod) {
   if (!mod || typeof mod !== 'object') return null;
@@ -323,6 +347,7 @@ function findModuleById(list, id) {
 }
 
 ipcMain.handle('content:save', (_event, payload) => {
+  assertBuilder();
   const current = readConfig();
   const previous = Array.isArray(current.content) ? current.content : [];
   const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
@@ -376,6 +401,7 @@ ipcMain.handle('content:save', (_event, payload) => {
 /* -------- IPC: viewer + shell -------- */
 
 ipcMain.handle('viewer:open', () => {
+  assertBuilder();
   createViewerWindow({ standalone: false });
   return true;
 });
@@ -406,9 +432,136 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
   return true;
 });
 
-/* -------- IPC: export (Passo 6) -------- */
+/* -------- IPC: viewer-only project loading -------- */
+
+ipcMain.handle('viewer:hasProject', () => hasProject());
+
+ipcMain.handle('viewer:locale', () => {
+  // Best-effort: if a project is already loaded, use its language. Otherwise
+  // try the OS locale and fall back to English (most universal welcome).
+  if (hasProject()) {
+    try {
+      const cfg = readConfig();
+      if (cfg && ALLOWED_LANGS.has(cfg.language)) return cfg.language;
+    } catch (_) { /* ignore */ }
+  }
+  const osLang = (app.getLocale() || 'en').slice(0, 2).toLowerCase();
+  return ALLOWED_LANGS.has(osLang) ? osLang : 'en';
+});
+
+function extractLbpro(lbproPath) {
+  // Transactional extraction: unpack to a temp staging dir, validate the
+  // resulting project-config.json, and ONLY then swap it into place. If
+  // anything fails (corrupt zip, invalid JSON, IO error) the previous loaded
+  // project is left untouched — no data loss for the end user.
+  if (!fs.existsSync(lbproPath)) {
+    throw new Error('Ficheiro não encontrado: ' + lbproPath);
+  }
+
+  const zip = new AdmZip(lbproPath);
+  const entries = zip.getEntries();
+  const hasConfig = entries.some((e) =>
+    e.entryName === 'data/project-config.json' || e.entryName === 'project-config.json'
+  );
+  if (!hasConfig) {
+    throw new Error('Pacote inválido: project-config.json em falta.');
+  }
+
+  const stagingRoot = path.join(WRITE_BASE, '.lbpro-staging-' + Date.now());
+  const stagingData = path.join(stagingRoot, 'data');
+  const stagingAssets = path.join(stagingRoot, 'dist-assets');
+
+  try {
+    fs.mkdirSync(stagingData, { recursive: true });
+    fs.mkdirSync(stagingAssets, { recursive: true });
+
+    for (const entry of entries) {
+      if (entry.isDirectory) continue;
+      const name = entry.entryName.replace(/\\/g, '/');
+      let destRel = null;
+
+      if (name === 'project-config.json' || name === 'data/project-config.json') {
+        destRel = path.join('data', 'project-config.json');
+      } else if (name === 'icon.ico' || name === 'data/icon.ico') {
+        destRel = path.join('data', 'icon.ico');
+      } else if (name.startsWith('dist-assets/') && !name.includes('..') && !name.includes('\0')) {
+        destRel = name.split('/').join(path.sep);
+      } else {
+        // Unknown entry — skip for safety (zip-slip / unexpected files).
+        continue;
+      }
+
+      const destAbs = path.join(stagingRoot, destRel);
+      const resolved = path.resolve(destAbs);
+      // Zip-slip belt + suspenders: ensure resolved path stays inside staging.
+      if (!resolved.startsWith(path.resolve(stagingRoot) + path.sep)) continue;
+      fs.mkdirSync(path.dirname(destAbs), { recursive: true });
+      fs.writeFileSync(destAbs, entry.getData());
+    }
+
+    // Validate: project-config.json must exist AND parse as JSON.
+    const stagedConfigPath = path.join(stagingData, 'project-config.json');
+    if (!fs.existsSync(stagedConfigPath)) {
+      throw new Error('Pacote inválido: project-config.json em falta após extração.');
+    }
+    try {
+      JSON.parse(fs.readFileSync(stagedConfigPath, 'utf-8'));
+    } catch (parseErr) {
+      throw new Error('Pacote inválido: project-config.json corrompido (' + parseErr.message + ').');
+    }
+
+    // All good — swap in. Only AFTER successful validation do we touch the
+    // currently-loaded project. Order: remove old, then rename staging dirs
+    // into place. Brief window between the two renames is unavoidable, but
+    // there's no other process competing for these paths.
+    if (fs.existsSync(DATA_DIR)) fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    if (fs.existsSync(ASSETS_DIR)) fs.rmSync(ASSETS_DIR, { recursive: true, force: true });
+    fs.renameSync(stagingData, DATA_DIR);
+    fs.renameSync(stagingAssets, ASSETS_DIR);
+  } finally {
+    // Best-effort cleanup of the staging root regardless of outcome.
+    try {
+      if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true });
+    } catch (_) { /* ignore */ }
+  }
+}
+
+// Guard against re-entrant viewer:loadProject invocations. A double-click on
+// the welcome button (or two windows somehow) would otherwise interleave
+// staging/rename operations on the same paths.
+let loadProjectBusy = false;
+
+ipcMain.handle('viewer:loadProject', async () => {
+  if (loadProjectBusy) {
+    throw new Error('Já existe uma operação de carregamento em curso.');
+  }
+  loadProjectBusy = true;
+  try {
+    const owner = viewerWindow || builderWindow || null;
+    const result = await dialog.showOpenDialog(owner, {
+      title: 'Selecionar ficheiro de projeto (.lbpro)',
+      properties: ['openFile'],
+      filters: [{ name: 'LaunchBox Project', extensions: ['lbpro'] }]
+    });
+    if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+      return { ok: false, cancelled: true };
+    }
+    const filePath = result.filePaths[0];
+    try {
+      extractLbpro(filePath);
+      return { ok: true, path: filePath };
+    } catch (err) {
+      throw new Error((err && err.message) ? err.message : String(err));
+    }
+  } finally {
+    loadProjectBusy = false;
+  }
+});
+
+/* -------- IPC: export (Builder only) -------- */
 
 ipcMain.handle('export:saveIcon', (_event, payload) => {
+  assertBuilder();
   if (!payload || !payload.sourcePath) {
     throw new Error('Caminho do ícone em falta.');
   }
@@ -427,97 +580,69 @@ ipcMain.handle('export:saveIcon', (_event, payload) => {
   return updated;
 });
 
-function generateBuildConfig(config) {
-  const productName = (config.brand && config.brand.title)
-    ? config.brand.title.trim()
-    : 'LaunchBox Pro';
-  const hasIcon = !!(config.export && config.export.iconPath) && fs.existsSync(ICON_DEST_PATH);
-
-  return {
-    appId: 'com.launchbox.product',
-    productName,
-    directories: { output: RELEASE_DIR },
-    files: ['main.js', 'preload.js', 'preload-viewer.js', 'src/**/*', 'locales/**/*'],
-    extraResources: [
-      // Absolute paths — DATA_DIR / ASSETS_DIR resolve to the Builder's
-      // writable area (userData when packaged, project root in dev). The
-      // course-mode flag staged in DATA_DIR travels here.
-      { from: DATA_DIR, to: 'data' },
-      { from: ASSETS_DIR, to: 'dist-assets' }
-    ],
-    win: {
-      target: 'nsis',
-      ...(hasIcon ? { icon: ICON_DEST_PATH } : {})
-    },
-    nsis: {
-      oneClick: false,
-      allowToChangeInstallationDirectory: true
-    }
-  };
-}
-
-ipcMain.handle('export:build', async (event) => {
-  if (app.isPackaged) {
-    throw new Error('A compilação só pode ser feita em modo desenvolvimento.');
-  }
-
+ipcMain.handle('export:packLbpro', async (event, payload) => {
+  assertBuilder();
   const send = (msg, kind = 'info') => {
     event.sender.send('export:log', { msg, kind });
   };
 
-  send('A preparar configuração de build…');
-  const config = readConfig();
-  const buildConfig = generateBuildConfig(config);
+  send('A preparar pacote .lbpro…');
 
-  fs.writeFileSync(BUILD_CONFIG_PATH, JSON.stringify(buildConfig, null, 2), 'utf-8');
-  send('build-config.json criado em ' + BUILD_CONFIG_PATH);
-  send('A garantir que data/project-config.json e dist-assets/ existem para extraResources…');
-  ensureDirs();
-
-  send('A iniciar electron-builder. Este passo pode demorar 1-3 minutos…');
-
-  let builder;
-  try {
-    builder = require('electron-builder');
-  } catch (err) {
-    throw new Error('electron-builder não está instalado. Corra: npm install');
+  if (!hasProject()) {
+    throw new Error('Sem projeto para exportar. Guarde primeiro pelo menos uma definição no Construtor.');
   }
 
-  // Drop the course-mode flag so it gets bundled via extraResources. This is
-  // ALWAYS removed in the finally block, so the dev Construtor never gets
-  // accidentally locked into Viewer mode.
-  try {
-    fs.writeFileSync(COURSE_FLAG_PATH, '', 'utf-8');
-    send('Flag de curso criada (data/course-mode.flag) — será embutida no .exe.');
-  } catch (err) {
-    throw new Error('Não foi possível criar a flag de curso: ' + err.message);
+  const defaultName = (payload && typeof payload.defaultName === 'string' && payload.defaultName.trim())
+    ? payload.defaultName.trim()
+    : 'meu-curso';
+
+  const result = await dialog.showSaveDialog(builderWindow, {
+    title: (payload && payload.dialogTitle) || 'Guardar ficheiro de projeto',
+    defaultPath: sanitizeFilename(defaultName) + '.lbpro',
+    filters: [{ name: 'LaunchBox Project', extensions: ['lbpro'] }]
+  });
+  if (result.canceled || !result.filePath) {
+    send('Operação cancelada.', 'info');
+    return { ok: false, cancelled: true };
   }
 
+  let target = result.filePath;
+  if (!target.toLowerCase().endsWith('.lbpro')) target += '.lbpro';
+
+  send('A comprimir ficheiros…');
   try {
-    const outFiles = await builder.build({
-      targets: builder.Platform.WINDOWS.createTarget(),
-      config: buildConfig
-    });
-    send('Build concluído com sucesso.', 'success');
-    (outFiles || []).forEach((f) => send('Gerado: ' + f, 'success'));
-    send('Abra a pasta de build para encontrar o instalador: ' + RELEASE_DIR, 'success');
-    return { ok: true, files: outFiles || [] };
-  } catch (err) {
-    const msg = err && err.message ? err.message : String(err);
-    send('Erro durante o build: ' + msg, 'error');
-    throw err;
-  } finally {
-    // CRÍTICO: remover a flag para que o Construtor não fique "trancado" em
-    // modo curso no próximo arranque.
-    try {
-      if (fs.existsSync(COURSE_FLAG_PATH)) {
-        fs.unlinkSync(COURSE_FLAG_PATH);
-        send('Flag de curso removida do Construtor (limpeza pós-build).');
+    const zip = new AdmZip();
+    // 1. Project config (mandatory)
+    zip.addLocalFile(CONFIG_PATH, 'data');
+    // 2. Optional icon
+    if (fs.existsSync(ICON_DEST_PATH)) zip.addLocalFile(ICON_DEST_PATH, 'data');
+    // 3. All assets (PDFs, images, launch files, logo, banner…)
+    if (fs.existsSync(ASSETS_DIR)) {
+      const entries = fs.readdirSync(ASSETS_DIR);
+      for (const name of entries) {
+        const full = path.join(ASSETS_DIR, name);
+        try {
+          if (fs.statSync(full).isFile()) {
+            zip.addLocalFile(full, 'dist-assets');
+          }
+        } catch (_) { /* skip unreadable entries */ }
       }
-    } catch (cleanupErr) {
-      send('Aviso: não foi possível remover course-mode.flag: ' + cleanupErr.message, 'error');
     }
+    zip.writeZip(target);
+    send('Pacote guardado: ' + target, 'success');
+    return { ok: true, path: target };
+  } catch (err) {
+    send('Erro: ' + (err && err.message ? err.message : err), 'error');
+    throw err;
   }
+});
+
+ipcMain.handle('export:revealInFolder', (_event, p) => {
+  if (typeof p === 'string' && p && fs.existsSync(p)) {
+    shell.showItemInFolder(p);
+    return true;
+  }
+  return false;
 });
 
 /* -------- IPC: i18n -------- */
@@ -533,6 +658,7 @@ ipcMain.handle('i18n:loadLocale', (_event, lang) => {
 });
 
 ipcMain.handle('language:save', (_event, lang) => {
+  assertBuilder();
   const safeLang = ALLOWED_LANGS.has(lang) ? lang : 'pt';
   const current = readConfig();
   const updated = { ...current, language: safeLang };
@@ -540,28 +666,22 @@ ipcMain.handle('language:save', (_event, lang) => {
   return updated;
 });
 
-ipcMain.handle('export:openReleaseFolder', () => {
-  if (fs.existsSync(RELEASE_DIR)) shell.openPath(RELEASE_DIR);
-  return true;
-});
-
 /* -------- App lifecycle -------- */
 
 app.whenReady().then(() => {
-  ensureDirs();
-  readConfig();
-
-  if (isCourse) {
-    // Curso exportado: arranca direto no Viewer maximizado, sem Construtor.
+  if (isViewer) {
+    // Universal Viewer: do NOT bootstrap a default config. The renderer asks
+    // viewer:hasProject and shows the welcome / load screen if empty.
     createViewerWindow({ standalone: true });
   } else {
-    // Master App (Construtor) — dev OU .exe distribuído ao próprio criador.
+    ensureDirs();
+    readConfig();
     createBuilderWindow();
   }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      if (isCourse) createViewerWindow({ standalone: true });
+      if (isViewer) createViewerWindow({ standalone: true });
       else createBuilderWindow();
     }
   });

@@ -361,22 +361,22 @@
             </div>
 
             <div class="form-group">
-              <button type="button" class="btn btn-export" id="export-build" data-i18n="export.build_btn">
-                Compilar Produto Final (.exe)
+              <button type="button" class="btn btn-export" id="export-build" data-i18n="export.pack_btn">
+                Exportar Ficheiro de Projeto (.lbpro)
               </button>
-              <small data-i18n="export.build_help">
-                A compilação corre o electron-builder e gera o instalador em release/. Pode demorar alguns minutos.
+              <small data-i18n="export.pack_help">
+                Será aberta uma janela para escolher onde guardar o ficheiro do curso. O cliente final abre-o no LaunchBox Viewer — não precisa de instalar nada extra.
               </small>
             </div>
 
             <div class="form-group">
               <label data-i18n="export.status_label">Status</label>
               <div class="export-log" id="export-log">
-                <div class="export-log-empty" data-i18n="export.log_empty">Sem atividade. Clique em "Compilar" para começar.</div>
+                <div class="export-log-empty" data-i18n="export.log_empty">Sem atividade. Clique em "Exportar" para começar.</div>
               </div>
               <div class="form-actions" style="border-top: none; padding-top: 8px;">
-                <button type="button" class="btn btn-ghost btn-sm" id="export-open-release" data-i18n="export.open_release_btn">
-                  Abrir pasta release/
+                <button type="button" class="btn btn-ghost btn-sm" id="export-open-release" data-i18n="export.reveal_btn" disabled>
+                  Mostrar ficheiro na pasta
                 </button>
               </div>
             </div>

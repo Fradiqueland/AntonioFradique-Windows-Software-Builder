@@ -134,6 +134,15 @@
     "build_btn": "Compiler le Produit Final (.exe)",
     "build_help": "La compilation exécute electron-builder et génère l'installateur dans release/. Peut prendre quelques minutes.",
     "status_label": "Statut",
+    "pack_btn": "Exporter le Fichier de Projet (.lbpro)",
+    "pack_help": "Une fenêtre s'ouvrira pour choisir où enregistrer le fichier du cours. Le client final l'ouvre dans LaunchBox Viewer — rien d'autre à installer.",
+    "reveal_btn": "Afficher le fichier dans le dossier",
+    "pack_log": {
+      "starting": "Préparation du paquet .lbpro…",
+      "saved_prefix": "Paquet enregistré : ",
+      "cancelled": "Annulé.",
+      "failed_prefix": "Erreur : "
+    },
     "log_empty": "Aucune activité. Cliquez sur \"Compiler\" pour commencer.",
     "open_release_btn": "Ouvrir le dossier release/",
     "summary": {
@@ -154,6 +163,26 @@
       "finished_prefix": "Compilation terminée. Fichiers : ",
       "failed_prefix": "Échec : "
     }
+  },
+  "viewer": {
+    "welcome_title": "Bienvenue dans LaunchBox Viewer",
+    "welcome_subtitle": "Veuillez sélectionner votre fichier de projet .lbpro pour commencer.",
+    "welcome_window_title": "LaunchBox Viewer",
+    "load_project_btn": "Charger le Projet",
+    "loading": "Chargement du projet…",
+    "load_error_prefix": "Erreur lors du chargement du projet : ",
+    "menu_empty": "Aucun module configuré.",
+    "url_missing": "URL manquante.",
+    "pdf_missing": "Fichier PDF manquant.",
+    "file_missing": "Fichier manquant.",
+    "video_missing": "URL de la vidéo manquante.",
+    "external_error_prefix": "Erreur d'ouverture du lien : ",
+    "launch_error_prefix": "Erreur de lancement du fichier : ",
+    "config_error_prefix": "Erreur lors du chargement de la configuration : ",
+    "empty_heading": "Bienvenue",
+    "empty_text": "Sélectionnez une option dans le menu pour commencer.",
+    "optin_default_heading": "Saisissez votre email pour accéder",
+    "optin_bypass": "Fermer / Contourner le blocage (test)"
   },
   "corners": {
     "music_label": "Ma musique",

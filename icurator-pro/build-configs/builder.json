@@ -1,0 +1,29 @@
+{
+  "appId": "com.launchbox.builder",
+  "productName": "LaunchBox Builder",
+  "directories": {
+    "output": "dist/builder",
+    "buildResources": "build-configs/build-resources"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    "preload-viewer.js",
+    "src/**/*",
+    "locales/**/*",
+    "!build-configs/**",
+    "!dist/**",
+    "!release/**"
+  ],
+  "extraResources": [
+    { "from": "build-configs/builder-mode/app-mode.json", "to": "app-mode.json" }
+  ],
+  "win": {
+    "target": "nsis"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "shortcutName": "LaunchBox Builder"
+  }
+}

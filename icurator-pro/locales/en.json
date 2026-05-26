@@ -134,6 +134,15 @@
     "build_btn": "Compile Final Product (.exe)",
     "build_help": "Compilation runs electron-builder and generates the installer in release/. May take a few minutes.",
     "status_label": "Status",
+    "pack_btn": "Export Project File (.lbpro)",
+    "pack_help": "A window will open so you can choose where to save the course file. The end client opens it in LaunchBox Viewer — nothing extra to install.",
+    "reveal_btn": "Show file in folder",
+    "pack_log": {
+      "starting": "Preparing .lbpro package…",
+      "saved_prefix": "Package saved: ",
+      "cancelled": "Cancelled.",
+      "failed_prefix": "Error: "
+    },
     "log_empty": "No activity. Click \"Compile\" to start.",
     "open_release_btn": "Open release/ folder",
     "summary": {
@@ -154,6 +163,26 @@
       "finished_prefix": "Build finished. Files: ",
       "failed_prefix": "Failed: "
     }
+  },
+  "viewer": {
+    "welcome_title": "Welcome to LaunchBox Viewer",
+    "welcome_subtitle": "Please select your .lbpro project file to begin.",
+    "welcome_window_title": "LaunchBox Viewer",
+    "load_project_btn": "Load Project",
+    "loading": "Loading project…",
+    "load_error_prefix": "Error loading project: ",
+    "menu_empty": "No modules configured.",
+    "url_missing": "URL missing.",
+    "pdf_missing": "PDF file missing.",
+    "file_missing": "File missing.",
+    "video_missing": "Video URL missing.",
+    "external_error_prefix": "Error opening link: ",
+    "launch_error_prefix": "Error launching file: ",
+    "config_error_prefix": "Error loading configuration: ",
+    "empty_heading": "Welcome",
+    "empty_text": "Select an option from the menu to start.",
+    "optin_default_heading": "Enter your email to access",
+    "optin_bypass": "Close / Bypass Gate (test)"
   },
   "corners": {
     "music_label": "My music",

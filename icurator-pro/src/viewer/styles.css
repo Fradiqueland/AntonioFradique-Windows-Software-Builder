@@ -176,6 +176,64 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
 .viewer-empty h2 { font-size: 22px; font-weight: 600; color: var(--v-text-dark); margin-bottom: 8px; }
 .viewer-empty p  { font-size: 14px; }
 
+/* ===== Welcome overlay (Universal Viewer first launch) ===== */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998; /* below opt-in (9999), above everything else */
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: auto;
+}
+.welcome-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 48px 40px 40px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  color: var(--v-text-dark);
+}
+.welcome-modal h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  line-height: 1.25;
+  color: #0f172a;
+}
+.welcome-modal p {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #475569;
+  margin-bottom: 28px;
+}
+.welcome-btn {
+  background: var(--v-button, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.05s ease, filter 0.15s ease;
+  font-family: inherit;
+}
+.welcome-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.welcome-btn:active:not(:disabled) { transform: translateY(1px); }
+.welcome-btn:disabled { opacity: 0.6; cursor: progress; }
+.welcome-status {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #64748b;
+  min-height: 18px;
+}
+.welcome-status.error { color: #dc2626; }
+
 /* ===== Opt-in overlay ===== */
 .optin-overlay {
   position: fixed;

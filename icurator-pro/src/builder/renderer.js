@@ -815,22 +815,38 @@ if (window.icurator && window.icurator.onExportLog) {
   window.icurator.onExportLog(({ msg, kind }) => appendExportLog(msg, kind));
 }
 
+// Tracks the last successfully written .lbpro path so the "reveal in folder"
+// button knows what to show. Reset to null after each new export attempt.
+let lastExportedPath = null;
+
 exportBuildBtn.addEventListener('click', async () => {
   exportBuildBtn.disabled = true;
   exportLogEl.innerHTML = '';
-  appendExportLog(t('export.log.starting'));
+  appendExportLog(t('export.pack_log.starting'));
+  lastExportedPath = null;
+  exportOpenReleaseBtn.disabled = true;
   try {
-    const result = await window.icurator.buildProduct();
-    appendExportLog(t('export.log.finished_prefix') + (result.files || []).length, 'success');
+    // Use the project title (sanitised by main) as the default file name so
+    // the user gets "Curso de Photoshop.lbpro" pre-filled in the save dialog.
+    const cfg = await window.icurator.loadConfig();
+    const suggested = (cfg && cfg.brand && cfg.brand.title) || 'meu-curso';
+    const result = await window.icurator.packLbpro({ defaultName: suggested });
+    if (result && result.cancelled) {
+      appendExportLog(t('export.pack_log.cancelled'));
+    } else if (result && result.ok && result.path) {
+      lastExportedPath = result.path;
+      exportOpenReleaseBtn.disabled = false;
+      appendExportLog(t('export.pack_log.saved_prefix') + result.path, 'success');
+    }
   } catch (err) {
-    appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
+    appendExportLog(t('export.pack_log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     exportBuildBtn.disabled = false;
   }
 });
 
 exportOpenReleaseBtn.addEventListener('click', () => {
-  window.icurator.openReleaseFolder();
+  if (lastExportedPath) window.icurator.revealInFolder(lastExportedPath);
 });
 
 loadInitialConfig();

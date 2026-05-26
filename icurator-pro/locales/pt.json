@@ -134,6 +134,15 @@
     "build_btn": "Compilar Produto Final (.exe)",
     "build_help": "A compilação corre o electron-builder e gera o instalador em release/. Pode demorar alguns minutos.",
     "status_label": "Status",
+    "pack_btn": "Exportar Ficheiro de Projeto (.lbpro)",
+    "pack_help": "Será aberta uma janela para escolher onde guardar o ficheiro do curso. O cliente final abre-o no LaunchBox Viewer — não precisa de instalar nada extra.",
+    "reveal_btn": "Mostrar ficheiro na pasta",
+    "pack_log": {
+      "starting": "A preparar pacote .lbpro…",
+      "saved_prefix": "Pacote guardado: ",
+      "cancelled": "Operação cancelada.",
+      "failed_prefix": "Erro: "
+    },
     "log_empty": "Sem atividade. Clique em \"Compilar\" para começar.",
     "open_release_btn": "Abrir pasta release/",
     "summary": {
@@ -154,6 +163,26 @@
       "finished_prefix": "Compilação terminada. Ficheiros: ",
       "failed_prefix": "Falhou: "
     }
+  },
+  "viewer": {
+    "welcome_title": "Bem-vindo ao LaunchBox Viewer",
+    "welcome_subtitle": "Por favor, selecione o seu ficheiro de projeto .lbpro para começar.",
+    "welcome_window_title": "LaunchBox Viewer",
+    "load_project_btn": "Carregar Projeto",
+    "loading": "A carregar projeto…",
+    "load_error_prefix": "Erro ao carregar projeto: ",
+    "menu_empty": "Nenhum módulo configurado.",
+    "url_missing": "URL em falta.",
+    "pdf_missing": "Ficheiro PDF em falta.",
+    "file_missing": "Ficheiro em falta.",
+    "video_missing": "URL de vídeo em falta.",
+    "external_error_prefix": "Erro ao abrir link: ",
+    "launch_error_prefix": "Erro ao lançar ficheiro: ",
+    "config_error_prefix": "Erro ao carregar configuração: ",
+    "empty_heading": "Bem-vindo",
+    "empty_text": "Selecione uma opção no menu para começar.",
+    "optin_default_heading": "Insira o seu email para aceder",
+    "optin_bypass": "Fechar / Ignorar Bloqueio (teste)"
   },
   "corners": {
     "music_label": "Minha música",
