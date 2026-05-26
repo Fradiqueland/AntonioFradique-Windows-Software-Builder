@@ -36,9 +36,12 @@ const BIN_DIR = path.join(__dirname, '..', 'src', 'builder', 'bin');
 const HASHES_FILE = path.join(__dirname, 'sfx-hashes.json');
 const README_HINT = 'Consulte src/builder/bin/README.md para download manual.';
 
-// URLs estáveis. Se mudarem, atualize aqui ou descarregue manualmente.
-const URL_7ZR = 'https://www.7-zip.org/a/7zr.exe';
-const URL_7Z_EXTRA = 'https://www.7-zip.org/a/7z2409-extra.7z';
+// URLs estáveis. O 7-zip.org tira URLs directas quando lança versão nova
+// (o ficheiro 7z2409-extra.7z passou a dar 404 quando saiu a 24.10), por
+// isso usamos o repo oficial GitHub do Igor Pavlov (ip7z/7zip), onde as
+// releases têm URLs permanentes que não desaparecem.
+const URL_7ZR = 'https://github.com/ip7z/7zip/releases/download/24.09/7zr.exe';
+const URL_7Z_EXTRA = 'https://github.com/ip7z/7zip/releases/download/24.09/7z2409-extra.7z';
 const URL_SFX_MOD = 'https://github.com/chrislake/7zsfxmm/releases/download/1.7.1.3937/7zsd_All_x64.sfx';
 
 function download(url, dest, redirectsLeft = 5) {
