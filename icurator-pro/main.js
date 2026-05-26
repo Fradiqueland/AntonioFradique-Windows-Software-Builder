@@ -569,12 +569,15 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
       }
     }
 
-    /* 3. Compress the staging tree into a .7z payload. -mx=3 is a good
-     *    trade-off: ~30% faster than -mx=5 with only marginally larger
-     *    output for already-compressed media (PDFs, PNGs, JPEGs). */
-    send('A comprimir conteúdos (pode demorar)…');
+    /* 3. Compress the staging tree into a .7z payload. Compressão ultra
+     *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
+     *    final do curso (~60-70 MB típico) e reduzir o tempo de extracção
+     *    em %TEMP% no PC do aluno. -mmt=on usa múltiplos núcleos. */
+    send('A comprimir conteúdos com compressão máxima (pode demorar)…');
     await execFileP(sevenZipExe, [
-      'a', '-t7z', '-mx=3', '-mmt=on', '-bsp0', '-bso0',
+      'a', '-t7z',
+      '-m0=lzma2', '-mx=9', '-md=64m', '-mfb=64',
+      '-mmt=on', '-bsp0', '-bso0',
       archivePath, stagingRoot + path.sep + '*'
     ], { maxBuffer: 1024 * 1024 * 64, windowsHide: true });
 

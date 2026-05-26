@@ -1,0 +1,24 @@
+Avançamos com a estratégia do .EXE Único, mas precisamos de otimizar o tamanho final do ficheiro e reduzir os falsos positivos do antivírus. Aplica as seguintes técnicas de compressão e limpeza:
+
+### 1. Limpeza Radical do Template do Viewer (Electron Pruning)
+Antes de o template do Viewer ser considerado pronto para o pacote, o script de build deve apagar ficheiros desnecessários do Electron que inflam o tamanho:
+* Apaga a pasta `locales/` nativa do Electron (que contém ficheiros .pak para idiomas como coreano, chinês, etc. — não confundir com as nossas traduções na raiz). Mantém apenas `en-US.pak` e `pt-BR.pak`/`pt-PT.pak` se existirem.
+* Garante que as Developer Tools estão completamente desativadas e os ficheiros de símbolos (`.pdb`) foram removidos.
+
+### 2. Compressão Máxima com 7-Zip (LZMA2)
+Na função `export:build` no `main.js`, quando invocares o `7za.exe` para criar o executável SFX final do curso:
+* Configura os parâmetros do comando para usar compressão ultra: `-m0=lzma2 -mx=9 -md=64m -mfb=64`.
+* Isto vai garantir que o .exe final do curso fique o mais pequeno possível (perto dos 60MB-70MB), reduzindo também o tempo de extração na pasta %TEMP% do aluno.
+
+Aplica estas otimizações no motor de exportação SFX e confirma o novo tamanho estimado do template!
+
+Ajuste urgente de Layout/CSS: O botão promocional do canto superior esquerdo ("Minha musica") ainda está a sobrepor-se e a tapar elementos visuais ou textos dentro do painel lateral esquerdo.
+
+Por favor, refina o posicionamento CSS deste bloco específico em `src/builder/styles.css` e em `src/viewer/styles.css`:
+
+1. Identifica o contentor do canto superior esquerdo (ex: `.corner.top-left`).
+2. Modifica a sua propriedade `top` para que ele desça um pouco e fique numa zona neutra da barra lateral, evitando o logótipo e o dropdown de idiomas. Experimenta aumentar para `top: 70px` ou `top: 80px` (ajusta conforme necessário para que fique perfeitamente centralizado verticalmente num espaço vazio).
+3. Garante que a margem esquerda (`left: 8px` ou similar) está bem alinhada com o preenchimento (padding) interno da sidebar para manter a simetria visual.
+4. Aplica o mesmo alinhamento inteligente no Visualizador, garantindo que o design fica limpo e profissional em ambos os modos.
+
+Faz esta alteração estética e avisa-me assim que o elemento estiver reposicionado sem sobreposições!

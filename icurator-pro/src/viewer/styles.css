@@ -301,7 +301,11 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
 }
 .corner .corner-link:hover { text-decoration: underline; color: #bfdbfe; }
 
-.corner-tl { top: 6px;    left: 6px;  }
+/* top-left fica DENTRO da sidebar (width 280px), abaixo do bloco da
+ * marca. .viewer-brand pode chegar a ~190px com logo (22+22 padding +
+ * 110 max-height + 12 gap + ~25 título), por isso 200px garante que
+ * nunca sobrepõe — mesmo com logo ao tamanho máximo. */
+.corner-tl { top: 200px;  left: 18px; max-width: 240px; }
 .corner-tr { top: 6px;    right: 6px; text-align: right; }
 /* Empurrado para fora da sidebar do Viewer (~260px) para não tapar o menu. */
 .corner-bl { bottom: 6px; left: 280px; max-width: 320px; }
