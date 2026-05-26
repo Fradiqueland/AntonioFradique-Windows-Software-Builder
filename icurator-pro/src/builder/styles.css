@@ -773,8 +773,8 @@ select.select:focus {
  * fora da sidebar — assim deixa de haver conflito com o menu e com o
  * selector de idiomas. .corner-tl fica à esquerda do .corner-tr, com uma
  * margem elegante entre os dois. */
-.corner-tl { top: 15px; right: 230px; max-width: 260px; text-align: right; }
-.corner-tr { top: 6px;  right: 6px;   text-align: right; }
+.corner-tl { top: 6px; right: 230px; max-width: 260px; text-align: right; }
+.corner-tr { top: 6px; right: 6px;   text-align: right; }
 /* Bottom-left empurrado para a direita para NÃO tapar o botão azul
  * "Pré-visualizar Produto" da sidebar (~280px de largura). */
 .corner-bl { bottom: 6px; left: 300px; max-width: 320px; }
