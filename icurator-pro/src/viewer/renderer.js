@@ -1,12 +1,11 @@
-/* Viewer renderer — universal player.
+/* Viewer renderer — SFX-stamped player.
  *
- * Two boot paths:
- *   1. No project loaded (Universal Viewer fresh install) — show welcome
- *      overlay, ask the user to pick a .lbpro, extract, then re-boot.
- *   2. Project loaded — render brand/menu/banner/opt-in from project-config.
+ * No welcome / load-project flow: the Viewer is only ever launched from a
+ * self-extracting course .exe, which guarantees project-config.json exists
+ * at process.resourcesPath/data/project-config.json before this code runs.
  *
- * The 4 promotional corners are wired exactly once and remain visible on
- * both paths (welcome screen + course screen).
+ * The 4 promotional corners are wired in index.html and stay visible above
+ * everything else (z-index in styles.css).
  */
 
 const sidebarEl = document.getElementById('viewer-sidebar');
@@ -23,19 +22,12 @@ const optinBypass = document.getElementById('optin-bypass');
 const bannerTopEl = document.getElementById('banner-top');
 const bannerBottomEl = document.getElementById('banner-bottom');
 
-const welcomeOverlay = document.getElementById('welcome-overlay');
-const welcomeTitleEl = document.getElementById('welcome-title');
-const welcomeSubtitleEl = document.getElementById('welcome-subtitle');
-const welcomeLoadBtn = document.getElementById('welcome-load-btn');
-const welcomeStatusEl = document.getElementById('welcome-status');
-
 let config = null;
 let i18nDict = {};
 
 /* -------- i18n (minimal — viewer doesn't expose a language switcher) -------- */
 
 function tr(key, fallback) {
-  // Tiny dotted-path lookup against the loaded locale dictionary.
   const parts = key.split('.');
   let cur = i18nDict;
   for (const p of parts) {
@@ -43,16 +35,6 @@ function tr(key, fallback) {
     else return fallback !== undefined ? fallback : key;
   }
   return typeof cur === 'string' ? cur : (fallback !== undefined ? fallback : key);
-}
-
-async function loadViewerLocale() {
-  try {
-    const lang = await window.viewer.detectLocale();
-    const { dict } = await window.viewer.loadLocale(lang);
-    i18nDict = dict || {};
-  } catch (_) {
-    i18nDict = {};
-  }
 }
 
 /* -------- Helpers -------- */
@@ -263,74 +245,22 @@ function hideOptinGate() {
 optinBypass.addEventListener('click', hideOptinGate);
 optinFormHtml.addEventListener('submit', (e) => { e.preventDefault(); hideOptinGate(); });
 
-/* -------- Welcome screen (Universal Viewer) -------- */
-
-function applyWelcomeTranslations() {
-  welcomeTitleEl.textContent = tr('viewer.welcome_title', 'Bem-vindo ao LaunchBox Viewer');
-  welcomeSubtitleEl.textContent = tr('viewer.welcome_subtitle',
-    'Por favor, selecione o seu ficheiro de projeto .lbpro para começar.');
-  welcomeLoadBtn.textContent = tr('viewer.load_project_btn', 'Carregar Projeto');
-  document.title = tr('viewer.welcome_window_title', 'LaunchBox Viewer');
-  // Also fill the optin bypass label since that's the only other always-present
-  // bit of UI text.
-  optinBypass.textContent = tr('viewer.optin_bypass', optinBypass.textContent);
-}
-
-function showWelcome() {
-  applyWelcomeTranslations();
-  welcomeStatusEl.textContent = '';
-  welcomeStatusEl.classList.remove('error');
-  welcomeOverlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-function hideWelcome() {
-  welcomeOverlay.classList.add('hidden');
-  document.body.style.overflow = '';
-}
-
-welcomeLoadBtn.addEventListener('click', async () => {
-  welcomeLoadBtn.disabled = true;
-  welcomeStatusEl.classList.remove('error');
-  welcomeStatusEl.textContent = tr('viewer.loading', 'A carregar projeto…');
-  try {
-    const result = await window.viewer.loadProject();
-    if (result && result.cancelled) {
-      welcomeStatusEl.textContent = '';
-      return;
-    }
-    if (result && result.ok) {
-      // Re-boot in "loaded" mode now that the extraction wrote the new
-      // project-config.json + dist-assets/ into our writable area.
-      hideWelcome();
-      await bootLoaded();
-    }
-  } catch (err) {
-    welcomeStatusEl.classList.add('error');
-    welcomeStatusEl.textContent = tr('viewer.load_error_prefix', 'Erro ao carregar projeto: ')
-      + (err && err.message ? err.message : String(err));
-  } finally {
-    welcomeLoadBtn.disabled = false;
-  }
-});
-
 /* -------- Boot -------- */
 
-async function bootLoaded() {
+async function boot() {
   try {
     config = await window.viewer.loadConfig();
   } catch (err) {
-    showToast(tr('viewer.config_error_prefix', 'Erro ao carregar configuração: ') + err.message);
+    showToast('Erro ao carregar configuração: ' + (err && err.message ? err.message : err));
     return;
   }
 
-  // Re-load locale based on the project's saved language preference.
-  if (config && config.language) {
-    try {
-      const { dict } = await window.viewer.loadLocale(config.language);
-      i18nDict = dict || i18nDict;
-    } catch (_) { /* keep previous dict */ }
-  }
+  // Load locale based on the saved project language (defaults to 'pt').
+  const lang = (config && config.language) || 'pt';
+  try {
+    const { dict } = await window.viewer.loadLocale(lang);
+    i18nDict = dict || {};
+  } catch (_) { i18nDict = {}; }
 
   applyTheme(config.brand);
   const title = (config.brand && config.brand.title) || 'LaunchBox Pro';
@@ -348,7 +278,6 @@ async function bootLoaded() {
     logoEl.removeAttribute('src');
   }
 
-  // Translate the static "viewer-empty" placeholder in the stage area.
   const emptyHeading = stageEl.querySelector('.viewer-empty h2');
   const emptyText = stageEl.querySelector('.viewer-empty p');
   if (emptyHeading) emptyHeading.textContent = tr('viewer.empty_heading', 'Bem-vindo');
@@ -361,24 +290,9 @@ async function bootLoaded() {
   if (leads && leads.enabled) showOptinGate(leads);
 }
 
-async function boot() {
-  await loadViewerLocale();
-  let projectLoaded = false;
-  try {
-    projectLoaded = await window.viewer.hasProject();
-  } catch (_) {
-    projectLoaded = false;
-  }
-  if (projectLoaded) {
-    await bootLoaded();
-  } else {
-    showWelcome();
-  }
-}
-
 /* =========================================================
  * Cantos promocionais — abrem no browser do sistema.
- * Hardcoded em index.html, sempre visíveis (welcome + course).
+ * Hardcoded em index.html, sempre visíveis.
  * ========================================================= */
 function wireCornerLinks() {
   document.querySelectorAll('.corner-link[data-ext]').forEach((a) => {

@@ -131,20 +131,11 @@
     "icon_help": "The icon must be a .ico file (Windows format).",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
-    "build_btn": "Compile Final Product (.exe)",
-    "build_help": "Compilation runs electron-builder and generates the installer in release/. May take a few minutes.",
+    "build_btn": "Export Final Product (.exe)",
+    "build_help": "Creates a single ready-to-ship .exe. The student double-clicks and the course opens instantly — nothing to install. Can take 30s to 1 min to generate.",
     "status_label": "Status",
-    "pack_btn": "Export Project File (.lbpro)",
-    "pack_help": "A window will open so you can choose where to save the course file. The end client opens it in LaunchBox Viewer — nothing extra to install.",
-    "reveal_btn": "Show file in folder",
-    "pack_log": {
-      "starting": "Preparing .lbpro package…",
-      "saved_prefix": "Package saved: ",
-      "cancelled": "Cancelled.",
-      "failed_prefix": "Error: "
-    },
-    "log_empty": "No activity. Click \"Compile\" to start.",
-    "open_release_btn": "Open release/ folder",
+    "log_empty": "No activity. Click \"Export\" to start.",
+    "open_release_btn": "Show file in folder",
     "summary": {
       "project": "Project",
       "modules": "Modules",
@@ -159,18 +150,13 @@
       "default_electron": "Default Electron"
     },
     "log": {
-      "starting": "Starting build…",
-      "finished_prefix": "Build finished. Files: ",
-      "failed_prefix": "Failed: "
+      "starting": "Preparing export…",
+      "saved_prefix": "Course saved to: ",
+      "cancelled": "Cancelled.",
+      "failed_prefix": "Error: "
     }
   },
   "viewer": {
-    "welcome_title": "Welcome to LaunchBox Viewer",
-    "welcome_subtitle": "Please select your .lbpro project file to begin.",
-    "welcome_window_title": "LaunchBox Viewer",
-    "load_project_btn": "Load Project",
-    "loading": "Loading project…",
-    "load_error_prefix": "Error loading project: ",
     "menu_empty": "No modules configured.",
     "url_missing": "URL missing.",
     "pdf_missing": "PDF file missing.",

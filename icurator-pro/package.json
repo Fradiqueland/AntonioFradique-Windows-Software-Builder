@@ -1,20 +1,18 @@
 {
   "name": "launchbox-pro",
   "version": "0.1.0",
-  "description": "LaunchBox Pro — Dashboard Creator + Universal Viewer (Electron)",
+  "description": "LaunchBox Pro — Construtor (gera .exe único por curso via SFX 7-Zip)",
   "main": "main.js",
   "author": "LaunchBox Pro",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "start:viewer": "electron .",
     "dev": "electron . --enable-logging",
-    "build:builder": "electron-builder --config build-configs/builder.json --win --x64",
-    "build:viewer": "electron-builder --config build-configs/viewer.json --win --x64"
+    "setup:sfx": "node scripts/fetch-sfx.js",
+    "build:viewer-template": "electron-builder --config build-configs/viewer-template.json --win --x64",
+    "build:builder": "electron-builder --config build-configs/builder.json --win --x64"
   },
-  "dependencies": {
-    "adm-zip": "^0.5.10"
-  },
+  "dependencies": {},
   "devDependencies": {
     "electron": "^32.0.0",
     "electron-builder": "^25.0.0"

@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('icurator', {
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   openViewer: () => ipcRenderer.invoke('viewer:open'),
   saveIcon: (data) => ipcRenderer.invoke('export:saveIcon', data),
-  packLbpro: (data) => ipcRenderer.invoke('export:packLbpro', data),
+  buildExe: (data) => ipcRenderer.invoke('export:buildExe', data),
   revealInFolder: (filePath) => ipcRenderer.invoke('export:revealInFolder', filePath),
   onExportLog: (cb) => {
     const listener = (_e, payload) => cb(payload);

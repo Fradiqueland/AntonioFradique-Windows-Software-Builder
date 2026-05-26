@@ -131,20 +131,11 @@
     "icon_help": "O ícone tem de ser obrigatoriamente um ficheiro .ico (formato Windows).",
     "icon_must_be_ico": "Por favor, escolha um ficheiro .ico",
     "summary_label": "Resumo do Projeto",
-    "build_btn": "Compilar Produto Final (.exe)",
-    "build_help": "A compilação corre o electron-builder e gera o instalador em release/. Pode demorar alguns minutos.",
+    "build_btn": "Exportar Produto Final (.exe)",
+    "build_help": "Cria um único .exe pronto a entregar. O aluno dá duplo-clique e o curso abre imediatamente — sem instalar nada. Pode demorar 30s a 1 min a gerar.",
     "status_label": "Status",
-    "pack_btn": "Exportar Ficheiro de Projeto (.lbpro)",
-    "pack_help": "Será aberta uma janela para escolher onde guardar o ficheiro do curso. O cliente final abre-o no LaunchBox Viewer — não precisa de instalar nada extra.",
-    "reveal_btn": "Mostrar ficheiro na pasta",
-    "pack_log": {
-      "starting": "A preparar pacote .lbpro…",
-      "saved_prefix": "Pacote guardado: ",
-      "cancelled": "Operação cancelada.",
-      "failed_prefix": "Erro: "
-    },
-    "log_empty": "Sem atividade. Clique em \"Compilar\" para começar.",
-    "open_release_btn": "Abrir pasta release/",
+    "log_empty": "Sem atividade. Clique em \"Exportar\" para começar.",
+    "open_release_btn": "Mostrar ficheiro na pasta",
     "summary": {
       "project": "Projeto",
       "modules": "Módulos",
@@ -159,18 +150,13 @@
       "default_electron": "Default Electron"
     },
     "log": {
-      "starting": "A iniciar compilação…",
-      "finished_prefix": "Compilação terminada. Ficheiros: ",
-      "failed_prefix": "Falhou: "
+      "starting": "A preparar exportação…",
+      "saved_prefix": "Curso guardado em: ",
+      "cancelled": "Operação cancelada.",
+      "failed_prefix": "Erro: "
     }
   },
   "viewer": {
-    "welcome_title": "Bem-vindo ao LaunchBox Viewer",
-    "welcome_subtitle": "Por favor, selecione o seu ficheiro de projeto .lbpro para começar.",
-    "welcome_window_title": "LaunchBox Viewer",
-    "load_project_btn": "Carregar Projeto",
-    "loading": "A carregar projeto…",
-    "load_error_prefix": "Erro ao carregar projeto: ",
     "menu_empty": "Nenhum módulo configurado.",
     "url_missing": "URL em falta.",
     "pdf_missing": "Ficheiro PDF em falta.",

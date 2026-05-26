@@ -1,27 +1,39 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
-const AdmZip = require('adm-zip');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const execFileP = promisify(execFile);
 
 /* =========================================================
- * APP MODE: Builder vs Viewer
+ * APP MODE: Builder vs Viewer (SFX-stamped)
  * =========================================================
  *
- * Two separate Windows .exe builds share this codebase:
+ * Distribution model is now "single self-extracting .exe per course":
  *
  *   - Builder (.exe) — the creator's tool. Edits project-config.json and
- *     copies assets into dist-assets/. Exports the whole project as a
- *     single .lbpro file (ZIP) that the creator emails / uploads to clients.
+ *     copies assets into dist-assets/. On "Export" it stamps the current
+ *     project into a copy of the Viewer template, compresses everything
+ *     with 7-Zip and concatenates the 7-Zip SFX module to produce a single
+ *     self-extracting .exe — e.g. "Curso de Photoshop.exe".
  *
- *   - Viewer  (.exe) — a universal player. Ships empty. On first launch it
- *     asks the user to pick a .lbpro file, extracts it into userData, then
- *     plays the course. Same .exe can be re-used for any course.
+ *   - Viewer (Electron app) — the player. NEVER distributed standalone.
+ *     It is built once by the developer (`npm run build:viewer-template`)
+ *     into `src/builder/templates/viewer-core/win-unpacked/` and shipped
+ *     INSIDE the Builder install as an extraResource. The Builder uses it
+ *     as a template for every course export.
+ *
+ *     When the student double-clicks Curso.exe the SFX module extracts the
+ *     whole payload to a fresh `%TEMP%\7zXXXX\` folder and launches the
+ *     stamped Viewer from there. The course's project-config.json and
+ *     dist-assets/ live next to the Viewer's app.asar (under resources/),
+ *     so the Viewer just reads them from `process.resourcesPath`.
  *
  * Mode is decided by `app-mode.json`, injected as an extraResource by each
- * build config (build-configs/builder.json vs build-configs/viewer.json).
- * In dev we default to Builder; set LAUNCHBOX_MODE=viewer to test the
- * Viewer welcome flow in dev.
+ * build config. In dev we default to Builder; set LAUNCHBOX_MODE=viewer to
+ * preview the Viewer flow from a dev project tree.
  */
 function detectMode() {
   if (app.isPackaged) {
@@ -39,24 +51,38 @@ function detectMode() {
 const APP_MODE = detectMode();
 const isViewer = APP_MODE === 'viewer';
 
-// Give each mode its own userData directory so the Builder and the Viewer
-// installed side-by-side never share/overwrite each other's state. MUST be
-// called before any app.getPath('userData') access.
-app.setName(isViewer ? 'LaunchBox Viewer' : 'LaunchBox Builder');
+// Per-mode app naming + cache location.
+//
+// Builder packaged → standalone install → userData in %AppData%\LaunchBox Builder.
+// Viewer packaged → SFX-extracted to %TEMP% → redirect userData INTO the
+//   same temp folder so all Electron cache (Cache, Cookies, GPUCache, …)
+//   disappears with the SFX cleanup when the student closes the course.
+if (isViewer) {
+  app.setName('LaunchBox Viewer');
+  if (app.isPackaged) {
+    const exeDir = path.dirname(app.getPath('exe'));
+    app.setPath('userData', path.join(exeDir, '.electron-cache'));
+  }
+} else {
+  app.setName('LaunchBox Builder');
+}
 
 /* =========================================================
- * PATHS — always writable.
+ * PATHS
  *
- * Packaged: app.getPath('userData') (per-mode, see app.setName above) —
- *           e.g. %AppData%\LaunchBox Builder vs %AppData%\LaunchBox Viewer.
- * Dev:      next to main.js, as before.
- *
- * The Viewer extracts a .lbpro into WRITE_BASE; the Builder edits and packs
- * from WRITE_BASE. No more read-only resource paths involved — the EPERM
- * class of bug from earlier is gone for both modes.
+ * Builder dev      → PROJECT_ROOT (next to main.js)
+ * Builder packaged → app.getPath('userData') (writable AppData)
+ * Viewer dev       → PROJECT_ROOT (lets the Builder's "Preview" reuse it)
+ * Viewer packaged  → process.resourcesPath (the SFX-extracted resources
+ *                    folder, sibling of app.asar — read & write OK because
+ *                    it's a fresh %TEMP% extraction every launch)
  * ========================================================= */
 const PROJECT_ROOT = __dirname;
-const WRITE_BASE = app.isPackaged ? app.getPath('userData') : PROJECT_ROOT;
+const WRITE_BASE = (() => {
+  if (!app.isPackaged) return PROJECT_ROOT;
+  if (isViewer) return process.resourcesPath;
+  return app.getPath('userData');
+})();
 
 const DATA_DIR = path.join(WRITE_BASE, 'data');
 const ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
@@ -68,6 +94,19 @@ const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'lau
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
 const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr']);
+
+/* SFX export resources (Builder packaged only).
+ * In dev: bin/template lives under the project tree.
+ * In prod: shipped as extraResources of the Builder install. */
+function getSfxBinDir() {
+  if (app.isPackaged) return path.join(process.resourcesPath, 'sfx');
+  return path.join(PROJECT_ROOT, 'src', 'builder', 'bin');
+}
+function getViewerTemplateDir() {
+  if (app.isPackaged) return path.join(process.resourcesPath, 'viewer-template');
+  // electron-builder's dir target writes into <output>/win-unpacked/
+  return path.join(PROJECT_ROOT, 'src', 'builder', 'templates', 'viewer-core', 'win-unpacked');
+}
 
 const DEFAULT_CONFIG = {
   language: 'pt',
@@ -118,9 +157,10 @@ function deepMerge(defaults, override) {
 }
 
 function readConfig() {
-  // In Viewer mode, NEVER auto-create defaults — that would mask the "no
-  // project loaded" state. Return defaults in-memory only.
   if (!fs.existsSync(CONFIG_PATH)) {
+    // Viewer in SFX mode should ALWAYS have a stamped-in project; if it
+    // doesn't, something went wrong with the export — surface defaults
+    // rather than throw, so the window still opens with the corners.
     if (isViewer) return structuredClone(DEFAULT_CONFIG);
     ensureDirs();
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
@@ -142,7 +182,7 @@ function writeConfig(config) {
 }
 
 function sanitizeFilename(name) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return String(name || '').replace(/[^a-zA-Z0-9._ -]/g, '_').trim() || 'curso';
 }
 
 function copyAssetToProject(sourcePath, prefix = 'asset') {
@@ -168,14 +208,38 @@ function resolveRelativeAsset(relativePath) {
   return path.join(WRITE_BASE, relativePath);
 }
 
+function copyDirRecursive(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) copyDirRecursive(s, d);
+    else if (entry.isFile()) fs.copyFileSync(s, d);
+  }
+}
+
+function concatFilesToTarget(sources, target) {
+  return new Promise((resolve, reject) => {
+    const out = fs.createWriteStream(target);
+    out.on('error', reject);
+    out.on('finish', resolve);
+    let i = 0;
+    function next() {
+      if (i >= sources.length) { out.end(); return; }
+      const inp = fs.createReadStream(sources[i++]);
+      inp.on('error', reject);
+      inp.on('end', next);
+      inp.pipe(out, { end: false });
+    }
+    next();
+  });
+}
+
 /* -------- Windows -------- */
 
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 1024,
-    minHeight: 680,
+    width: 1280, height: 820, minWidth: 1024, minHeight: 680,
     title: 'LaunchBox Pro — Construtor',
     backgroundColor: '#0f172a',
     webPreferences: {
@@ -196,17 +260,12 @@ function createViewerWindow({ standalone = false } = {}) {
     viewerWindow.focus();
     return viewerWindow;
   }
-
-  const projectExists = hasProject();
-  const config = projectExists ? readConfig() : null;
-  const title = (config && config.brand && config.brand.title) || 'LaunchBox Viewer';
-  const bgColor = (config && config.brand && config.brand.colors && config.brand.colors.background) || '#f8fafc';
+  const config = readConfig();
+  const title = (config.brand && config.brand.title) || 'LaunchBox Viewer';
+  const bgColor = (config.brand && config.brand.colors && config.brand.colors.background) || '#f8fafc';
 
   viewerWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 900,
-    minHeight: 600,
+    width: 1280, height: 820, minWidth: 900, minHeight: 600,
     title: standalone ? title : (title + ' — Pré-visualização'),
     backgroundColor: bgColor,
     show: false,
@@ -245,18 +304,14 @@ ipcMain.handle('brand:save', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   let logoRelative = current.brand.logo || null;
-
   if (payload && payload.logoSourcePath) {
-    if (!fs.existsSync(payload.logoSourcePath)) {
-      throw new Error('Ficheiro de logo não encontrado: ' + payload.logoSourcePath);
-    }
+    if (!fs.existsSync(payload.logoSourcePath)) throw new Error('Ficheiro de logo não encontrado: ' + payload.logoSourcePath);
     deleteAssetIfInside(logoRelative);
     logoRelative = copyAssetToProject(payload.logoSourcePath, 'logo');
   } else if (payload && payload.removeLogo) {
     deleteAssetIfInside(logoRelative);
     logoRelative = null;
   }
-
   const updated = {
     ...current,
     brand: {
@@ -285,10 +340,8 @@ ipcMain.handle('marketing:saveLeads', (_event, payload) => {
       ...current.marketing,
       leads: {
         enabled: !!(payload && payload.enabled),
-        heading: (payload && typeof payload.heading === 'string')
-          ? payload.heading.trim() : current.marketing.leads.heading,
-        formHtml: (payload && typeof payload.formHtml === 'string')
-          ? payload.formHtml : current.marketing.leads.formHtml
+        heading: (payload && typeof payload.heading === 'string') ? payload.heading.trim() : current.marketing.leads.heading,
+        formHtml: (payload && typeof payload.formHtml === 'string') ? payload.formHtml : current.marketing.leads.formHtml
       }
     }
   };
@@ -300,18 +353,14 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   let bannerRelative = current.marketing.banner.image || null;
-
   if (payload && payload.imageSourcePath) {
-    if (!fs.existsSync(payload.imageSourcePath)) {
-      throw new Error('Ficheiro de banner não encontrado: ' + payload.imageSourcePath);
-    }
+    if (!fs.existsSync(payload.imageSourcePath)) throw new Error('Ficheiro de banner não encontrado: ' + payload.imageSourcePath);
     deleteAssetIfInside(bannerRelative);
     bannerRelative = copyAssetToProject(payload.imageSourcePath, 'banner');
   } else if (payload && payload.removeImage) {
     deleteAssetIfInside(bannerRelative);
     bannerRelative = null;
   }
-
   const position = (payload && payload.position) === 'top' ? 'top' : 'bottom';
   const updated = {
     ...current,
@@ -335,8 +384,7 @@ function sanitizeModule(mod) {
   if (!mod || typeof mod !== 'object') return null;
   const type = ALL_TYPES.has(mod.type) ? mod.type : null;
   if (!type) return null;
-  const id = (typeof mod.id === 'string' && mod.id.trim())
-    ? mod.id.trim() : crypto.randomUUID();
+  const id = (typeof mod.id === 'string' && mod.id.trim()) ? mod.id.trim() : crypto.randomUUID();
   const title = (typeof mod.title === 'string' && mod.title.trim()) ? mod.title.trim() : 'Sem título';
   const data = (mod.data && typeof mod.data === 'object') ? { ...mod.data } : {};
   return { id, title, type, data };
@@ -351,13 +399,11 @@ ipcMain.handle('content:save', (_event, payload) => {
   const current = readConfig();
   const previous = Array.isArray(current.content) ? current.content : [];
   const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
-
   const nextModules = [];
   for (const raw of incoming) {
     const mod = sanitizeModule(raw);
     if (!mod) continue;
     const prev = findModuleById(previous, mod.id);
-
     if (FILE_TYPES.has(mod.type)) {
       const sourcePath = mod.data && typeof mod.data.sourcePath === 'string' ? mod.data.sourcePath : null;
       if (sourcePath) {
@@ -381,18 +427,14 @@ ipcMain.handle('content:save', (_event, payload) => {
     }
     nextModules.push(mod);
   }
-
   const keptFiles = new Set(
-    nextModules
-      .filter((m) => FILE_TYPES.has(m.type) && m.data && m.data.file)
-      .map((m) => m.data.file)
+    nextModules.filter((m) => FILE_TYPES.has(m.type) && m.data && m.data.file).map((m) => m.data.file)
   );
   for (const prev of previous) {
     if (!prev || !FILE_TYPES.has(prev.type)) continue;
     const prevFile = prev.data && prev.data.file;
     if (prevFile && !keptFiles.has(prevFile)) deleteAssetIfInside(prevFile);
   }
-
   const updated = { ...current, content: nextModules };
   writeConfig(updated);
   return updated;
@@ -409,231 +451,161 @@ ipcMain.handle('viewer:open', () => {
 ipcMain.handle('shell:openExternal', async (_event, url) => {
   if (typeof url !== 'string' || !url.trim()) return false;
   const trimmed = url.trim();
-  if (!/^https?:\/\//i.test(trimmed)) {
-    throw new Error('URL inválido (apenas http/https): ' + trimmed);
-  }
+  if (!/^https?:\/\//i.test(trimmed)) throw new Error('URL inválido (apenas http/https): ' + trimmed);
   await shell.openExternal(trimmed);
   return true;
 });
 
 ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
-  if (typeof relativePath !== 'string' || !relativePath) {
-    throw new Error('Caminho de ficheiro vazio.');
-  }
+  if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro vazio.');
   const abs = path.join(WRITE_BASE, relativePath);
-  if (!abs.startsWith(ASSETS_DIR)) {
-    throw new Error('Caminho não permitido: ' + relativePath);
-  }
-  if (!fs.existsSync(abs)) {
-    throw new Error('Ficheiro não existe: ' + abs);
-  }
+  if (!abs.startsWith(ASSETS_DIR)) throw new Error('Caminho não permitido: ' + relativePath);
+  if (!fs.existsSync(abs)) throw new Error('Ficheiro não existe: ' + abs);
   const errMsg = await shell.openPath(abs);
   if (errMsg) throw new Error(errMsg);
   return true;
 });
 
-/* -------- IPC: viewer-only project loading -------- */
-
-ipcMain.handle('viewer:hasProject', () => hasProject());
-
-ipcMain.handle('viewer:locale', () => {
-  // Best-effort: if a project is already loaded, use its language. Otherwise
-  // try the OS locale and fall back to English (most universal welcome).
-  if (hasProject()) {
-    try {
-      const cfg = readConfig();
-      if (cfg && ALLOWED_LANGS.has(cfg.language)) return cfg.language;
-    } catch (_) { /* ignore */ }
-  }
-  const osLang = (app.getLocale() || 'en').slice(0, 2).toLowerCase();
-  return ALLOWED_LANGS.has(osLang) ? osLang : 'en';
-});
-
-function extractLbpro(lbproPath) {
-  // Transactional extraction: unpack to a temp staging dir, validate the
-  // resulting project-config.json, and ONLY then swap it into place. If
-  // anything fails (corrupt zip, invalid JSON, IO error) the previous loaded
-  // project is left untouched — no data loss for the end user.
-  if (!fs.existsSync(lbproPath)) {
-    throw new Error('Ficheiro não encontrado: ' + lbproPath);
-  }
-
-  const zip = new AdmZip(lbproPath);
-  const entries = zip.getEntries();
-  const hasConfig = entries.some((e) =>
-    e.entryName === 'data/project-config.json' || e.entryName === 'project-config.json'
-  );
-  if (!hasConfig) {
-    throw new Error('Pacote inválido: project-config.json em falta.');
-  }
-
-  const stagingRoot = path.join(WRITE_BASE, '.lbpro-staging-' + Date.now());
-  const stagingData = path.join(stagingRoot, 'data');
-  const stagingAssets = path.join(stagingRoot, 'dist-assets');
-
-  try {
-    fs.mkdirSync(stagingData, { recursive: true });
-    fs.mkdirSync(stagingAssets, { recursive: true });
-
-    for (const entry of entries) {
-      if (entry.isDirectory) continue;
-      const name = entry.entryName.replace(/\\/g, '/');
-      let destRel = null;
-
-      if (name === 'project-config.json' || name === 'data/project-config.json') {
-        destRel = path.join('data', 'project-config.json');
-      } else if (name === 'icon.ico' || name === 'data/icon.ico') {
-        destRel = path.join('data', 'icon.ico');
-      } else if (name.startsWith('dist-assets/') && !name.includes('..') && !name.includes('\0')) {
-        destRel = name.split('/').join(path.sep);
-      } else {
-        // Unknown entry — skip for safety (zip-slip / unexpected files).
-        continue;
-      }
-
-      const destAbs = path.join(stagingRoot, destRel);
-      const resolved = path.resolve(destAbs);
-      // Zip-slip belt + suspenders: ensure resolved path stays inside staging.
-      if (!resolved.startsWith(path.resolve(stagingRoot) + path.sep)) continue;
-      fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-      fs.writeFileSync(destAbs, entry.getData());
-    }
-
-    // Validate: project-config.json must exist AND parse as JSON.
-    const stagedConfigPath = path.join(stagingData, 'project-config.json');
-    if (!fs.existsSync(stagedConfigPath)) {
-      throw new Error('Pacote inválido: project-config.json em falta após extração.');
-    }
-    try {
-      JSON.parse(fs.readFileSync(stagedConfigPath, 'utf-8'));
-    } catch (parseErr) {
-      throw new Error('Pacote inválido: project-config.json corrompido (' + parseErr.message + ').');
-    }
-
-    // All good — swap in. Only AFTER successful validation do we touch the
-    // currently-loaded project. Order: remove old, then rename staging dirs
-    // into place. Brief window between the two renames is unavoidable, but
-    // there's no other process competing for these paths.
-    if (fs.existsSync(DATA_DIR)) fs.rmSync(DATA_DIR, { recursive: true, force: true });
-    if (fs.existsSync(ASSETS_DIR)) fs.rmSync(ASSETS_DIR, { recursive: true, force: true });
-    fs.renameSync(stagingData, DATA_DIR);
-    fs.renameSync(stagingAssets, ASSETS_DIR);
-  } finally {
-    // Best-effort cleanup of the staging root regardless of outcome.
-    try {
-      if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true });
-    } catch (_) { /* ignore */ }
-  }
-}
-
-// Guard against re-entrant viewer:loadProject invocations. A double-click on
-// the welcome button (or two windows somehow) would otherwise interleave
-// staging/rename operations on the same paths.
-let loadProjectBusy = false;
-
-ipcMain.handle('viewer:loadProject', async () => {
-  if (loadProjectBusy) {
-    throw new Error('Já existe uma operação de carregamento em curso.');
-  }
-  loadProjectBusy = true;
-  try {
-    const owner = viewerWindow || builderWindow || null;
-    const result = await dialog.showOpenDialog(owner, {
-      title: 'Selecionar ficheiro de projeto (.lbpro)',
-      properties: ['openFile'],
-      filters: [{ name: 'LaunchBox Project', extensions: ['lbpro'] }]
-    });
-    if (result.canceled || !result.filePaths || !result.filePaths[0]) {
-      return { ok: false, cancelled: true };
-    }
-    const filePath = result.filePaths[0];
-    try {
-      extractLbpro(filePath);
-      return { ok: true, path: filePath };
-    } catch (err) {
-      throw new Error((err && err.message) ? err.message : String(err));
-    }
-  } finally {
-    loadProjectBusy = false;
-  }
-});
-
-/* -------- IPC: export (Builder only) -------- */
+/* -------- IPC: export (Builder only) — SFX pipeline -------- */
 
 ipcMain.handle('export:saveIcon', (_event, payload) => {
   assertBuilder();
-  if (!payload || !payload.sourcePath) {
-    throw new Error('Caminho do ícone em falta.');
-  }
-  if (!fs.existsSync(payload.sourcePath)) {
-    throw new Error('Ficheiro de ícone não encontrado.');
-  }
-  if (path.extname(payload.sourcePath).toLowerCase() !== '.ico') {
-    throw new Error('O ícone tem de ser um ficheiro .ico');
-  }
+  if (!payload || !payload.sourcePath) throw new Error('Caminho do ícone em falta.');
+  if (!fs.existsSync(payload.sourcePath)) throw new Error('Ficheiro de ícone não encontrado.');
+  if (path.extname(payload.sourcePath).toLowerCase() !== '.ico') throw new Error('O ícone tem de ser um ficheiro .ico');
   ensureDirs();
   fs.copyFileSync(payload.sourcePath, ICON_DEST_PATH);
-
   const current = readConfig();
   const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/icon.ico' } };
   writeConfig(updated);
   return updated;
 });
 
-ipcMain.handle('export:packLbpro', async (event, payload) => {
+// Guard against re-entrant export invocations from a double-click.
+let exportBusy = false;
+
+ipcMain.handle('export:buildExe', async (event, payload) => {
   assertBuilder();
+  // True re-entrancy guard: claim the lock BEFORE any async work (including
+  // the save dialog), so two rapid clicks can't both pass the check and
+  // open concurrent dialogs / interleaved exports.
+  if (exportBusy) throw new Error('Já existe uma exportação em curso.');
+  exportBusy = true;
+
   const send = (msg, kind = 'info') => {
-    event.sender.send('export:log', { msg, kind });
+    try { event.sender.send('export:log', { msg, kind }); } catch (_) { /* window closed */ }
   };
 
-  send('A preparar pacote .lbpro…');
+  const stamp = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
+  const stagingRoot = path.join(os.tmpdir(), 'lbpro-stage-' + stamp);
+  const archivePath = path.join(os.tmpdir(), 'lbpro-payload-' + stamp + '.7z');
+  const sfxCfgPath = path.join(os.tmpdir(), 'lbpro-sfx-' + stamp + '.txt');
 
-  if (!hasProject()) {
-    throw new Error('Sem projeto para exportar. Guarde primeiro pelo menos uma definição no Construtor.');
-  }
-
-  const defaultName = (payload && typeof payload.defaultName === 'string' && payload.defaultName.trim())
-    ? payload.defaultName.trim()
-    : 'meu-curso';
-
-  const result = await dialog.showSaveDialog(builderWindow, {
-    title: (payload && payload.dialogTitle) || 'Guardar ficheiro de projeto',
-    defaultPath: sanitizeFilename(defaultName) + '.lbpro',
-    filters: [{ name: 'LaunchBox Project', extensions: ['lbpro'] }]
-  });
-  if (result.canceled || !result.filePath) {
-    send('Operação cancelada.', 'info');
-    return { ok: false, cancelled: true };
-  }
-
-  let target = result.filePath;
-  if (!target.toLowerCase().endsWith('.lbpro')) target += '.lbpro';
-
-  send('A comprimir ficheiros…');
   try {
-    const zip = new AdmZip();
-    // 1. Project config (mandatory)
-    zip.addLocalFile(CONFIG_PATH, 'data');
-    // 2. Optional icon
-    if (fs.existsSync(ICON_DEST_PATH)) zip.addLocalFile(ICON_DEST_PATH, 'data');
-    // 3. All assets (PDFs, images, launch files, logo, banner…)
+    // Platform guard: 7za.exe is a Windows binary, the SFX header is for PE
+    // (Windows executable) format — running this on macOS/Linux can produce
+    // bytes but the resulting "exe" won't run on Windows reliably either.
+    if (process.platform !== 'win32') {
+      throw new Error('A exportação SFX só funciona em Windows. Execute o Construtor num PC Windows.');
+    }
+
+    if (!hasProject()) {
+      throw new Error('Sem projeto para exportar. Guarde primeiro pelo menos uma definição no Construtor.');
+    }
+
+    const sfxBinDir = getSfxBinDir();
+    const sevenZipExe = path.join(sfxBinDir, '7za.exe');
+    const sfxStub = path.join(sfxBinDir, '7zsd_All_x64.sfx');
+    const templateDir = getViewerTemplateDir();
+    const templateExe = path.join(templateDir, 'LaunchBox Viewer.exe');
+
+    // Pre-flight checks with very specific error messages — these are the
+    // most common reasons exports fail on a fresh dev setup.
+    if (!fs.existsSync(sevenZipExe)) {
+      throw new Error('Binário 7za.exe em falta em ' + sfxBinDir + '. Corra "npm run setup:sfx" ou siga as instruções em src/builder/bin/README.md');
+    }
+    if (!fs.existsSync(sfxStub)) {
+      throw new Error('SFX 7zsd_All_x64.sfx em falta em ' + sfxBinDir + '. Siga as instruções em src/builder/bin/README.md');
+    }
+    if (!fs.existsSync(templateExe)) {
+      throw new Error('Template do Viewer em falta em ' + templateDir + '. Execute primeiro: npm run build:viewer-template');
+    }
+
+    const defaultName = sanitizeFilename((payload && payload.defaultName) || 'meu-curso');
+    const result = await dialog.showSaveDialog(builderWindow, {
+      title: 'Guardar Curso (.exe)',
+      defaultPath: defaultName + '.exe',
+      filters: [{ name: 'Curso LaunchBox', extensions: ['exe'] }]
+    });
+    if (result.canceled || !result.filePath) {
+      send('Operação cancelada.', 'info');
+      return { ok: false, cancelled: true };
+    }
+    let target = result.filePath;
+    if (!target.toLowerCase().endsWith('.exe')) target += '.exe';
+
+    /* 1. Stage = copy Viewer template (LaunchBox Viewer.exe + DLLs + asar). */
+    send('A copiar template do Viewer…');
+    fs.mkdirSync(stagingRoot, { recursive: true });
+    copyDirRecursive(templateDir, stagingRoot);
+
+    /* 2. Inject the current project under <stage>/resources/ so the Viewer
+     *    finds it at process.resourcesPath/data/* exactly like in dev. */
+    send('A injectar configuração do curso…');
+    const stageResources = path.join(stagingRoot, 'resources');
+    if (!fs.existsSync(stageResources)) fs.mkdirSync(stageResources, { recursive: true });
+    const stageData = path.join(stageResources, 'data');
+    const stageAssets = path.join(stageResources, 'dist-assets');
+    fs.mkdirSync(stageData, { recursive: true });
+    fs.mkdirSync(stageAssets, { recursive: true });
+    fs.copyFileSync(CONFIG_PATH, path.join(stageData, 'project-config.json'));
+    if (fs.existsSync(ICON_DEST_PATH)) fs.copyFileSync(ICON_DEST_PATH, path.join(stageData, 'icon.ico'));
     if (fs.existsSync(ASSETS_DIR)) {
-      const entries = fs.readdirSync(ASSETS_DIR);
-      for (const name of entries) {
-        const full = path.join(ASSETS_DIR, name);
+      for (const name of fs.readdirSync(ASSETS_DIR)) {
+        const src = path.join(ASSETS_DIR, name);
         try {
-          if (fs.statSync(full).isFile()) {
-            zip.addLocalFile(full, 'dist-assets');
-          }
-        } catch (_) { /* skip unreadable entries */ }
+          if (fs.statSync(src).isFile()) fs.copyFileSync(src, path.join(stageAssets, name));
+        } catch (_) { /* skip unreadable */ }
       }
     }
-    zip.writeZip(target);
-    send('Pacote guardado: ' + target, 'success');
+
+    /* 3. Compress the staging tree into a .7z payload. -mx=3 is a good
+     *    trade-off: ~30% faster than -mx=5 with only marginally larger
+     *    output for already-compressed media (PDFs, PNGs, JPEGs). */
+    send('A comprimir conteúdos (pode demorar)…');
+    await execFileP(sevenZipExe, [
+      'a', '-t7z', '-mx=3', '-mmt=on', '-bsp0', '-bso0',
+      archivePath, stagingRoot + path.sep + '*'
+    ], { maxBuffer: 1024 * 1024 * 64, windowsHide: true });
+
+    /* 4. Build the SFX config. These directives target the chrislake/
+     *    7zsfxmm fork (7zsd_All_x64.sfx). %%T = the per-run temp folder
+     *    chosen by the SFX (auto-cleaned on RunProgram exit). GUIMode=2
+     *    suppresses the extraction UI. The quoted RunProgram path lets
+     *    the Viewer exe name contain a space ("LaunchBox Viewer.exe"). */
+    send('A construir o executável SFX…');
+    const sfxConfig =
+      ';!@Install@!UTF-8!\r\n' +
+      'GUIMode="2"\r\n' +
+      'OverwriteMode="2"\r\n' +
+      'RunProgram="\\"%%T\\\\LaunchBox Viewer.exe\\""\r\n' +
+      ';!@InstallEnd@!\r\n';
+    fs.writeFileSync(sfxCfgPath, sfxConfig, { encoding: 'utf-8' });
+
+    /* 5. The single-file magic: SFX stub + config + 7z payload, concatenated
+     *    in that order, IS a valid Windows .exe that auto-extracts + runs. */
+    await concatFilesToTarget([sfxStub, sfxCfgPath, archivePath], target);
+
+    send('Curso guardado: ' + target, 'success');
     return { ok: true, path: target };
   } catch (err) {
     send('Erro: ' + (err && err.message ? err.message : err), 'error');
     throw err;
+  } finally {
+    exportBusy = false;
+    try { if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true }); } catch (_) {}
+    try { if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath); } catch (_) {}
+    try { if (fs.existsSync(sfxCfgPath)) fs.unlinkSync(sfxCfgPath); } catch (_) {}
   }
 });
 
@@ -650,9 +622,7 @@ ipcMain.handle('export:revealInFolder', (_event, p) => {
 ipcMain.handle('i18n:loadLocale', (_event, lang) => {
   const safeLang = ALLOWED_LANGS.has(lang) ? lang : 'pt';
   const filePath = path.join(LOCALES_DIR, safeLang + '.json');
-  if (!fs.existsSync(filePath)) {
-    throw new Error('Ficheiro de tradução em falta: ' + safeLang);
-  }
+  if (!fs.existsSync(filePath)) throw new Error('Ficheiro de tradução em falta: ' + safeLang);
   const raw = fs.readFileSync(filePath, 'utf-8');
   return { lang: safeLang, dict: JSON.parse(raw) };
 });
@@ -670,15 +640,12 @@ ipcMain.handle('language:save', (_event, lang) => {
 
 app.whenReady().then(() => {
   if (isViewer) {
-    // Universal Viewer: do NOT bootstrap a default config. The renderer asks
-    // viewer:hasProject and shows the welcome / load screen if empty.
     createViewerWindow({ standalone: true });
   } else {
     ensureDirs();
     readConfig();
     createBuilderWindow();
   }
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       if (isViewer) createViewerWindow({ standalone: true });

@@ -131,20 +131,11 @@
     "icon_help": "L'icône doit obligatoirement être un fichier .ico (format Windows).",
     "icon_must_be_ico": "Veuillez choisir un fichier .ico",
     "summary_label": "Résumé du Projet",
-    "build_btn": "Compiler le Produit Final (.exe)",
-    "build_help": "La compilation exécute electron-builder et génère l'installateur dans release/. Peut prendre quelques minutes.",
+    "build_btn": "Exporter le Produit Final (.exe)",
+    "build_help": "Crée un seul .exe prêt à livrer. L'élève double-clique et le cours s'ouvre immédiatement — rien à installer. Peut prendre 30s à 1 min à générer.",
     "status_label": "Statut",
-    "pack_btn": "Exporter le Fichier de Projet (.lbpro)",
-    "pack_help": "Une fenêtre s'ouvrira pour choisir où enregistrer le fichier du cours. Le client final l'ouvre dans LaunchBox Viewer — rien d'autre à installer.",
-    "reveal_btn": "Afficher le fichier dans le dossier",
-    "pack_log": {
-      "starting": "Préparation du paquet .lbpro…",
-      "saved_prefix": "Paquet enregistré : ",
-      "cancelled": "Annulé.",
-      "failed_prefix": "Erreur : "
-    },
-    "log_empty": "Aucune activité. Cliquez sur \"Compiler\" pour commencer.",
-    "open_release_btn": "Ouvrir le dossier release/",
+    "log_empty": "Aucune activité. Cliquez sur \"Exporter\" pour commencer.",
+    "open_release_btn": "Afficher le fichier dans le dossier",
     "summary": {
       "project": "Projet",
       "modules": "Modules",
@@ -159,18 +150,13 @@
       "default_electron": "Default Electron"
     },
     "log": {
-      "starting": "Démarrage de la compilation…",
-      "finished_prefix": "Compilation terminée. Fichiers : ",
-      "failed_prefix": "Échec : "
+      "starting": "Préparation de l'exportation…",
+      "saved_prefix": "Cours enregistré dans : ",
+      "cancelled": "Annulé.",
+      "failed_prefix": "Erreur : "
     }
   },
   "viewer": {
-    "welcome_title": "Bienvenue dans LaunchBox Viewer",
-    "welcome_subtitle": "Veuillez sélectionner votre fichier de projet .lbpro pour commencer.",
-    "welcome_window_title": "LaunchBox Viewer",
-    "load_project_btn": "Charger le Projet",
-    "loading": "Chargement du projet…",
-    "load_error_prefix": "Erreur lors du chargement du projet : ",
     "menu_empty": "Aucun module configuré.",
     "url_missing": "URL manquante.",
     "pdf_missing": "Fichier PDF manquant.",

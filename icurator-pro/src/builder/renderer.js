@@ -822,24 +822,24 @@ let lastExportedPath = null;
 exportBuildBtn.addEventListener('click', async () => {
   exportBuildBtn.disabled = true;
   exportLogEl.innerHTML = '';
-  appendExportLog(t('export.pack_log.starting'));
+  appendExportLog(t('export.log.starting'));
   lastExportedPath = null;
   exportOpenReleaseBtn.disabled = true;
   try {
-    // Use the project title (sanitised by main) as the default file name so
-    // the user gets "Curso de Photoshop.lbpro" pre-filled in the save dialog.
+    // Use the project title as the default file name so the user gets
+    // "Curso de Photoshop.exe" pre-filled in the save dialog.
     const cfg = await window.icurator.loadConfig();
     const suggested = (cfg && cfg.brand && cfg.brand.title) || 'meu-curso';
-    const result = await window.icurator.packLbpro({ defaultName: suggested });
+    const result = await window.icurator.buildExe({ defaultName: suggested });
     if (result && result.cancelled) {
-      appendExportLog(t('export.pack_log.cancelled'));
+      appendExportLog(t('export.log.cancelled'));
     } else if (result && result.ok && result.path) {
       lastExportedPath = result.path;
       exportOpenReleaseBtn.disabled = false;
-      appendExportLog(t('export.pack_log.saved_prefix') + result.path, 'success');
+      appendExportLog(t('export.log.saved_prefix') + result.path, 'success');
     }
   } catch (err) {
-    appendExportLog(t('export.pack_log.failed_prefix') + (err && err.message ? err.message : err), 'error');
+    appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     exportBuildBtn.disabled = false;
   }

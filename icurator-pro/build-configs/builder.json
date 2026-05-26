@@ -2,21 +2,25 @@
   "appId": "com.launchbox.builder",
   "productName": "LaunchBox Builder",
   "directories": {
-    "output": "dist/builder",
-    "buildResources": "build-configs/build-resources"
+    "output": "dist/builder"
   },
   "files": [
     "main.js",
     "preload.js",
     "preload-viewer.js",
-    "src/**/*",
+    "src/builder/**/*",
+    "src/viewer/**/*",
     "locales/**/*",
+    "!src/builder/templates/**",
+    "!src/builder/bin/**",
     "!build-configs/**",
-    "!dist/**",
-    "!release/**"
+    "!scripts/**",
+    "!dist/**"
   ],
   "extraResources": [
-    { "from": "build-configs/builder-mode/app-mode.json", "to": "app-mode.json" }
+    { "from": "build-configs/builder-mode/app-mode.json", "to": "app-mode.json" },
+    { "from": "src/builder/bin", "to": "sfx" },
+    { "from": "src/builder/templates/viewer-core/win-unpacked", "to": "viewer-template" }
   ],
   "win": {
     "target": "nsis"
