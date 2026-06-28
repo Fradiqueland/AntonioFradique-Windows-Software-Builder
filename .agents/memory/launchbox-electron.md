@@ -118,6 +118,17 @@ always present. The export-time icon code (saveIcon persists `export.iconPath`, 
 re-reads config and stamps) is correct — don't chase it; check deps + the export log line
 (success = "Ícone personalizado aplicado…", failure now logs a loud `error`).
 
+## rcedit ENOENT from inside app.asar → fix is asar:false, NOT asarUnpack
+The `rcedit` npm wrapper (v4) computes its binary path from its own __dirname, which when
+packaged is `…/resources/app.asar/node_modules/rcedit/bin/rcedit-x64.exe`, and spawns THAT.
+You can't exec a binary from inside app.asar → `spawn … ENOENT`. `asarUnpack` does NOT help:
+even when rcedit IS unpacked to app.asar.unpacked, the wrapper still spawns the app.asar
+path (it does not rewrite to .unpacked). The robust fix is `build.asar: false` in
+package.json so everything lives in plain `resources/app/` and the binary spawns fine —
+same reason 7za.exe works (it's shipped via extraResources, outside any asar). Note: the
+course viewer-template is already shipped win-unpacked, so asar packing the Builder bought
+little anyway. (Superseded the earlier, incorrect "asarUnpack fixes the course icon" note.)
+
 ## Builder APP icon (its own exe/window) vs course .exe icon — two separate mechanisms
 The Builder's own icon = electron-builder `build.win.icon` (`build/icon.ico`, multi-size)
 for the installed exe/installer + a `BrowserWindow({icon})` PNG (put it under `src/builder/`
