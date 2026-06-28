@@ -302,61 +302,97 @@ leadsForm.addEventListener('submit', async (e) => {
  * BANNER FORM (Passo 3)
  * ========================================================= */
 const bannerForm = document.getElementById('banner-form');
-const bannerEnabled = document.getElementById('banner-enabled');
-const bannerImageInput = document.getElementById('banner-image');
-const bannerImageRemoveBtn = document.getElementById('banner-image-remove');
-const bannerImagePreview = document.getElementById('banner-image-preview');
-const bannerImageEmpty = document.getElementById('banner-image-empty');
-const bannerUrlInput = document.getElementById('banner-url');
-const bannerPositionSelect = document.getElementById('banner-position');
 const bannerSaveBtn = document.getElementById('banner-save');
 const showBannerStatus = makeStatus(document.getElementById('banner-status'));
 
-const bannerState = { pendingImageSourcePath: null, pendingRemoveImage: false, currentImageRelative: null };
+/* Dois banners independentes (topo e rodapé). Cada slot gere o seu próprio
+ * estado de imagem pendente (escolher / remover / manter). */
+function makeBannerSlot(slotName) {
+  const enabled = document.getElementById('banner-' + slotName + '-enabled');
+  const imageInput = document.getElementById('banner-' + slotName + '-image');
+  const removeBtn = document.getElementById('banner-' + slotName + '-image-remove');
+  const preview = document.getElementById('banner-' + slotName + '-image-preview');
+  const empty = document.getElementById('banner-' + slotName + '-image-empty');
+  const urlInput = document.getElementById('banner-' + slotName + '-url');
+  const state = { pendingImageSourcePath: null, pendingRemoveImage: false, currentImageRelative: null };
 
-const bannerPickLabel = document.querySelector('label[for="banner-image"]');
-if (bannerPickLabel) bannerPickLabel.addEventListener('click', async (e) => {
-  e.preventDefault();
-  const picked = await window.icurator.pickFile('image');
-  if (!picked) return;
-  bannerState.pendingImageSourcePath = picked.path;
-  bannerState.pendingRemoveImage = false;
-  setFileNameForInput(bannerImageInput, picked.name);
-  setImagePreview(bannerImagePreview, bannerImageEmpty, picked.path);
-});
+  const pickLabel = document.querySelector('label[for="banner-' + slotName + '-image"]');
+  if (pickLabel) pickLabel.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const picked = await window.icurator.pickFile('image');
+    if (!picked) return;
+    state.pendingImageSourcePath = picked.path;
+    state.pendingRemoveImage = false;
+    setFileNameForInput(imageInput, picked.name);
+    setImagePreview(preview, empty, picked.path);
+  });
 
-bannerImageRemoveBtn.addEventListener('click', () => {
-  bannerState.pendingImageSourcePath = null;
-  bannerState.pendingRemoveImage = true;
-  bannerImageInput.value = '';
-  setFileNameForInput(bannerImageInput, null);
-  setImagePreview(bannerImagePreview, bannerImageEmpty, null);
-});
+  removeBtn.addEventListener('click', () => {
+    state.pendingImageSourcePath = null;
+    state.pendingRemoveImage = true;
+    imageInput.value = '';
+    setFileNameForInput(imageInput, null);
+    setImagePreview(preview, empty, null);
+  });
+
+  return {
+    state,
+    payload() {
+      return {
+        enabled: enabled.checked,
+        url: urlInput.value,
+        imageSourcePath: state.pendingImageSourcePath || undefined,
+        removeImage: state.pendingRemoveImage || undefined
+      };
+    },
+    async load(banner) {
+      const b = banner || {};
+      enabled.checked = !!b.enabled;
+      urlInput.value = b.url || '';
+      state.currentImageRelative = b.image || null;
+      state.pendingImageSourcePath = null;
+      state.pendingRemoveImage = false;
+      setFileNameForInput(imageInput, null);
+      if (state.currentImageRelative) {
+        const abs = await window.icurator.resolveAssetPath(state.currentImageRelative);
+        setImagePreview(preview, empty, abs);
+      } else {
+        setImagePreview(preview, empty, null);
+      }
+    },
+    async afterSave(savedBanner, justPicked) {
+      const b = savedBanner || {};
+      state.pendingImageSourcePath = null;
+      state.pendingRemoveImage = false;
+      state.currentImageRelative = b.image || null;
+      imageInput.value = '';
+      setFileNameForInput(imageInput, null);
+      let previewPath = null;
+      if (state.currentImageRelative) {
+        previewPath = justPicked || await window.icurator.resolveAssetPath(state.currentImageRelative);
+      }
+      setImagePreview(preview, empty, previewPath);
+    }
+  };
+}
+
+const bannerTopSlot = makeBannerSlot('top');
+const bannerBottomSlot = makeBannerSlot('bottom');
 
 bannerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   bannerSaveBtn.disabled = true;
   showBannerStatus(t('common.saving'), '');
-  const justPickedBanner = bannerState.pendingImageSourcePath;
+  const justPickedTop = bannerTopSlot.state.pendingImageSourcePath;
+  const justPickedBottom = bannerBottomSlot.state.pendingImageSourcePath;
   try {
     const updated = await window.icurator.saveBannerConfig({
-      enabled: bannerEnabled.checked,
-      url: bannerUrlInput.value,
-      position: bannerPositionSelect.value,
-      imageSourcePath: bannerState.pendingImageSourcePath || undefined,
-      removeImage: bannerState.pendingRemoveImage || undefined
+      top: bannerTopSlot.payload(),
+      bottom: bannerBottomSlot.payload()
     });
-    bannerState.pendingImageSourcePath = null;
-    bannerState.pendingRemoveImage = false;
-    bannerState.currentImageRelative = updated.marketing.banner.image || null;
-    bannerImageInput.value = '';
-    setFileNameForInput(bannerImageInput, null);
-    let bannerPreviewPath = null;
-    if (bannerState.currentImageRelative) {
-      bannerPreviewPath = justPickedBanner
-        || await window.icurator.resolveAssetPath(bannerState.currentImageRelative);
-    }
-    setImagePreview(bannerImagePreview, bannerImageEmpty, bannerPreviewPath);
+    const banners = (updated.marketing && updated.marketing.banners) || {};
+    await bannerTopSlot.afterSave(banners.top, justPickedTop);
+    await bannerBottomSlot.afterSave(banners.bottom, justPickedBottom);
     updateExportSummary(updated);
     showBannerStatus(t('common.saved'), 'success');
   } catch (err) {
@@ -725,18 +761,10 @@ async function loadInitialConfig() {
     leadsHeading.value = leads.heading || '';
     leadsHtml.value = leads.formHtml || '';
 
-    // --- Banner
-    const banner = (config.marketing && config.marketing.banner) || {};
-    bannerEnabled.checked = !!banner.enabled;
-    bannerUrlInput.value = banner.url || '';
-    bannerPositionSelect.value = banner.position === 'top' ? 'top' : 'bottom';
-    bannerState.currentImageRelative = banner.image || null;
-    if (bannerState.currentImageRelative) {
-      const abs = await window.icurator.resolveAssetPath(bannerState.currentImageRelative);
-      setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
-    } else {
-      setImagePreview(bannerImagePreview, bannerImageEmpty, null);
-    }
+    // --- Banners (topo + rodapé, independentes)
+    const banners = (config.marketing && config.marketing.banners) || {};
+    await bannerTopSlot.load(banners.top);
+    await bannerBottomSlot.load(banners.bottom);
 
     // --- Content / menus
     contentModules = Array.isArray(config.content) ? config.content : [];
@@ -777,7 +805,8 @@ function updateExportSummary(config) {
   const title = (config.brand && config.brand.title) || '—';
   const moduleCount = Array.isArray(config.content) ? config.content.length : 0;
   const leadsOn = !!(config.marketing && config.marketing.leads && config.marketing.leads.enabled);
-  const bannerOn = !!(config.marketing && config.marketing.banner && config.marketing.banner.enabled);
+  const banners = (config.marketing && config.marketing.banners) || {};
+  const bannerOn = !!((banners.top && banners.top.enabled) || (banners.bottom && banners.bottom.enabled));
   const hasLogo = !!(config.brand && config.brand.logo);
   const hasIcon = !!(config.export && config.export.iconPath);
 
@@ -802,8 +831,8 @@ if (iconPickLabel) iconPickLabel.addEventListener('click', async (e) => {
   e.preventDefault();
   const picked = await window.icurator.pickFile('icon');
   if (!picked) return;
-  if (!picked.name.toLowerCase().endsWith('.ico')) {
-    alert(t('export.icon_must_be_ico'));
+  if (!/\.(ico|png|jpe?g)$/i.test(picked.name)) {
+    alert(t('export.icon_must_be_image'));
     return;
   }
   try {

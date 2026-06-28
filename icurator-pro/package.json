@@ -46,7 +46,10 @@
       "shortcutName": "LaunchBox Builder"
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "png-to-ico": "^2.1.8",
+    "rcedit": "^4.0.1"
+  },
   "devDependencies": {
     "electron": "^32.0.0",
     "electron-builder": "^25.0.0"

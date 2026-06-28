@@ -58,6 +58,25 @@ Builder without a fresh viewer template silently ships a broken installer.
 if `win-unpacked/resources/app.asar` is missing. Use `npm run build:all` to do both
 stages in order. npm `&&` chaining works on Windows (cmd.exe).
 
+## Course .exe icon comes from the SFX stub, NOT win.icon
+The course `Curso.exe` is a 7-Zip SFX: `[stub 7zsd_All_x64.sfx][SFX config][7z payload]`
+concatenated. Its taskbar/Explorer icon is the icon embedded in the STUB PE, so
+setting `win.icon` (electron-builder) or copying a `.ico` into the payload does
+nothing to the final .exe icon. **Fix:** at export, stamp the icon onto a TEMP
+COPY of the stub with `rcedit` BEFORE concatenation, then concat the stamped stub.
+Accept png/jpg/ico (convert png/jpg→.ico via Electron `nativeImage` + `png-to-ico`).
+**Why:** users uploaded an icon and saw the default one — the icon was applied to
+the wrong artifact. **How to apply:** `png-to-ico`+`rcedit` are lazy-required with
+graceful fallback (export must never fail if deps missing — user runs `npm install`
+first on Windows); keep both as `dependencies` in package.json.
+
+## Two banners (top + bottom), independent slots
+Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,url} }`.
+`migrateConfig()` (called in readConfig after deepMerge) maps the legacy single
+`marketing.banner` (which had a `position` field) into the matching slot. Viewer is
+read-only (no saveLanguage) — the language selector switches live for the session
+only, it does not persist.
+
 ## Lead capture
 Lead capture is EXCLUSIVELY via the provider HTML form (`marketing.leads.formHtml`). The native
 First/Last/Email form was removed. Unlock = provider form submit interception OR the

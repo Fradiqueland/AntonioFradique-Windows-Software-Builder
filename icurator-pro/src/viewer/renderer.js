@@ -25,7 +25,9 @@ const bannerBottomEl = document.getElementById('banner-bottom');
 let config = null;
 let i18nDict = {};
 
-/* -------- i18n (minimal — viewer doesn't expose a language switcher) -------- */
+/* -------- i18n (com seletor de idioma em direto no Viewer) -------- */
+
+const ALLOWED_LANGS = ['pt', 'en', 'es', 'fr'];
 
 function tr(key, fallback) {
   const parts = key.split('.');
@@ -233,17 +235,22 @@ async function handleModuleClick(mod, btn) {
 
 /* -------- Banner -------- */
 
-async function renderBanner(banner) {
+async function renderBanner(banners) {
   bannerTopEl.classList.add('hidden');
   bannerBottomEl.classList.add('hidden');
   bannerTopEl.innerHTML = '';
   bannerBottomEl.innerHTML = '';
   document.body.classList.remove('banner-top', 'banner-bottom');
 
+  const b = banners || {};
+  await renderBannerSlot('top', b.top, bannerTopEl);
+  await renderBannerSlot('bottom', b.bottom, bannerBottomEl);
+}
+
+async function renderBannerSlot(position, banner, host) {
   if (!banner || !banner.enabled || !banner.image) return;
 
   const fileUrl = await relToFileUrl(banner.image);
-  const host = banner.position === 'top' ? bannerTopEl : bannerBottomEl;
 
   const link = document.createElement('a');
   link.href = '#';
@@ -261,7 +268,7 @@ async function renderBanner(banner) {
   link.appendChild(img);
   host.appendChild(link);
   host.classList.remove('hidden');
-  document.body.classList.add(banner.position === 'top' ? 'banner-top' : 'banner-bottom');
+  document.body.classList.add(position === 'top' ? 'banner-top' : 'banner-bottom');
 }
 
 /* -------- Opt-in gate -------- */
@@ -334,16 +341,41 @@ async function boot() {
     logoEl.removeAttribute('src');
   }
 
+  applyDynamicTexts();
+
+  buildMenu(Array.isArray(config.content) ? config.content : []);
+  await renderBanner(config.marketing && config.marketing.banners);
+
+  // Seletor de idioma em direto: re-traduz texto estático + dinâmico sem
+  // reiniciar o Viewer. Não persiste (o Viewer é um leitor só-de-leitura).
+  const langSelect = document.getElementById('viewer-lang');
+  if (langSelect) {
+    langSelect.value = ALLOWED_LANGS.includes(lang) ? lang : 'pt';
+    langSelect.addEventListener('change', () => setLanguage(langSelect.value));
+  }
+
+  const leads = config.marketing && config.marketing.leads;
+  if (leads && leads.enabled) showOptinGate(leads);
+}
+
+/* Re-aplica as traduções definidas por JS (não cobertas por data-i18n):
+ * o ecrã de boas-vindas e o aviso de menu vazio. */
+function applyDynamicTexts() {
   const emptyHeading = stageEl.querySelector('.viewer-empty h2');
   const emptyText = stageEl.querySelector('.viewer-empty p');
   if (emptyHeading) emptyHeading.textContent = tr('viewer.empty_heading', 'Bem-vindo');
   if (emptyText) emptyText.textContent = tr('viewer.empty_text', 'Selecione uma opção no menu para começar.');
+  const menuEmpty = menuEl.querySelector('.viewer-menu-empty');
+  if (menuEmpty) menuEmpty.textContent = tr('viewer.menu_empty', 'Nenhum módulo configurado.');
+}
 
-  buildMenu(Array.isArray(config.content) ? config.content : []);
-  await renderBanner(config.marketing && config.marketing.banner);
-
-  const leads = config.marketing && config.marketing.leads;
-  if (leads && leads.enabled) showOptinGate(leads);
+async function setLanguage(lang) {
+  try {
+    const { dict } = await window.viewer.loadLocale(lang);
+    i18nDict = dict || {};
+  } catch (_) { return; }
+  applyI18n();
+  applyDynamicTexts();
 }
 
 /* =========================================================

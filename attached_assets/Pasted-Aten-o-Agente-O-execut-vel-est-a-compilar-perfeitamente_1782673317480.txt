@@ -1,0 +1,23 @@
+Atenção Agente: O executável está a compilar perfeitamente, o que é uma excelente vitória! No entanto, o YouTube Erro 153 teima em aparecer, e precisamos de adicionar 4 novas funcionalidades Premium ao software. Por favor, implementa as seguintes instruções com precisão:
+
+### 1. RESOLUÇÃO DEFINITIVA DO YOUTUBE (Erro 153)
+* **A Causa:** O `<webview>` não está a arrancar porque falta a permissão nas definições da janela, ou o `iframe` está a bloquear o referrer do protocolo `file://`. 
+* **A Solução:** Em `main.js`, na criação da `BrowserWindow` do Viewer (tanto na janela de Preview como no código que vai para o produto final), tens OBRIGATORIAMENTE de adicionar `webviewTag: true` dentro de `webPreferences`. 
+* **Alternativa Segura:** Se voltares a usar `<iframe>` em vez de `<webview>`, tens de forçar o atributo `sandbox="allow-scripts allow-same-origin allow-presentation"` e garantir que o link é `https://www.youtube.com/embed/ID`. Resolve isto para que o vídeo toque sem o ecrã de Erro 153.
+
+### 2. BANNERS: TOPO, RODAPÉ E DIMENSÕES
+* Na secção "Banners" do Construtor, adiciona a informação visual: *"Dimensões recomendadas: 728x90px (ou formato horizontal equivalente)"*.
+* Altera a lógica para permitir **2 Banners Distintos**: um input para o "Banner de Topo" e outro para o "Banner de Rodapé".
+* O utilizador deve poder escolher usar apenas um (só topo ou só rodapé) ou ambos. Atualiza o `project-config.json` e o `renderer.js` do Viewer para injetar estas imagens nas posições corretas do ecrã do aluno, sem sobrepor os botões.
+
+### 3. SELETOR DE IDIOMA NO PRODUTO FINAL (Viewer)
+* O aluno (utilizador final) também tem de poder mudar o idioma.
+* Adiciona um dropdown/seletor de idiomas na interface do **Viewer** (tanto no Preview do Construtor como no `.exe` exportado).
+* Este seletor deve estar ligado à função `applyI18n()` para traduzir o ecrã de captura de leads, os cantos promocionais e o menu em tempo real (PT, EN, ES, FR).
+
+### 4. ÍCONE PERSONALIZADO PARA O EXECUTÁVEL (.exe)
+* Na secção "Export" (ou "Brand / Design"), adiciona um input de ficheiro para o **Ícone do Produto Final**.
+* O utilizador quer fazer upload de imagens normais (`.jpg` ou `.png`). 
+* **Lógica de Exportação:** Como o Windows exige um ficheiro `.ico` para o executável final, o teu código Node.js no momento da exportação tem de pegar nesse `.png` ou `.jpg`, convertê-lo (ou usar o suporte nativo do `electron-builder` para `.png` se aplicável) e passar esse caminho para a chave `win.icon` na configuração do empacotador do curso final.
+
+Aplica estas 4 atualizações, garante que a configuração grava corretamente sem erros de estado (mantendo os dados do duplo save), e avisa-me quando estiver pronto para compilar!

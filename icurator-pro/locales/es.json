@@ -88,7 +88,12 @@
     "position_label": "Posición del Banner",
     "position_top": "Arriba de la Página",
     "position_bottom": "Abajo de la Página",
-    "save_btn": "Guardar Configuración del Banner"
+    "save_btn": "Guardar Configuración del Banner",
+    "dims_hint": "Tamaño recomendado: 728×90px (o formato horizontal equivalente).",
+    "top_legend": "Banner Superior",
+    "bottom_legend": "Banner Inferior",
+    "top_toggle_title": "Activar Banner Superior",
+    "bottom_toggle_title": "Activar Banner Inferior"
   },
   "content": {
     "list_title": "Módulos del Menú",
@@ -141,10 +146,10 @@
     "module_saved": "Módulo guardado."
   },
   "export": {
-    "icon_label": "Icono del Software (.ico)",
+    "icon_label": "Icono del Software",
     "icon_none": "Ningún icono definido.",
     "icon_current_prefix": "Icono actual: ",
-    "icon_help": "El icono debe ser obligatoriamente un archivo .ico (formato Windows).",
+    "icon_help": "Acepta .png, .jpg o .ico. Se convierte automáticamente y se aplica al icono del .exe final.",
     "icon_must_be_ico": "Por favor, elija un archivo .ico",
     "summary_label": "Resumen del Proyecto",
     "build_btn": "Exportar Producto Final (.exe)",
@@ -170,7 +175,8 @@
       "saved_prefix": "Curso guardado en: ",
       "cancelled": "Cancelado.",
       "failed_prefix": "Error: "
-    }
+    },
+    "icon_must_be_image": "Por favor, elija un archivo .ico, .png o .jpg"
   },
   "viewer": {
     "menu_empty": "Ningún módulo configurado.",

@@ -88,7 +88,12 @@
     "position_label": "Banner Position",
     "position_top": "Top of Page",
     "position_bottom": "Bottom of Page",
-    "save_btn": "Save Banner Settings"
+    "save_btn": "Save Banner Settings",
+    "dims_hint": "Recommended size: 728×90px (or equivalent horizontal format).",
+    "top_legend": "Top Banner",
+    "bottom_legend": "Bottom Banner",
+    "top_toggle_title": "Enable Top Banner",
+    "bottom_toggle_title": "Enable Bottom Banner"
   },
   "content": {
     "list_title": "Menu Modules",
@@ -141,10 +146,10 @@
     "module_saved": "Module saved."
   },
   "export": {
-    "icon_label": "Software Icon (.ico)",
+    "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "The icon must be a .ico file (Windows format).",
+    "icon_help": "Accepts .png, .jpg or .ico. Automatically converted and applied to the final .exe icon.",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
     "build_btn": "Export Final Product (.exe)",
@@ -170,7 +175,8 @@
       "saved_prefix": "Course saved to: ",
       "cancelled": "Cancelled.",
       "failed_prefix": "Error: "
-    }
+    },
+    "icon_must_be_image": "Please choose a .ico, .png or .jpg file"
   },
   "viewer": {
     "menu_empty": "No modules configured.",

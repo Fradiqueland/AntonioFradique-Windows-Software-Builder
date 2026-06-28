@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -117,7 +117,10 @@ const DEFAULT_CONFIG = {
   },
   marketing: {
     leads: { enabled: false, heading: 'Insira o seu email para aceder ao conteúdo', formHtml: '' },
-    banner: { enabled: false, image: null, url: '', position: 'bottom' }
+    banners: {
+      top: { enabled: false, image: null, url: '' },
+      bottom: { enabled: false, image: null, url: '' }
+    }
   },
   content: [],
   export: { iconPath: null }
@@ -161,6 +164,32 @@ function deepMerge(defaults, override) {
   return out;
 }
 
+/* Back-compat: o modelo antigo guardava um único marketing.banner
+ * {enabled,image,url,position}. O novo modelo usa marketing.banners com dois
+ * slots independentes (top e bottom). Migra o banner antigo para o slot da
+ * sua posição, para que projetos já gravados não percam o banner. */
+function migrateConfig(cfg) {
+  if (cfg && cfg.marketing && cfg.marketing.banner && typeof cfg.marketing.banner === 'object') {
+    const old = cfg.marketing.banner;
+    if (!cfg.marketing.banners || typeof cfg.marketing.banners !== 'object') {
+      cfg.marketing.banners = {
+        top: { enabled: false, image: null, url: '' },
+        bottom: { enabled: false, image: null, url: '' }
+      };
+    }
+    if (old.image || old.enabled) {
+      const slot = old.position === 'top' ? 'top' : 'bottom';
+      cfg.marketing.banners[slot] = {
+        enabled: !!old.enabled,
+        image: old.image || null,
+        url: typeof old.url === 'string' ? old.url : ''
+      };
+    }
+    delete cfg.marketing.banner;
+  }
+  return cfg;
+}
+
 function readConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
     // Viewer in SFX mode should ALWAYS have a stamped-in project; if it
@@ -173,7 +202,7 @@ function readConfig() {
   }
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    return deepMerge(DEFAULT_CONFIG, JSON.parse(raw));
+    return migrateConfig(deepMerge(DEFAULT_CONFIG, JSON.parse(raw)));
   } catch (err) {
     console.error('Failed to read config, returning defaults:', err);
     return structuredClone(DEFAULT_CONFIG);
@@ -312,6 +341,49 @@ function attachContextMenu(webContents) {
   });
 }
 
+/* Converte um .png/.jpg em .ico multi-resolução. Usa o nativeImage do Electron
+ * para descodificar (suporta png/jpg) e o png-to-ico para empacotar. Um .ico é
+ * usado tal e qual. */
+async function buildIcoFromSource(sourceAbs, outIcoPath) {
+  const ext = path.extname(sourceAbs).toLowerCase();
+  if (ext === '.ico') { fs.copyFileSync(sourceAbs, outIcoPath); return outIcoPath; }
+  const img = nativeImage.createFromPath(sourceAbs);
+  if (img.isEmpty()) throw new Error('Imagem de ícone inválida: ' + sourceAbs);
+  const pngToIco = require('png-to-ico');
+  const sizes = [256, 128, 64, 48, 32, 16];
+  const buffers = sizes
+    .map((s) => img.resize({ width: s, height: s, quality: 'best' }).toPNG())
+    .filter((b) => b && b.length);
+  if (buffers.length === 0) throw new Error('Falha a gerar PNGs do ícone.');
+  const icoBuf = await pngToIco(buffers);
+  fs.writeFileSync(outIcoPath, icoBuf);
+  return outIcoPath;
+}
+
+/* Aplica o ícone personalizado ao stub SFX (cópia temporária) com o rcedit.
+ * O ícone do .exe final do curso vem do stub 7-Zip, NÃO de win.icon (o curso
+ * não é empacotado pelo electron-builder, é uma concatenação SFX). Em caso de
+ * falha (deps por instalar, etc.) devolve o stub original e avisa — a
+ * exportação nunca falha por causa do ícone. */
+async function stampSfxIcon(stubPath, iconSourceAbs, tmpDir, send) {
+  try {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const icoPath = path.join(tmpDir, 'course-icon.ico');
+    await buildIcoFromSource(iconSourceAbs, icoPath);
+    const stampedStub = path.join(tmpDir, 'sfx-stub-stamped.exe');
+    fs.copyFileSync(stubPath, stampedStub);
+    const rcedit = require('rcedit');
+    await rcedit(stampedStub, { icon: icoPath });
+    send('Ícone personalizado aplicado ao executável final.', 'success');
+    return stampedStub;
+  } catch (err) {
+    send('Aviso: não foi possível aplicar o ícone personalizado (' +
+      (err && err.message ? err.message : err) +
+      '). Confirme que correu "npm install". A usar o ícone predefinido.', 'info');
+    return stubPath;
+  }
+}
+
 function createViewerWindow({ standalone = false } = {}) {
   if (viewerWindow && !viewerWindow.isDestroyed()) {
     // Recarrega para reler o project-config.json atualizado (módulos novos,
@@ -339,6 +411,19 @@ function createViewerWindow({ standalone = false } = {}) {
       devTools: !app.isPackaged
     }
   });
+
+  /* YouTube Erro 153: numa página file:// o referrer é file://, que o YouTube
+   * rejeita. Forçamos um Referer/Origin válido de youtube.com nos pedidos para
+   * os domínios do YouTube — cobre tanto <webview> como <iframe>. Aplica-se à
+   * pré-visualização do Construtor e ao Viewer exportado (ambos passam aqui). */
+  viewerWindow.webContents.session.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.ytimg.com/*', '*://*.googlevideo.com/*', '*://*.youtube-nocookie.com/*'] },
+    (details, callback) => {
+      details.requestHeaders['Referer'] = 'https://www.youtube.com/';
+      details.requestHeaders['Origin'] = 'https://www.youtube.com';
+      callback({ requestHeaders: details.requestHeaders });
+    }
+  );
 
   viewerWindow.setMenuBarVisibility(false);
   viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
@@ -413,28 +498,37 @@ ipcMain.handle('marketing:saveLeads', (_event, payload) => {
 ipcMain.handle('marketing:saveBanners', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
-  let bannerRelative = current.marketing.banner.image || null;
-  if (payload && payload.imageSourcePath) {
-    if (!fs.existsSync(payload.imageSourcePath)) throw new Error('Ficheiro de banner não encontrado: ' + payload.imageSourcePath);
-    deleteAssetIfInside(bannerRelative);
-    bannerRelative = copyAssetToProject(payload.imageSourcePath, 'banner');
-  } else if (payload && payload.removeImage) {
-    deleteAssetIfInside(bannerRelative);
-    bannerRelative = null;
-  }
-  const position = (payload && payload.position) === 'top' ? 'top' : 'bottom';
+  const curBanners = (current.marketing && current.marketing.banners) || {};
+
+  // Cada slot (top/bottom) é independente: copia a imagem nova, remove a
+  // existente, ou mantém a atual conforme o payload do slot.
+  const saveSlot = (slotName) => {
+    const cur = curBanners[slotName] || { enabled: false, image: null, url: '' };
+    const p = (payload && payload[slotName]) || {};
+    let image = cur.image || null;
+    if (p.imageSourcePath) {
+      if (!fs.existsSync(p.imageSourcePath)) throw new Error('Ficheiro de banner não encontrado: ' + p.imageSourcePath);
+      deleteAssetIfInside(image);
+      image = copyAssetToProject(p.imageSourcePath, 'banner-' + slotName);
+    } else if (p.removeImage) {
+      deleteAssetIfInside(image);
+      image = null;
+    }
+    return {
+      enabled: !!p.enabled,
+      image,
+      url: (typeof p.url === 'string') ? p.url.trim() : (cur.url || '')
+    };
+  };
+
   const updated = {
     ...current,
     marketing: {
       ...current.marketing,
-      banner: {
-        enabled: !!(payload && payload.enabled),
-        image: bannerRelative,
-        url: (payload && typeof payload.url === 'string') ? payload.url.trim() : current.marketing.banner.url,
-        position
-      }
+      banners: { top: saveSlot('top'), bottom: saveSlot('bottom') }
     }
   };
+  if (updated.marketing.banner) delete updated.marketing.banner;
   writeConfig(updated);
   return updated;
 });
@@ -513,7 +607,7 @@ ipcMain.handle('dialog:pickFile', async (_event, category) => {
   assertBuilder();
   const FILTERS = {
     image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
-    icon: [{ name: 'Ícone Windows (.ico)', extensions: ['ico'] }],
+    icon: [{ name: 'Ícone (.ico, .png, .jpg)', extensions: ['ico', 'png', 'jpg', 'jpeg'] }],
     pdf: [{ name: 'PDF', extensions: ['pdf'] }],
     launch: [{
       name: 'Ficheiros',
@@ -559,15 +653,27 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
 
 /* -------- IPC: export (Builder only) — SFX pipeline -------- */
 
+const ICON_SOURCE_NAMES = ['icon-source.ico', 'icon-source.png', 'icon-source.jpg', 'icon-source.jpeg'];
+
 ipcMain.handle('export:saveIcon', (_event, payload) => {
   assertBuilder();
   if (!payload || !payload.sourcePath) throw new Error('Caminho do ícone em falta.');
   if (!fs.existsSync(payload.sourcePath)) throw new Error('Ficheiro de ícone não encontrado.');
-  if (path.extname(payload.sourcePath).toLowerCase() !== '.ico') throw new Error('O ícone tem de ser um ficheiro .ico');
+  const ext = path.extname(payload.sourcePath).toLowerCase();
+  if (!['.ico', '.png', '.jpg', '.jpeg'].includes(ext)) {
+    throw new Error('O ícone tem de ser .ico, .png ou .jpg');
+  }
   ensureDirs();
-  fs.copyFileSync(payload.sourcePath, ICON_DEST_PATH);
+  // Remove qualquer ícone-fonte anterior (qualquer extensão) e o legado icon.ico.
+  for (const f of ICON_SOURCE_NAMES) {
+    const p = path.join(DATA_DIR, f);
+    if (fs.existsSync(p)) { try { fs.unlinkSync(p); } catch (_) { /* ignore */ } }
+  }
+  if (fs.existsSync(ICON_DEST_PATH)) { try { fs.unlinkSync(ICON_DEST_PATH); } catch (_) { /* ignore */ } }
+  const destName = 'icon-source' + ext;
+  fs.copyFileSync(payload.sourcePath, path.join(DATA_DIR, destName));
   const current = readConfig();
-  const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/icon.ico' } };
+  const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/' + destName } };
   writeConfig(updated);
   return updated;
 });
@@ -591,6 +697,7 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
   const stagingRoot = path.join(os.tmpdir(), 'lbpro-stage-' + stamp);
   const archivePath = path.join(os.tmpdir(), 'lbpro-payload-' + stamp + '.7z');
   const sfxCfgPath = path.join(os.tmpdir(), 'lbpro-sfx-' + stamp + '.txt');
+  const iconTmpDir = path.join(os.tmpdir(), 'lbpro-icon-' + stamp);
 
   try {
     // Platform guard: 7za.exe is a Windows binary, the SFX header is for PE
@@ -669,7 +776,6 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     fs.mkdirSync(stageData, { recursive: true });
     fs.mkdirSync(stageAssets, { recursive: true });
     fs.copyFileSync(CONFIG_PATH, path.join(stageData, 'project-config.json'));
-    if (fs.existsSync(ICON_DEST_PATH)) fs.copyFileSync(ICON_DEST_PATH, path.join(stageData, 'icon.ico'));
     if (fs.existsSync(ASSETS_DIR)) {
       for (const name of fs.readdirSync(ASSETS_DIR)) {
         const src = path.join(ASSETS_DIR, name);
@@ -705,9 +811,24 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
       ';!@InstallEnd@!\r\n';
     fs.writeFileSync(sfxCfgPath, sfxConfig, { encoding: 'utf-8' });
 
-    /* 5. The single-file magic: SFX stub + config + 7z payload, concatenated
+    /* 5. Ícone personalizado: aplica-o a uma cópia temporária do stub SFX
+     *    ANTES da concatenação. O ícone do .exe final vem do stub, não de
+     *    win.icon. Sem ícone definido (ou em caso de falha) usa-se o stub
+     *    original. */
+    let stubToUse = sfxStub;
+    const cfgForIcon = readConfig();
+    const iconRel = cfgForIcon.export && cfgForIcon.export.iconPath;
+    if (iconRel) {
+      const iconAbs = path.join(WRITE_BASE, iconRel);
+      if (fs.existsSync(iconAbs)) {
+        send('A aplicar o ícone personalizado ao executável…');
+        stubToUse = await stampSfxIcon(sfxStub, iconAbs, iconTmpDir, send);
+      }
+    }
+
+    /* 6. The single-file magic: SFX stub + config + 7z payload, concatenated
      *    in that order, IS a valid Windows .exe that auto-extracts + runs. */
-    await concatFilesToTarget([sfxStub, sfxCfgPath, archivePath], target);
+    await concatFilesToTarget([stubToUse, sfxCfgPath, archivePath], target);
 
     send('Curso guardado: ' + target, 'success');
     return { ok: true, path: target };
@@ -719,6 +840,7 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     try { if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true }); } catch (_) {}
     try { if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath); } catch (_) {}
     try { if (fs.existsSync(sfxCfgPath)) fs.unlinkSync(sfxCfgPath); } catch (_) {}
+    try { if (fs.existsSync(iconTmpDir)) fs.rmSync(iconTmpDir, { recursive: true, force: true }); } catch (_) {}
   }
 });
 

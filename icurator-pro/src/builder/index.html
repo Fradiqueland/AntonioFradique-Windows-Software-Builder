@@ -188,49 +188,73 @@
         <!-- PASSO 3 — Banners -->
         <section class="panel hidden" data-panel="banners">
           <form id="banner-form" class="form-card" autocomplete="off">
-            <div class="form-group">
-              <label class="toggle-row">
-                <input type="checkbox" id="banner-enabled" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                <span class="toggle-text">
-                  <span class="toggle-title" data-i18n="banner.toggle_title">Ativar Banner de Publicidade</span>
-                  <span class="toggle-sub" data-i18n="banner.toggle_sub">
-                    O banner ficará fixo no Visualizador, em todas as páginas.
+            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Dimensões recomendadas: 728×90px (ou formato horizontal equivalente).</p>
+
+            <!-- BANNER DE TOPO -->
+            <fieldset class="banner-slot">
+              <legend data-i18n="banner.top_legend">Banner de Topo</legend>
+              <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-top-enabled" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.top_toggle_title">Ativar Banner de Topo</span>
                   </span>
-                </span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label data-i18n="banner.image_label">Imagem do Banner</label>
-              <div class="file-row">
-                <label class="file-btn" for="banner-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                <input type="file" id="banner-image" accept="image/*" class="file-input-hidden" />
-                <span class="file-name" id="banner-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
-                <button type="button" class="btn btn-ghost" id="banner-image-remove" data-i18n="common.remove">Remover</button>
+                </label>
               </div>
-              <div class="logo-preview-wrap banner-preview-wrap">
-                <img id="banner-image-preview" alt="Pré-visualização do banner" />
-                <span id="banner-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
+              <div class="form-group">
+                <label data-i18n="banner.image_label">Imagem do Banner</label>
+                <div class="file-row">
+                  <label class="file-btn" for="banner-top-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                  <input type="file" id="banner-top-image" accept="image/*" class="file-input-hidden" />
+                  <span class="file-name" id="banner-top-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                  <button type="button" class="btn btn-ghost" id="banner-top-image-remove" data-i18n="common.remove">Remover</button>
+                </div>
+                <div class="logo-preview-wrap banner-preview-wrap">
+                  <img id="banner-top-image-preview" alt="Pré-visualização do banner de topo" />
+                  <span id="banner-top-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
+                </div>
               </div>
-              <small data-i18n="banner.image_help">Recomendado: imagem horizontal (ex: 728×90 ou 970×90). Copiada para dist-assets/.</small>
-            </div>
+              <div class="form-group">
+                <label for="banner-top-url" data-i18n="banner.url_label">Link de Destino</label>
+                <input type="text" id="banner-top-url"
+                       data-i18n-placeholder="banner.url_placeholder"
+                       placeholder="https://exemplo.com/o-meu-link-afiliado" />
+              </div>
+            </fieldset>
 
-            <div class="form-group">
-              <label for="banner-url" data-i18n="banner.url_label">Link de Destino</label>
-              <input type="text" id="banner-url"
-                     data-i18n-placeholder="banner.url_placeholder"
-                     placeholder="https://exemplo.com/o-meu-link-afiliado" />
-              <small data-i18n="banner.url_help">URL aberto no browser externo quando o cliente final clicar no banner.</small>
-            </div>
-
-            <div class="form-group">
-              <label for="banner-position" data-i18n="banner.position_label">Posição do Banner</label>
-              <select id="banner-position" class="select">
-                <option value="top" data-i18n="banner.position_top">Topo da Página</option>
-                <option value="bottom" selected data-i18n="banner.position_bottom">Rodapé da Página</option>
-              </select>
-            </div>
+            <!-- BANNER DE RODAPÉ -->
+            <fieldset class="banner-slot">
+              <legend data-i18n="banner.bottom_legend">Banner de Rodapé</legend>
+              <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-bottom-enabled" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.bottom_toggle_title">Ativar Banner de Rodapé</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
+                <label data-i18n="banner.image_label">Imagem do Banner</label>
+                <div class="file-row">
+                  <label class="file-btn" for="banner-bottom-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                  <input type="file" id="banner-bottom-image" accept="image/*" class="file-input-hidden" />
+                  <span class="file-name" id="banner-bottom-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                  <button type="button" class="btn btn-ghost" id="banner-bottom-image-remove" data-i18n="common.remove">Remover</button>
+                </div>
+                <div class="logo-preview-wrap banner-preview-wrap">
+                  <img id="banner-bottom-image-preview" alt="Pré-visualização do banner de rodapé" />
+                  <span id="banner-bottom-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="banner-bottom-url" data-i18n="banner.url_label">Link de Destino</label>
+                <input type="text" id="banner-bottom-url"
+                       data-i18n-placeholder="banner.url_placeholder"
+                       placeholder="https://exemplo.com/o-meu-link-afiliado" />
+              </div>
+            </fieldset>
 
             <div class="form-actions">
               <span class="save-status" id="banner-status"></span>
@@ -353,14 +377,14 @@
         <section class="panel hidden" data-panel="export">
           <div class="form-card">
             <div class="form-group">
-              <label data-i18n="export.icon_label">Ícone do Software (.ico)</label>
+              <label data-i18n="export.icon_label">Ícone do Software</label>
               <div class="file-row">
                 <label class="file-btn" for="export-icon"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                <input type="file" id="export-icon" accept=".ico,image/x-icon,image/vnd.microsoft.icon" class="file-input-hidden" />
+                <input type="file" id="export-icon" accept=".ico,.png,.jpg,.jpeg,image/png,image/jpeg,image/x-icon,image/vnd.microsoft.icon" class="file-input-hidden" />
                 <span class="file-name" id="export-icon-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
               </div>
               <div class="file-current" id="export-icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
-              <small data-i18n="export.icon_help">O ícone tem de ser obrigatoriamente um ficheiro .ico (formato Windows).</small>
+              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final.</small>
             </div>
 
             <div class="form-group">

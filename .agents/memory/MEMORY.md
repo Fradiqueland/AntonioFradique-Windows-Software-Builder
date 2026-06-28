@@ -1,1 +1,1 @@
-- [LaunchBox Pro Electron quirks](launchbox-electron.md) — electron-builder config must live in package.json (ENOENT on viewer-template); YouTube 153 is a file:// referrer issue (use webview); lead capture is provider-HTML-only.
+- [LaunchBox Pro Electron quirks](launchbox-electron.md) — electron-builder config must live in package.json (ENOENT on viewer-template); YouTube 153 is a file:// referrer issue; course .exe icon comes from the SFX stub (stamp stub w/ rcedit before concat), NOT win.icon; banners are two independent slots; lead capture is provider-HTML-only.

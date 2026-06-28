@@ -88,7 +88,12 @@
     "position_label": "Position de la Bannière",
     "position_top": "Haut de Page",
     "position_bottom": "Bas de Page",
-    "save_btn": "Enregistrer les Paramètres de Bannière"
+    "save_btn": "Enregistrer les Paramètres de Bannière",
+    "dims_hint": "Taille recommandée : 728×90px (ou format horizontal équivalent).",
+    "top_legend": "Bannière du Haut",
+    "bottom_legend": "Bannière du Bas",
+    "top_toggle_title": "Activer la Bannière du Haut",
+    "bottom_toggle_title": "Activer la Bannière du Bas"
   },
   "content": {
     "list_title": "Modules du Menu",
@@ -141,10 +146,10 @@
     "module_saved": "Module enregistré."
   },
   "export": {
-    "icon_label": "Icône du Logiciel (.ico)",
+    "icon_label": "Icône du Logiciel",
     "icon_none": "Aucune icône définie.",
     "icon_current_prefix": "Icône actuelle : ",
-    "icon_help": "L'icône doit obligatoirement être un fichier .ico (format Windows).",
+    "icon_help": "Accepte .png, .jpg ou .ico. Converti automatiquement et appliqué à licône du .exe final.",
     "icon_must_be_ico": "Veuillez choisir un fichier .ico",
     "summary_label": "Résumé du Projet",
     "build_btn": "Exporter le Produit Final (.exe)",
@@ -170,7 +175,8 @@
       "saved_prefix": "Cours enregistré dans : ",
       "cancelled": "Annulé.",
       "failed_prefix": "Erreur : "
-    }
+    },
+    "icon_must_be_image": "Veuillez choisir un fichier .ico, .png ou .jpg"
   },
   "viewer": {
     "menu_empty": "Aucun module configuré.",
