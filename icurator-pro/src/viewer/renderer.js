@@ -17,7 +17,6 @@ const stageEl = document.getElementById('viewer-stage');
 const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
 const optinFormHtml = document.getElementById('optin-form-html');
-const optinBypass = document.getElementById('optin-bypass');
 const optinNativeForm = document.getElementById('optin-native-form');
 const optinFirstName = document.getElementById('optin-first-name');
 const optinLastName = document.getElementById('optin-last-name');
@@ -271,7 +270,6 @@ function hideOptinGate() {
   document.body.style.overflow = '';
 }
 
-optinBypass.addEventListener('click', hideOptinGate);
 optinFormHtml.addEventListener('submit', (e) => { e.preventDefault(); hideOptinGate(); });
 
 /* Native lead capture: First Name, Last Name and Email are all required.

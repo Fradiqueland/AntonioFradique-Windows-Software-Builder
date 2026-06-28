@@ -281,24 +281,6 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
   cursor: pointer;
   margin-top: 8px;
 }
-.optin-actions {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px dashed #cbd5e1;
-  text-align: center;
-}
-.optin-bypass {
-  background: transparent;
-  color: #64748b;
-  border: 1px solid #cbd5e1;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.optin-bypass:hover { background: #f1f5f9; color: var(--v-text-dark); }
-
 /* Toast errors */
 .viewer-toast {
   position: fixed;
