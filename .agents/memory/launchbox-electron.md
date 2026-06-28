@@ -130,12 +130,22 @@ course viewer-template is already shipped win-unpacked, so asar packing the Buil
 little anyway. (Superseded the earlier, incorrect "asarUnpack fixes the course icon" note.)
 
 ## Builder APP icon (its own exe/window) vs course .exe icon — two separate mechanisms
-The Builder's own icon = electron-builder `build.win.icon` (`build/icon.ico`, multi-size)
-for the installed exe/installer + a `BrowserWindow({icon})` PNG (put it under `src/builder/`
-so it's inside the packaged files glob) for the running window. This is UNRELATED to the
-course `Curso.exe` icon, which is stamped onto the SFX stub via rcedit at export time.
-Generate `.ico` from any image with ImageMagick: `magick in.jpg -define
-icon:auto-resize=256,128,64,48,32,16 build/icon.ico` (ImageMagick is available on Replit).
+The Builder's own icon = electron-builder `build.win.icon` for the installed exe/installer +
+a `BrowserWindow({icon})` PNG (put it under `src/builder/` so it's inside the packaged files
+glob) for the running window. This is UNRELATED to the course `Curso.exe` icon, which is
+stamped onto the SFX stub via rcedit at export time.
+
+### Do NOT hand-build the .ico — let electron-builder generate it from a PNG
+Point `build.win.icon` at a 256×256 (or larger) **PNG** (`build/icon.png`) and electron-builder
+/app-builder converts it to a valid multi-size .ico itself. Hand-assembled .ico files (manual
+Node byte-packing, or ImageMagick `-define icon:auto-resize=...`) were repeatedly REJECTED by
+app-builder, which then silently logs `default Electron icon is used  reason=application icon
+is not set` and ships the atom icon. Diagnosis tell: `magick identify build/icon.ico` showed a
+bogus 16×16 entry of ~176 KB (a tiny icon should be ~hundreds of bytes) → corrupt entry table.
+**Why:** app-builder validates the .ico and rejects malformed ones wholesale; it does NOT
+reject a PNG source — it builds the .ico. **How to apply:** ship `build/icon.png`, set
+`win.icon: "build/icon.png"`, and watch the build log — success = no "application icon is not
+set" line for the builder exe. (Superseded the earlier, wrong "PNG-encoded .ico fixed it" note.)
 
 ## Two banners (top + bottom), independent slots
 Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,url} }`.

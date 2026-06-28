@@ -1,0 +1,124 @@
+Windows PowerShell 5.1
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+PS D:\Projetos AI\LaunchBox Pro\AntonioFradique.net Windows Software Builder> npm install
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated @npmcli/move-file@2.0.1: This functionality has been moved to @npmcli/fs
+npm warn deprecated npmlog@6.0.2: This package is no longer supported.
+npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@8.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated are-we-there-yet@3.0.1: This package is no longer supported.
+npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+npm warn deprecated gauge@4.0.4: This package is no longer supported.
+npm warn deprecated rcedit@4.0.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+npm warn deprecated tar@6.2.1: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 412 packages, and audited 413 packages in 20s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+10 high severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   electron@32.3.3 (postinstall: node install.js)
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+PS D:\Projetos AI\LaunchBox Pro\AntonioFradique.net Windows Software Builder> npm run build:all
+
+> launchbox-pro@0.1.0 build:all
+> npm install && npm run build:viewer-template && npm run build:builder
+
+
+up to date, audited 413 packages in 2s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+10 high severity vulnerabilities
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   electron@32.3.3 (postinstall: node install.js)
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+
+> launchbox-pro@0.1.0 build:viewer-template
+> electron-builder --config build-configs/viewer-template.json --win --x64 && node scripts/prune-viewer-template.js
+
+  • electron-builder  version=25.1.8 os=10.0.26100
+  • loaded configuration  file=D:\Projetos AI\LaunchBox Pro\AntonioFradique.net Windows Software Builder\build-configs\viewer-template.json
+  • writing effective config  file=src\builder\templates\viewer-core\builder-effective-config.yaml
+  • executing @electron/rebuild  electronVersion=32.3.3 arch=x64 buildFromSource=false appDir=./
+  • installing native dependencies  arch=x64
+  • completed installing native dependencies
+  • packaging       platform=win32 arch=x64 electron=32.3.3 appOutDir=src\builder\templates\viewer-core\win-unpacked
+  • updating asar integrity executable resource  executablePath=src\builder\templates\viewer-core\win-unpacked\LaunchBox Viewer.exe
+  • default Electron icon is used  reason=application icon is not set
+  • signing with signtool.exe  path=src\builder\templates\viewer-core\win-unpacked\LaunchBox Viewer.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=src\builder\templates\viewer-core\win-unpacked\resources\app.asar.unpacked\node_modules\rcedit\bin\rcedit-x64.exe
+  • signing with signtool.exe  path=src\builder\templates\viewer-core\win-unpacked\resources\app.asar.unpacked\node_modules\rcedit\bin\rcedit.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+▸ Tamanho antes da limpeza: 267.79 MB
+  ✓ Apagados 52 ficheiros .pak (mantidos: en-US.pak, pt-BR.pak, pt-PT.pak)
+  ✓ Apagados 0 ficheiros .pdb
+  ✓ Apagado LICENSE.electron.txt
+  ✓ Apagado LICENSES.chromium.html
+  ✓ app.asar → app.asar.bin (evita o descarte do electron-builder)
+
+✓ Limpeza concluída.
+  Antes:  267.79 MB
+  Depois: 220.93 MB
+  Poupado: 46.86 MB
+
+> launchbox-pro@0.1.0 build:builder
+> node scripts/check-viewer-template.js && electron-builder --win --x64
+
+✓ Template do Viewer presente: D:\Projetos AI\LaunchBox Pro\AntonioFradique.net Windows Software Builder\src\builder\templates\viewer-core\win-unpacked\resources\app.asar.bin
+  • electron-builder  version=25.1.8 os=10.0.26100
+  • loaded configuration  file=package.json ("build" field)
+  • writing effective config  file=dist\builder\builder-effective-config.yaml
+  • executing @electron/rebuild  electronVersion=32.3.3 arch=x64 buildFromSource=false appDir=./
+  • installing native dependencies  arch=x64
+  • completed installing native dependencies
+  • packaging       platform=win32 arch=x64 electron=32.3.3 appOutDir=dist\builder\win-unpacked
+  • asar usage is disabled — this is strongly not recommended  solution=enable asar and use asarUnpack to unpack files that must be externally available
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\app\node_modules\rcedit\bin\rcedit-x64.exe
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\app\node_modules\rcedit\bin\rcedit.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\sfx\7za.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\viewer-template\LaunchBox Viewer.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\viewer-template\resources\app.asar.unpacked\node_modules\rcedit\bin\rcedit.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\viewer-template\resources\app.asar.unpacked\node_modules\rcedit\bin\rcedit-x64.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • asar usage is disabled — this is strongly not recommended  solution=enable asar and use asarUnpack to unpack files that must be externally available
+  • default Electron icon is used  reason=application icon is not set
+  • signing with signtool.exe  path=dist\builder\win-unpacked\AntonioFradique.net Windows Software Builder.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • building        target=nsis file=dist\builder\AntonioFradique.net Windows Software Builder Setup 0.1.0.exe archs=x64 oneClick=false perMachine=false
+  • signing with signtool.exe  path=dist\builder\win-unpacked\resources\elevate.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\builder\__uninstaller-nsis-launchbox-pro.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\builder\AntonioFradique.net Windows Software Builder Setup 0.1.0.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • building block map  blockMapFile=dist\builder\AntonioFradique.net Windows Software Builder Setup 0.1.0.exe.blockmap
+PS D:\Projetos AI\LaunchBox Pro\AntonioFradique.net Windows Software Builder>
