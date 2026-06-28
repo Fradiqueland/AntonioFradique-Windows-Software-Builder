@@ -11,7 +11,8 @@
     "leads": "Lead Capture",
     "banners": "Banners",
     "content": "Content / Menus",
-    "export": "Export"
+    "export": "Export",
+    "icon": "Icon"
   },
   "header": {
     "brand": {
@@ -33,6 +34,10 @@
     "export": {
       "title": "Export",
       "subtitle": "Compile the final product to .exe (Windows)."
+    },
+    "icon": {
+      "title": "Software Icon",
+      "subtitle": "Set the final .exe icon and save."
     }
   },
   "sidebar": {
@@ -149,7 +154,7 @@
     "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "Accepts .png, .jpg or .ico. Automatically converted and applied to the final .exe icon.",
+    "icon_help": "Accepts .png, .jpg, .ico, .gif, .webp or .bmp. It is automatically converted and applied to the final .exe icon.",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
     "build_btn": "Export Final Product (.exe)",
@@ -197,5 +202,9 @@
     "author_label": "Created by Antonio Fradique",
     "plastic_text": "Earn money helping the planet! Turn plastic into profit:",
     "parking_text": "Tired of driving around? Find parking in seconds with ParknDgo!"
+  },
+  "icon": {
+    "save_btn": "Save Icon",
+    "preview_empty": "No icon loaded"
   }
 }

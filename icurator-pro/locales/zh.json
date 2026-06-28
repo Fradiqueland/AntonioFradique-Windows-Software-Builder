@@ -11,7 +11,8 @@
     "leads": "潜在客户捕获",
     "banners": "横幅",
     "content": "内容 / 菜单",
-    "export": "导出"
+    "export": "导出",
+    "icon": "图标"
   },
   "header": {
     "brand": {
@@ -33,6 +34,10 @@
     "export": {
       "title": "导出",
       "subtitle": "将最终产品编译为 .exe（Windows）。"
+    },
+    "icon": {
+      "title": "软件图标",
+      "subtitle": "设置最终 .exe 的图标并保存。"
     }
   },
   "sidebar": {
@@ -149,7 +154,7 @@
     "icon_label": "软件图标",
     "icon_none": "未定义图标。",
     "icon_current_prefix": "当前图标：",
-    "icon_help": "接受 .png、.jpg 或 .ico。会自动转换并应用到最终 .exe 的图标。",
+    "icon_help": "支持 .png、.jpg、.ico、.gif、.webp 或 .bmp。会自动转换并应用到最终 .exe 的图标。",
     "icon_must_be_ico": "请选择一个 .ico 文件",
     "summary_label": "项目摘要",
     "build_btn": "导出最终产品 (.exe)",
@@ -197,5 +202,9 @@
     "author_label": "由 António Fradique 创作",
     "plastic_text": "帮助地球的同时赚钱！将塑料转化为利润，蓬勃发展：",
     "parking_text": "厌倦了兜圈子？使用 ParknDgo 在几秒钟内找到停车位！"
+  },
+  "icon": {
+    "save_btn": "保存图标",
+    "preview_empty": "未加载图标"
   }
 }

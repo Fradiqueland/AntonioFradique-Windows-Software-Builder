@@ -76,6 +76,9 @@
           <button class="tab" data-tab="export">
             <span class="tab-num">5</span><span class="tab-label" data-i18n="tab.export">Exportar</span>
           </button>
+          <button class="tab" data-tab="icon">
+            <span class="tab-num">6</span><span class="tab-label" data-i18n="tab.icon">Ícone</span>
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -379,20 +382,9 @@
           </div>
         </section>
 
-        <!-- PASSO 6 — Exportar -->
+        <!-- PASSO 5 — Exportar -->
         <section class="panel hidden" data-panel="export">
           <div class="form-card">
-            <div class="form-group">
-              <label data-i18n="export.icon_label">Ícone do Software</label>
-              <div class="file-row">
-                <label class="file-btn" for="export-icon"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                <input type="file" id="export-icon" accept=".ico,.png,.jpg,.jpeg,image/png,image/jpeg,image/x-icon,image/vnd.microsoft.icon" class="file-input-hidden" />
-                <span class="file-name" id="export-icon-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
-              </div>
-              <div class="file-current" id="export-icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
-              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final.</small>
-            </div>
-
             <div class="form-group">
               <label data-i18n="export.summary_label">Resumo do Projeto</label>
               <div class="export-summary" id="export-summary" data-i18n="common.loading_summary">A carregar resumo…</div>
@@ -417,6 +409,31 @@
                   Mostrar ficheiro na pasta
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PASSO 6 — Ícone -->
+        <section class="panel hidden" data-panel="icon">
+          <div class="form-card">
+            <div class="form-group">
+              <label data-i18n="export.icon_label">Ícone do Software</label>
+              <div class="file-row">
+                <button type="button" class="file-btn" id="icon-pick"><span data-i18n="common.choose_file">Escolher ficheiro</span></button>
+                <span class="file-name" id="icon-pick-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                <button type="button" class="btn btn-ghost" id="icon-remove" data-i18n="common.remove">Remover</button>
+              </div>
+              <div class="logo-preview-wrap icon-preview-wrap">
+                <img id="icon-preview" alt="Pré-visualização do ícone" />
+                <span id="icon-preview-empty" class="logo-empty" data-i18n="icon.preview_empty">Sem ícone carregado</span>
+              </div>
+              <div class="file-current" id="icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
+              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final.</small>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="icon-status"></span>
+              <button type="button" class="btn btn-primary" id="icon-save" data-i18n="icon.save_btn">Guardar Ícone</button>
             </div>
           </div>
         </section>

@@ -501,6 +501,23 @@ select.select:focus {
 }
 .banner-preview-wrap img.visible { display: block; }
 
+/* Icon preview (Passo 6) — auto-fit, never overflow */
+.icon-preview-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+.icon-preview-wrap img {
+  max-height: 120px;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: none;
+  border-radius: 4px;
+}
+.icon-preview-wrap img.visible { display: block; }
+
 /* ===== Passo 4 — Conteúdo / Menus ===== */
 
 .btn-sm { padding: 7px 12px; font-size: 13px; }

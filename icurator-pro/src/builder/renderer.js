@@ -771,32 +771,24 @@ async function loadInitialConfig() {
     contentModules = Array.isArray(config.content) ? config.content : [];
     renderContentList();
 
-    // --- Export (Passo 6)
+    // --- Export (Passo 5) + Ícone (Passo 6)
     updateExportSummary(config);
-    const iconPath = config.export && config.export.iconPath;
-    if (iconPath) {
-      exportIconCurrent.textContent = t('export.icon_current_prefix') + iconPath;
-      exportIconCurrent.classList.add('has-file');
-    } else {
-      exportIconCurrent.textContent = t('export.icon_none');
-      exportIconCurrent.classList.remove('has-file');
-    }
+    await loadIconState(config);
 
     // --- i18n: apply saved language (do NOT persist again — it's already saved).
     const savedLang = config.language || 'pt';
     await setLanguage(savedLang, { persist: false });
-    // Re-render the export summary so its labels respect the new language.
+    // Re-render the export summary + icon status so labels respect the new language.
     updateExportSummary(config);
+    setIconCurrentText();
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
   }
 }
 
 /* =========================================================
- * EXPORT (Passo 6)
+ * EXPORT (Passo 5)
  * ========================================================= */
-const exportIconInput = document.getElementById('export-icon');
-const exportIconCurrent = document.getElementById('export-icon-current');
 const exportSummaryEl = document.getElementById('export-summary');
 const exportBuildBtn = document.getElementById('export-build');
 const exportLogEl = document.getElementById('export-log');
@@ -827,23 +819,104 @@ function updateExportSummary(config) {
   exportSummaryEl.querySelector('.summary-row .summary-value').textContent = title;
 }
 
-const iconPickLabel = document.querySelector('label[for="export-icon"]');
-if (iconPickLabel) iconPickLabel.addEventListener('click', async (e) => {
-  e.preventDefault();
+/* =========================================================
+ * ÍCONE (Passo 6) — aba dedicada com gravação explícita.
+ * O seletor apenas pré-visualiza; o ícone só é gravado quando
+ * o utilizador clica em "Guardar Ícone".
+ * ========================================================= */
+const iconPickBtn = document.getElementById('icon-pick');
+const iconPickName = document.getElementById('icon-pick-name');
+const iconRemoveBtn = document.getElementById('icon-remove');
+const iconPreviewImg = document.getElementById('icon-preview');
+const iconPreviewEmpty = document.getElementById('icon-preview-empty');
+const iconCurrentEl = document.getElementById('icon-current');
+const iconSaveBtn = document.getElementById('icon-save');
+const showIconStatus = makeStatus(document.getElementById('icon-status'));
+
+const iconState = { pendingSourcePath: null, pendingRemove: false, currentRelative: null };
+
+function setIconName(label) {
+  if (!iconPickName) return;
+  if (label) {
+    iconPickName.textContent = label;
+    iconPickName.classList.add('has-file');
+    iconPickName.removeAttribute('data-i18n');
+  } else {
+    iconPickName.textContent = t('common.no_file_chosen');
+    iconPickName.classList.remove('has-file');
+    iconPickName.setAttribute('data-i18n', 'common.no_file_chosen');
+  }
+}
+
+function setIconCurrentText() {
+  if (!iconCurrentEl) return;
+  if (iconState.currentRelative) {
+    iconCurrentEl.textContent = t('export.icon_current_prefix') + iconState.currentRelative;
+    iconCurrentEl.classList.add('has-file');
+    iconCurrentEl.removeAttribute('data-i18n');
+  } else {
+    iconCurrentEl.textContent = t('export.icon_none');
+    iconCurrentEl.classList.remove('has-file');
+    iconCurrentEl.setAttribute('data-i18n', 'export.icon_none');
+  }
+}
+
+async function loadIconState(config) {
+  iconState.pendingSourcePath = null;
+  iconState.pendingRemove = false;
+  iconState.currentRelative = (config && config.export && config.export.iconPath) || null;
+  setIconName(null);
+  setIconCurrentText();
+  if (iconState.currentRelative) {
+    const abs = await window.icurator.resolveAssetPath(iconState.currentRelative);
+    setImagePreview(iconPreviewImg, iconPreviewEmpty, abs);
+  } else {
+    setImagePreview(iconPreviewImg, iconPreviewEmpty, null);
+  }
+}
+
+if (iconPickBtn) iconPickBtn.addEventListener('click', async () => {
   const picked = await window.icurator.pickFile('icon');
   if (!picked) return;
-  if (!/\.(ico|png|jpe?g)$/i.test(picked.name)) {
+  if (!/\.(ico|png|jpe?g|gif|webp|bmp)$/i.test(picked.name)) {
     alert(t('export.icon_must_be_image'));
     return;
   }
+  iconState.pendingSourcePath = picked.path;
+  iconState.pendingRemove = false;
+  setIconName(picked.name);
+  setImagePreview(iconPreviewImg, iconPreviewEmpty, picked.path);
+  showIconStatus('', '');
+});
+
+if (iconRemoveBtn) iconRemoveBtn.addEventListener('click', () => {
+  iconState.pendingSourcePath = null;
+  iconState.pendingRemove = true;
+  setIconName(null);
+  setImagePreview(iconPreviewImg, iconPreviewEmpty, null);
+});
+
+if (iconSaveBtn) iconSaveBtn.addEventListener('click', async () => {
+  iconSaveBtn.disabled = true;
+  showIconStatus(t('common.saving'), '');
   try {
-    const updated = await window.icurator.saveIcon({ sourcePath: picked.path });
-    exportIconCurrent.textContent = t('export.icon_current_prefix') + updated.export.iconPath;
-    exportIconCurrent.classList.add('has-file');
+    let updated;
+    if (iconState.pendingSourcePath) {
+      updated = await window.icurator.saveIcon({ sourcePath: iconState.pendingSourcePath });
+    } else if (iconState.pendingRemove) {
+      updated = await window.icurator.saveIcon({ removeIcon: true });
+    } else {
+      showIconStatus('', '');
+      iconSaveBtn.disabled = false;
+      return;
+    }
+    await loadIconState(updated);
     updateExportSummary(updated);
-    setFileNameForInput(exportIconInput, picked.name);
+    showIconStatus(t('common.saved'), 'success');
   } catch (err) {
-    alert(t('common.error_prefix') + err.message);
+    showIconStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
+  } finally {
+    iconSaveBtn.disabled = false;
   }
 });
 

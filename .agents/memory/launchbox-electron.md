@@ -77,6 +77,28 @@ Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,u
 read-only (no saveLanguage) — the language selector switches live for the session
 only, it does not persist.
 
+## Builder image-preview CSS must constrain the <img>, or it breaks the whole layout
+Every Builder preview (logo, both banners, icon) puts a raw `<img>` inside a
+`.logo-preview-wrap`-style box; `setImagePreview()` only toggles a `.visible` class.
+If the preview `<img>` has NO size cap, a large source image renders at natural size,
+overflows the panel width, creates horizontal scroll and pushes the sidebar/menu
+off-screen — looks like the UI is "locked". **Rule:** any new preview needs a
+`.<x>-preview-wrap img { max-width:100%; max-height:N; width/height:auto;
+object-fit:contain }` rule (and `overflow:hidden` on the wrap). **Why:** this bit the
+banner preview (CSS targeted a stale single-banner id `#banner-image-preview` after the
+split into top/bottom slots) and would have bitten the icon preview too.
+
+## Icon save = dedicated "Ícone" tab with explicit Save button
+The icon picker is its own Builder tab (`data-panel="icon"`, 6th tab), NOT inside Export.
+Flow is pick→preview only; persistence happens on the explicit "Guardar Ícone" click via
+`export:saveIcon`. Picker uses a plain `<button>` (no `<label for>`+hidden file input).
+`saveIcon` accepts `{sourcePath}` or `{removeIcon:true}`; allowed source exts are
+`.ico/.png/.jpg/.jpeg/.gif/.webp/.bmp` (kept in lockstep across the picker filter,
+`ICON_ALLOWED_EXTS` validation, and `ICON_SOURCE_NAMES` cleanup list). Conversion to the
+final .exe icon still goes through `nativeImage`+`png-to-ico` with graceful fallback, so
+exotic formats that nativeImage can't decode just fall back to the default icon — they
+never block saving or export.
+
 ## Lead capture
 Lead capture is EXCLUSIVELY via the provider HTML form (`marketing.leads.formHtml`). The native
 First/Last/Email form was removed. Unlock = provider form submit interception OR the

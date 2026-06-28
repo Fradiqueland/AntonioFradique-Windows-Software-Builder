@@ -11,7 +11,8 @@
     "leads": "Captura de Leads",
     "banners": "Banners",
     "content": "Contenido / Menús",
-    "export": "Exportar"
+    "export": "Exportar",
+    "icon": "Icono"
   },
   "header": {
     "brand": {
@@ -33,6 +34,10 @@
     "export": {
       "title": "Exportar",
       "subtitle": "Compila el producto final a .exe (Windows)."
+    },
+    "icon": {
+      "title": "Icono del Software",
+      "subtitle": "Defina el icono del .exe final y guarde."
     }
   },
   "sidebar": {
@@ -149,7 +154,7 @@
     "icon_label": "Icono del Software",
     "icon_none": "Ningún icono definido.",
     "icon_current_prefix": "Icono actual: ",
-    "icon_help": "Acepta .png, .jpg o .ico. Se convierte automáticamente y se aplica al icono del .exe final.",
+    "icon_help": "Acepta .png, .jpg, .ico, .gif, .webp o .bmp. Se convierte automáticamente y se aplica al icono del .exe final.",
     "icon_must_be_ico": "Por favor, elija un archivo .ico",
     "summary_label": "Resumen del Proyecto",
     "build_btn": "Exportar Producto Final (.exe)",
@@ -197,5 +202,9 @@
     "author_label": "Creado por Antonio Fradique",
     "plastic_text": "¡Gana dinero ayudando al planeta! Prospera transformando plástico en beneficio:",
     "parking_text": "¿Harto de dar vueltas? ¡Encuentra aparcamiento en segundos con ParknDgo!"
+  },
+  "icon": {
+    "save_btn": "Guardar Icono",
+    "preview_empty": "Ningún icono cargado"
   }
 }

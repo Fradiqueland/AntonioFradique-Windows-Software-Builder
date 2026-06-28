@@ -607,7 +607,7 @@ ipcMain.handle('dialog:pickFile', async (_event, category) => {
   assertBuilder();
   const FILTERS = {
     image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
-    icon: [{ name: 'Ícone (.ico, .png, .jpg)', extensions: ['ico', 'png', 'jpg', 'jpeg'] }],
+    icon: [{ name: 'Ícone / Imagem', extensions: ['ico', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] }],
     pdf: [{ name: 'PDF', extensions: ['pdf'] }],
     launch: [{
       name: 'Ficheiros',
@@ -653,23 +653,38 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
 
 /* -------- IPC: export (Builder only) — SFX pipeline -------- */
 
-const ICON_SOURCE_NAMES = ['icon-source.ico', 'icon-source.png', 'icon-source.jpg', 'icon-source.jpeg'];
+const ICON_ALLOWED_EXTS = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+const ICON_SOURCE_NAMES = ICON_ALLOWED_EXTS.map((e) => 'icon-source' + e);
 
-ipcMain.handle('export:saveIcon', (_event, payload) => {
-  assertBuilder();
-  if (!payload || !payload.sourcePath) throw new Error('Caminho do ícone em falta.');
-  if (!fs.existsSync(payload.sourcePath)) throw new Error('Ficheiro de ícone não encontrado.');
-  const ext = path.extname(payload.sourcePath).toLowerCase();
-  if (!['.ico', '.png', '.jpg', '.jpeg'].includes(ext)) {
-    throw new Error('O ícone tem de ser .ico, .png ou .jpg');
-  }
-  ensureDirs();
+function clearStoredIcons() {
   // Remove qualquer ícone-fonte anterior (qualquer extensão) e o legado icon.ico.
   for (const f of ICON_SOURCE_NAMES) {
     const p = path.join(DATA_DIR, f);
     if (fs.existsSync(p)) { try { fs.unlinkSync(p); } catch (_) { /* ignore */ } }
   }
   if (fs.existsSync(ICON_DEST_PATH)) { try { fs.unlinkSync(ICON_DEST_PATH); } catch (_) { /* ignore */ } }
+}
+
+ipcMain.handle('export:saveIcon', (_event, payload) => {
+  assertBuilder();
+  ensureDirs();
+
+  // Remover o ícone personalizado (volta ao predefinido).
+  if (payload && payload.removeIcon) {
+    clearStoredIcons();
+    const current = readConfig();
+    const updated = { ...current, export: { ...(current.export || {}), iconPath: null } };
+    writeConfig(updated);
+    return updated;
+  }
+
+  if (!payload || !payload.sourcePath) throw new Error('Caminho do ícone em falta.');
+  if (!fs.existsSync(payload.sourcePath)) throw new Error('Ficheiro de ícone não encontrado.');
+  const ext = path.extname(payload.sourcePath).toLowerCase();
+  if (!ICON_ALLOWED_EXTS.includes(ext)) {
+    throw new Error('O ícone tem de ser .ico, .png, .jpg, .gif, .webp ou .bmp');
+  }
+  clearStoredIcons();
   const destName = 'icon-source' + ext;
   fs.copyFileSync(payload.sourcePath, path.join(DATA_DIR, destName));
   const current = readConfig();

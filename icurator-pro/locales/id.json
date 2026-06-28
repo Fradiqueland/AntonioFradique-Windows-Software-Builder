@@ -11,7 +11,8 @@
     "leads": "Tangkap Prospek",
     "banners": "Spanduk",
     "content": "Konten / Menu",
-    "export": "Ekspor"
+    "export": "Ekspor",
+    "icon": "Ikon"
   },
   "header": {
     "brand": {
@@ -33,6 +34,10 @@
     "export": {
       "title": "Ekspor",
       "subtitle": "Kompilasi produk akhir menjadi .exe (Windows)."
+    },
+    "icon": {
+      "title": "Ikon Perangkat Lunak",
+      "subtitle": "Atur ikon .exe akhir lalu simpan."
     }
   },
   "sidebar": {
@@ -149,7 +154,7 @@
     "icon_label": "Ikon Perangkat Lunak",
     "icon_none": "Tidak ada ikon ditentukan.",
     "icon_current_prefix": "Ikon saat ini: ",
-    "icon_help": "Menerima .png, .jpg, atau .ico. Dikonversi otomatis dan diterapkan ke ikon .exe akhir.",
+    "icon_help": "Menerima .png, .jpg, .ico, .gif, .webp, atau .bmp. Dikonversi otomatis dan diterapkan ke ikon .exe akhir.",
     "icon_must_be_ico": "Silakan pilih file .ico",
     "summary_label": "Ringkasan Proyek",
     "build_btn": "Ekspor Produk Akhir (.exe)",
@@ -197,5 +202,9 @@
     "author_label": "Dibuat oleh António Fradique",
     "plastic_text": "Hasilkan uang sambil membantu planet ini! Berkembang dengan mengubah plastik menjadi keuntungan:",
     "parking_text": "Bosan berputar-putar? Temukan parkir dalam hitungan detik dengan ParknDgo!"
+  },
+  "icon": {
+    "save_btn": "Simpan Ikon",
+    "preview_empty": "Belum ada ikon dimuat"
   }
 }
