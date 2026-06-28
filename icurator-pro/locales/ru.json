@@ -1,0 +1,201 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "Конструктор"
+  },
+  "lang": {
+    "label": "Язык"
+  },
+  "tab": {
+    "brand": "Бренд / Дизайн",
+    "leads": "Сбор лидов",
+    "banners": "Баннеры",
+    "content": "Контент / Меню",
+    "export": "Экспорт"
+  },
+  "header": {
+    "brand": {
+      "title": "Бренд / Дизайн",
+      "subtitle": "Настройте внешний вид конечного продукта."
+    },
+    "leads": {
+      "title": "Сбор лидов",
+      "subtitle": "Настройте начальную страницу подписки / захвата."
+    },
+    "banners": {
+      "title": "Баннеры",
+      "subtitle": "Добавьте рекламные баннеры и партнёрские ссылки."
+    },
+    "content": {
+      "title": "Контент / Меню",
+      "subtitle": "Создайте навигационное меню конечного продукта."
+    },
+    "export": {
+      "title": "Экспорт",
+      "subtitle": "Скомпилируйте конечный продукт в .exe (Windows)."
+    }
+  },
+  "sidebar": {
+    "preview_btn": "Предпросмотр продукта",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "remove": "Удалить",
+    "saving": "Сохранение…",
+    "saved": "Настройки сохранены.",
+    "error_prefix": "Ошибка: ",
+    "choose_file": "Выбрать файл",
+    "no_file_chosen": "Файл не выбран",
+    "loading_summary": "Загрузка сводки…"
+  },
+  "brand": {
+    "title_label": "Название программы",
+    "title_placeholder": "Напр.: Мой цифровой курс",
+    "title_help": "Отображается в строке окна и в заголовке меню конечного продукта.",
+    "logo_label": "Логотип / Изображение шапки",
+    "logo_empty": "Логотип не загружен",
+    "logo_help": "Файл будет скопирован во внутреннюю папку dist-assets/.",
+    "colors_label": "Пользовательские цвета",
+    "color_sidebar": "Цвет бокового меню",
+    "color_background": "Основной цвет фона",
+    "color_buttons": "Цвет кнопок",
+    "save_btn": "Сохранить настройки"
+  },
+  "leads": {
+    "toggle_title": "Включить блокировку контента (Opt-in Gate)",
+    "toggle_sub": "Если включено, конечный клиент увидит контент только после отправки формы ниже.",
+    "heading_label": "Заголовок блокировки",
+    "heading_placeholder": "Напр.: Введите свой email для доступа к курсу",
+    "heading_help": "Крупное сообщение, показываемое над формой в просмотрщике.",
+    "html_label": "HTML-код формы",
+    "html_placeholder": "Вставьте сюда код формы (Mailchimp, AWeber, ActiveCampaign и т.д.)",
+    "html_help": "HTML вставляется в просмотрщик как есть. Всегда проверяйте, что он от вашего надёжного поставщика.",
+    "save_btn": "Сохранить настройки лидов",
+    "access_btn": "Я уже подписался — получить доступ к контенту"
+  },
+  "banner": {
+    "toggle_title": "Включить рекламный баннер",
+    "toggle_sub": "Баннер будет закреплён в просмотрщике на всех страницах.",
+    "image_label": "Изображение баннера",
+    "image_empty": "Баннер не загружен",
+    "image_help": "Рекомендуется: горизонтальное изображение (напр.: 728×90 или 970×90). Копируется в dist-assets/.",
+    "url_label": "Ссылка назначения",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "URL открывается во внешнем браузере, когда конечный клиент нажимает на баннер.",
+    "position_label": "Позиция баннера",
+    "position_top": "Вверху страницы",
+    "position_bottom": "Внизу страницы",
+    "save_btn": "Сохранить настройки баннеров",
+    "dims_hint": "Допустимые форматы: PNG, JPG или анимированный GIF. Рекомендуемый размер: 728×90px (горизонтальный формат).",
+    "top_legend": "Верхний баннер",
+    "bottom_legend": "Нижний баннер",
+    "top_toggle_title": "Включить верхний баннер",
+    "bottom_toggle_title": "Включить нижний баннер"
+  },
+  "content": {
+    "list_title": "Модули меню",
+    "add_btn": "+ Добавить новый модуль",
+    "list_empty": "Модулей пока нет. Нажмите «Добавить новый модуль», чтобы начать.",
+    "editor_empty": "Выберите модуль из списка или нажмите «+ Добавить новый модуль», чтобы начать редактирование.",
+    "editor_new_title": "Новый модуль",
+    "editor_edit_title": "Редактировать модуль",
+    "editor_save": "Сохранить модуль",
+    "module_title_label": "Заголовок кнопки",
+    "module_title_placeholder": "Напр.: Урок 1 — Введение",
+    "module_type_label": "Тип действия",
+    "type": {
+      "youtube": "Видео YouTube (Iframe)",
+      "html": "HTML / Форматированный текст",
+      "pdf": "Локальный файл PDF",
+      "webview": "Внутренний браузер (Webview)",
+      "external": "Внешний браузер (Chrome/Edge)",
+      "launch": "Запустить файл (.exe / .zip / и т.д.)"
+    },
+    "youtube_url_label": "URL или ID видео",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... или только ID",
+    "youtube_help": "Отображается в <iframe> внутри конечного продукта.",
+    "html_label": "HTML / Текст",
+    "html_placeholder": "<h1>Добро пожаловать</h1>\n<p>Ваш контент здесь…</p>",
+    "html_help": "HTML будет вставлен как есть в основную область просмотрщика.",
+    "pdf_label": "Файл PDF",
+    "pdf_help": "При сохранении PDF будет скопирован в dist-assets/.",
+    "file_none": "Файл не выбран.",
+    "file_new_prefix": "Новый файл: ",
+    "file_current_prefix": "Текущий файл: ",
+    "webview_url_label": "URL для открытия внутри программы",
+    "webview_url_placeholder": "https://example.com",
+    "webview_help": "Загружается через <webview> — пользователь остаётся внутри приложения.",
+    "external_url_label": "URL для открытия в системном браузере",
+    "external_url_placeholder": "https://example.com/affiliate",
+    "external_help": "Идеально для партнёрских ссылок — открывается в Chrome/Edge по умолчанию.",
+    "launch_label": "Файл для запуска",
+    "launch_help": "Любой формат (.exe, .zip, .doc…). Копируется в dist-assets/.",
+    "delete_confirm": "Удалить модуль «{title}»? Это действие нельзя отменить.",
+    "order_updated": "Порядок обновлён.",
+    "click_to_edit": "Нажмите для редактирования",
+    "btn_up": "Вверх",
+    "btn_down": "Вниз",
+    "btn_edit": "Редактировать",
+    "btn_delete": "Удалить",
+    "reorder_error_prefix": "Ошибка изменения порядка: ",
+    "delete_error_prefix": "Ошибка удаления: ",
+    "module_deleted": "Модуль удалён.",
+    "module_saved": "Модуль сохранён."
+  },
+  "export": {
+    "icon_label": "Значок программы",
+    "icon_none": "Значок не задан.",
+    "icon_current_prefix": "Текущий значок: ",
+    "icon_help": "Принимает .png, .jpg или .ico. Автоматически преобразуется и применяется к значку итогового .exe.",
+    "icon_must_be_ico": "Пожалуйста, выберите файл .ico",
+    "summary_label": "Сводка проекта",
+    "build_btn": "Экспортировать конечный продукт (.exe)",
+    "build_help": "Создаёт единый готовый к доставке .exe. Ученик дважды щёлкает — и курс сразу открывается, без установки. Создание может занять от 30 секунд до 1 минуты.",
+    "status_label": "Статус",
+    "log_empty": "Нет активности. Нажмите «Экспорт», чтобы начать.",
+    "open_release_btn": "Показать файл в папке",
+    "summary": {
+      "project": "Проект",
+      "modules": "Модули",
+      "logo": "Логотип",
+      "leads": "Подписка / Лиды",
+      "banner": "Баннер",
+      "icon": "Значок .exe",
+      "defined": "Задан",
+      "no_logo": "Без логотипа",
+      "active": "Активно",
+      "inactive": "Неактивно",
+      "default_electron": "Electron по умолчанию"
+    },
+    "log": {
+      "starting": "Подготовка экспорта…",
+      "saved_prefix": "Курс сохранён в: ",
+      "cancelled": "Операция отменена.",
+      "failed_prefix": "Ошибка: "
+    },
+    "icon_must_be_image": "Пожалуйста, выберите файл .ico, .png или .jpg"
+  },
+  "viewer": {
+    "menu_empty": "Модули не настроены.",
+    "url_missing": "Отсутствует URL.",
+    "pdf_missing": "Отсутствует файл PDF.",
+    "file_missing": "Отсутствует файл.",
+    "video_missing": "Отсутствует URL видео.",
+    "external_error_prefix": "Ошибка открытия ссылки: ",
+    "launch_error_prefix": "Ошибка запуска файла: ",
+    "config_error_prefix": "Ошибка загрузки конфигурации: ",
+    "empty_heading": "Добро пожаловать",
+    "empty_text": "Выберите пункт в меню, чтобы начать.",
+    "optin_default_heading": "Введите свой email для доступа к контенту",
+    "optin_bypass": "Закрыть / Пропустить блокировку (тест)"
+  },
+  "corners": {
+    "music_label": "Моя музыка",
+    "author_label": "Создано António Fradique",
+    "plastic_text": "Зарабатывайте, помогая планете! Процветайте, превращая пластик в прибыль:",
+    "parking_text": "Устали кружить? Найдите парковку за секунды с ParknDgo!"
+  }
+}

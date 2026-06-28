@@ -1,0 +1,201 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "बिल्डर"
+  },
+  "lang": {
+    "label": "भाषा"
+  },
+  "tab": {
+    "brand": "ब्रांड / डिज़ाइन",
+    "leads": "लीड कैप्चर",
+    "banners": "बैनर",
+    "content": "सामग्री / मेन्यू",
+    "export": "निर्यात"
+  },
+  "header": {
+    "brand": {
+      "title": "ब्रांड / डिज़ाइन",
+      "subtitle": "अंतिम उत्पाद का स्वरूप अनुकूलित करें।"
+    },
+    "leads": {
+      "title": "लीड कैप्चर",
+      "subtitle": "प्रारंभिक ऑप्ट-इन / स्क्वीज़ पेज कॉन्फ़िगर करें।"
+    },
+    "banners": {
+      "title": "बैनर",
+      "subtitle": "विज्ञापन बैनर और एफिलिएट लिंक जोड़ें।"
+    },
+    "content": {
+      "title": "सामग्री / मेन्यू",
+      "subtitle": "अंतिम उत्पाद का नेविगेशन मेन्यू बनाएं।"
+    },
+    "export": {
+      "title": "निर्यात",
+      "subtitle": "अंतिम उत्पाद को .exe (Windows) में संकलित करें।"
+    }
+  },
+  "sidebar": {
+    "preview_btn": "उत्पाद का पूर्वावलोकन",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "remove": "हटाएं",
+    "saving": "सहेजा जा रहा है…",
+    "saved": "सेटिंग्स सहेजी गईं।",
+    "error_prefix": "त्रुटि: ",
+    "choose_file": "फ़ाइल चुनें",
+    "no_file_chosen": "कोई फ़ाइल चयनित नहीं",
+    "loading_summary": "सारांश लोड हो रहा है…"
+  },
+  "brand": {
+    "title_label": "सॉफ़्टवेयर शीर्षक",
+    "title_placeholder": "उदा: मेरा डिजिटल कोर्स",
+    "title_help": "यह अंतिम उत्पाद की विंडो बार और मेन्यू हेडर में दिखाई देता है।",
+    "logo_label": "लोगो / हेडर छवि",
+    "logo_empty": "कोई लोगो लोड नहीं हुआ",
+    "logo_help": "फ़ाइल आंतरिक dist-assets/ फ़ोल्डर में कॉपी की जाएगी।",
+    "colors_label": "कस्टम रंग",
+    "color_sidebar": "साइड मेन्यू रंग",
+    "color_background": "मुख्य पृष्ठभूमि रंग",
+    "color_buttons": "बटन रंग",
+    "save_btn": "सेटिंग्स सहेजें"
+  },
+  "leads": {
+    "toggle_title": "सामग्री लॉक सक्षम करें (ऑप्ट-इन गेट)",
+    "toggle_sub": "सक्षम होने पर, अंतिम ग्राहक नीचे दिए गए फ़ॉर्म को सबमिट करने के बाद ही सामग्री देखेगा।",
+    "heading_label": "लॉक का शीर्षक",
+    "heading_placeholder": "उदा: कोर्स तक पहुंचने के लिए अपना ईमेल दर्ज करें",
+    "heading_help": "व्यूअर में फ़ॉर्म के ऊपर दिखाया गया बड़ा संदेश।",
+    "html_label": "फ़ॉर्म का HTML कोड",
+    "html_placeholder": "फ़ॉर्म कोड यहां पेस्ट करें (Mailchimp, AWeber, ActiveCampaign, आदि)",
+    "html_help": "HTML को व्यूअर में ज्यों का त्यों डाला जाता है। हमेशा सुनिश्चित करें कि यह आपके विश्वसनीय प्रदाता से आता है।",
+    "save_btn": "लीड सेटिंग्स सहेजें",
+    "access_btn": "मैंने सदस्यता ले ली — सामग्री तक पहुंचें"
+  },
+  "banner": {
+    "toggle_title": "विज्ञापन बैनर सक्षम करें",
+    "toggle_sub": "बैनर व्यूअर में सभी पृष्ठों पर स्थिर रहेगा।",
+    "image_label": "बैनर छवि",
+    "image_empty": "कोई बैनर लोड नहीं हुआ",
+    "image_help": "अनुशंसित: क्षैतिज छवि (उदा: 728×90 या 970×90)। dist-assets/ में कॉपी की जाती है।",
+    "url_label": "गंतव्य लिंक",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "जब अंतिम ग्राहक बैनर पर क्लिक करेगा तो URL बाहरी ब्राउज़र में खुलेगा।",
+    "position_label": "बैनर स्थिति",
+    "position_top": "पृष्ठ का शीर्ष",
+    "position_bottom": "पृष्ठ का निचला भाग",
+    "save_btn": "बैनर सेटिंग्स सहेजें",
+    "dims_hint": "स्वीकृत प्रारूप: PNG, JPG या एनिमेटेड GIF। अनुशंसित आकार: 728×90px (क्षैतिज प्रारूप)।",
+    "top_legend": "शीर्ष बैनर",
+    "bottom_legend": "निचला बैनर",
+    "top_toggle_title": "शीर्ष बैनर सक्षम करें",
+    "bottom_toggle_title": "निचला बैनर सक्षम करें"
+  },
+  "content": {
+    "list_title": "मेन्यू मॉड्यूल",
+    "add_btn": "+ नया मॉड्यूल जोड़ें",
+    "list_empty": "अभी तक कोई मॉड्यूल नहीं है। शुरू करने के लिए \"नया मॉड्यूल जोड़ें\" पर क्लिक करें।",
+    "editor_empty": "सूची से एक मॉड्यूल चुनें, या संपादन शुरू करने के लिए \"+ नया मॉड्यूल जोड़ें\" पर क्लिक करें।",
+    "editor_new_title": "नया मॉड्यूल",
+    "editor_edit_title": "मॉड्यूल संपादित करें",
+    "editor_save": "मॉड्यूल सहेजें",
+    "module_title_label": "बटन शीर्षक",
+    "module_title_placeholder": "उदा: पाठ 1 — परिचय",
+    "module_type_label": "क्रिया प्रकार",
+    "type": {
+      "youtube": "YouTube वीडियो (Iframe)",
+      "html": "HTML / रिच टेक्स्ट",
+      "pdf": "स्थानीय PDF फ़ाइल",
+      "webview": "आंतरिक ब्राउज़र (Webview)",
+      "external": "बाहरी ब्राउज़र (Chrome/Edge)",
+      "launch": "फ़ाइल लॉन्च करें (.exe / .zip / आदि)"
+    },
+    "youtube_url_label": "वीडियो का URL या ID",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... या केवल ID",
+    "youtube_help": "अंतिम उत्पाद के भीतर <iframe> में रेंडर किया गया।",
+    "html_label": "HTML / टेक्स्ट",
+    "html_placeholder": "<h1>स्वागत है</h1>\n<p>आपकी सामग्री यहां…</p>",
+    "html_help": "HTML को व्यूअर के मुख्य क्षेत्र में ज्यों का त्यों डाला जाएगा।",
+    "pdf_label": "PDF फ़ाइल",
+    "pdf_help": "सहेजते समय PDF को dist-assets/ में कॉपी किया जाएगा।",
+    "file_none": "कोई फ़ाइल चयनित नहीं।",
+    "file_new_prefix": "नई फ़ाइल: ",
+    "file_current_prefix": "वर्तमान फ़ाइल: ",
+    "webview_url_label": "सॉफ़्टवेयर के भीतर खोलने के लिए URL",
+    "webview_url_placeholder": "https://example.com",
+    "webview_help": "<webview> के माध्यम से लोड किया गया — उपयोगकर्ता ऐप के भीतर रहता है।",
+    "external_url_label": "सिस्टम ब्राउज़र में खोलने के लिए URL",
+    "external_url_placeholder": "https://example.com/affiliate",
+    "external_help": "एफिलिएट लिंक के लिए आदर्श — डिफ़ॉल्ट Chrome/Edge में खुलता है।",
+    "launch_label": "लॉन्च करने के लिए फ़ाइल",
+    "launch_help": "कोई भी प्रारूप (.exe, .zip, .doc…)। dist-assets/ में कॉपी किया गया।",
+    "delete_confirm": "मॉड्यूल \"{title}\" हटाएं? इस क्रिया को पूर्ववत नहीं किया जा सकता।",
+    "order_updated": "क्रम अद्यतन किया गया।",
+    "click_to_edit": "संपादित करने के लिए क्लिक करें",
+    "btn_up": "ऊपर",
+    "btn_down": "नीचे",
+    "btn_edit": "संपादित करें",
+    "btn_delete": "हटाएं",
+    "reorder_error_prefix": "पुनः क्रमित करने में त्रुटि: ",
+    "delete_error_prefix": "हटाने में त्रुटि: ",
+    "module_deleted": "मॉड्यूल हटाया गया।",
+    "module_saved": "मॉड्यूल सहेजा गया।"
+  },
+  "export": {
+    "icon_label": "सॉफ़्टवेयर आइकन",
+    "icon_none": "कोई आइकन परिभाषित नहीं।",
+    "icon_current_prefix": "वर्तमान आइकन: ",
+    "icon_help": ".png, .jpg या .ico स्वीकार करता है। यह स्वचालित रूप से रूपांतरित होकर अंतिम .exe के आइकन पर लागू होता है।",
+    "icon_must_be_ico": "कृपया एक .ico फ़ाइल चुनें",
+    "summary_label": "परियोजना सारांश",
+    "build_btn": "अंतिम उत्पाद निर्यात करें (.exe)",
+    "build_help": "डिलीवरी के लिए तैयार एकल .exe बनाता है। छात्र डबल-क्लिक करता है और कोर्स तुरंत खुल जाता है — कुछ भी इंस्टॉल किए बिना। बनाने में 30 सेकंड से 1 मिनट लग सकता है।",
+    "status_label": "स्थिति",
+    "log_empty": "कोई गतिविधि नहीं। शुरू करने के लिए \"निर्यात\" पर क्लिक करें।",
+    "open_release_btn": "फ़ोल्डर में फ़ाइल दिखाएं",
+    "summary": {
+      "project": "परियोजना",
+      "modules": "मॉड्यूल",
+      "logo": "लोगो",
+      "leads": "ऑप्ट-इन / लीड",
+      "banner": "बैनर",
+      "icon": ".exe आइकन",
+      "defined": "परिभाषित",
+      "no_logo": "कोई लोगो नहीं",
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "default_electron": "डिफ़ॉल्ट Electron"
+    },
+    "log": {
+      "starting": "निर्यात तैयार किया जा रहा है…",
+      "saved_prefix": "कोर्स यहां सहेजा गया: ",
+      "cancelled": "ऑपरेशन रद्द किया गया।",
+      "failed_prefix": "त्रुटि: "
+    },
+    "icon_must_be_image": "कृपया एक .ico, .png या .jpg फ़ाइल चुनें"
+  },
+  "viewer": {
+    "menu_empty": "कोई मॉड्यूल कॉन्फ़िगर नहीं किया गया।",
+    "url_missing": "URL गायब है।",
+    "pdf_missing": "PDF फ़ाइल गायब है।",
+    "file_missing": "फ़ाइल गायब है।",
+    "video_missing": "वीडियो URL गायब है।",
+    "external_error_prefix": "लिंक खोलने में त्रुटि: ",
+    "launch_error_prefix": "फ़ाइल लॉन्च करने में त्रुटि: ",
+    "config_error_prefix": "कॉन्फ़िगरेशन लोड करने में त्रुटि: ",
+    "empty_heading": "स्वागत है",
+    "empty_text": "शुरू करने के लिए मेन्यू से एक विकल्प चुनें।",
+    "optin_default_heading": "सामग्री तक पहुंचने के लिए अपना ईमेल दर्ज करें",
+    "optin_bypass": "लॉक बंद करें / अनदेखा करें (परीक्षण)"
+  },
+  "corners": {
+    "music_label": "मेरा संगीत",
+    "author_label": "António Fradique द्वारा निर्मित",
+    "plastic_text": "ग्रह की मदद करके पैसे कमाएं! प्लास्टिक को मुनाफे में बदलकर समृद्ध हों:",
+    "parking_text": "चक्कर लगाकर थक गए? ParknDgo के साथ सेकंडों में पार्किंग खोजें!"
+  }
+}

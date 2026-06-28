@@ -93,7 +93,7 @@ const FILE_TYPES = new Set(['pdf', 'launch']);
 const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
-const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr']);
+const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr', 'hi', 'ar', 'zh', 'bn', 'ru', 'id']);
 
 /* SFX export resources (Builder packaged only).
  * In dev: bin/template lives under the project tree.

@@ -1,0 +1,201 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "বিল্ডার"
+  },
+  "lang": {
+    "label": "ভাষা"
+  },
+  "tab": {
+    "brand": "ব্র্যান্ড / ডিজাইন",
+    "leads": "লিড ক্যাপচার",
+    "banners": "ব্যানার",
+    "content": "কন্টেন্ট / মেনু",
+    "export": "এক্সপোর্ট"
+  },
+  "header": {
+    "brand": {
+      "title": "ব্র্যান্ড / ডিজাইন",
+      "subtitle": "চূড়ান্ত পণ্যের চেহারা কাস্টমাইজ করুন।"
+    },
+    "leads": {
+      "title": "লিড ক্যাপচার",
+      "subtitle": "প্রাথমিক অপ্ট-ইন / স্কুইজ পেজ কনফিগার করুন।"
+    },
+    "banners": {
+      "title": "ব্যানার",
+      "subtitle": "বিজ্ঞাপন ব্যানার এবং অ্যাফিলিয়েট লিঙ্ক যোগ করুন।"
+    },
+    "content": {
+      "title": "কন্টেন্ট / মেনু",
+      "subtitle": "চূড়ান্ত পণ্যের নেভিগেশন মেনু তৈরি করুন।"
+    },
+    "export": {
+      "title": "এক্সপোর্ট",
+      "subtitle": "চূড়ান্ত পণ্যটিকে .exe (Windows) এ কম্পাইল করুন।"
+    }
+  },
+  "sidebar": {
+    "preview_btn": "পণ্যের প্রিভিউ",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "সংরক্ষণ",
+    "cancel": "বাতিল",
+    "close": "বন্ধ করুন",
+    "remove": "সরান",
+    "saving": "সংরক্ষণ করা হচ্ছে…",
+    "saved": "সেটিংস সংরক্ষিত হয়েছে।",
+    "error_prefix": "ত্রুটি: ",
+    "choose_file": "ফাইল নির্বাচন করুন",
+    "no_file_chosen": "কোনো ফাইল নির্বাচিত হয়নি",
+    "loading_summary": "সারাংশ লোড হচ্ছে…"
+  },
+  "brand": {
+    "title_label": "সফটওয়্যার শিরোনাম",
+    "title_placeholder": "যেমন: আমার ডিজিটাল কোর্স",
+    "title_help": "এটি উইন্ডো বার এবং চূড়ান্ত পণ্যের মেনু হেডারে প্রদর্শিত হয়।",
+    "logo_label": "লোগো / হেডার ছবি",
+    "logo_empty": "কোনো লোগো লোড হয়নি",
+    "logo_help": "ফাইলটি অভ্যন্তরীণ dist-assets/ ফোল্ডারে কপি করা হবে।",
+    "colors_label": "কাস্টম রঙ",
+    "color_sidebar": "সাইড মেনুর রঙ",
+    "color_background": "প্রধান পটভূমির রঙ",
+    "color_buttons": "বোতামের রঙ",
+    "save_btn": "সেটিংস সংরক্ষণ"
+  },
+  "leads": {
+    "toggle_title": "কন্টেন্ট লক সক্ষম করুন (অপ্ট-ইন গেট)",
+    "toggle_sub": "সক্ষম থাকলে, চূড়ান্ত গ্রাহক নিচের ফর্ম জমা দেওয়ার পরেই কন্টেন্ট দেখতে পাবেন।",
+    "heading_label": "লকের শিরোনাম",
+    "heading_placeholder": "যেমন: কোর্স অ্যাক্সেস করতে আপনার ইমেল লিখুন",
+    "heading_help": "ভিউয়ারে ফর্মের উপরে প্রদর্শিত বড় বার্তা।",
+    "html_label": "ফর্মের HTML কোড",
+    "html_placeholder": "এখানে ফর্ম কোড পেস্ট করুন (Mailchimp, AWeber, ActiveCampaign, ইত্যাদি)",
+    "html_help": "HTML হুবহু ভিউয়ারে যুক্ত করা হয়। সর্বদা নিশ্চিত করুন এটি আপনার বিশ্বস্ত প্রদানকারীর থেকে এসেছে।",
+    "save_btn": "লিড সেটিংস সংরক্ষণ",
+    "access_btn": "আমি সাবস্ক্রাইব করেছি — কন্টেন্ট অ্যাক্সেস করুন"
+  },
+  "banner": {
+    "toggle_title": "বিজ্ঞাপন ব্যানার সক্ষম করুন",
+    "toggle_sub": "ব্যানারটি ভিউয়ারে সব পৃষ্ঠায় স্থির থাকবে।",
+    "image_label": "ব্যানার ছবি",
+    "image_empty": "কোনো ব্যানার লোড হয়নি",
+    "image_help": "প্রস্তাবিত: অনুভূমিক ছবি (যেমন: 728×90 বা 970×90)। dist-assets/ এ কপি করা হয়।",
+    "url_label": "গন্তব্য লিঙ্ক",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "চূড়ান্ত গ্রাহক ব্যানারে ক্লিক করলে URL বাহ্যিক ব্রাউজারে খুলবে।",
+    "position_label": "ব্যানারের অবস্থান",
+    "position_top": "পৃষ্ঠার উপরে",
+    "position_bottom": "পৃষ্ঠার নিচে",
+    "save_btn": "ব্যানার সেটিংস সংরক্ষণ",
+    "dims_hint": "গৃহীত ফরম্যাট: PNG, JPG বা অ্যানিমেটেড GIF। প্রস্তাবিত আকার: 728×90px (অনুভূমিক ফরম্যাট)।",
+    "top_legend": "উপরের ব্যানার",
+    "bottom_legend": "নিচের ব্যানার",
+    "top_toggle_title": "উপরের ব্যানার সক্ষম করুন",
+    "bottom_toggle_title": "নিচের ব্যানার সক্ষম করুন"
+  },
+  "content": {
+    "list_title": "মেনু মডিউল",
+    "add_btn": "+ নতুন মডিউল যোগ করুন",
+    "list_empty": "এখনো কোনো মডিউল নেই। শুরু করতে \"নতুন মডিউল যোগ করুন\" এ ক্লিক করুন।",
+    "editor_empty": "তালিকা থেকে একটি মডিউল নির্বাচন করুন, অথবা সম্পাদনা শুরু করতে \"+ নতুন মডিউল যোগ করুন\" এ ক্লিক করুন।",
+    "editor_new_title": "নতুন মডিউল",
+    "editor_edit_title": "মডিউল সম্পাদনা",
+    "editor_save": "মডিউল সংরক্ষণ",
+    "module_title_label": "বোতামের শিরোনাম",
+    "module_title_placeholder": "যেমন: পাঠ ১ — ভূমিকা",
+    "module_type_label": "ক্রিয়ার ধরন",
+    "type": {
+      "youtube": "YouTube ভিডিও (Iframe)",
+      "html": "HTML / রিচ টেক্সট",
+      "pdf": "স্থানীয় PDF ফাইল",
+      "webview": "অভ্যন্তরীণ ব্রাউজার (Webview)",
+      "external": "বাহ্যিক ব্রাউজার (Chrome/Edge)",
+      "launch": "ফাইল চালু করুন (.exe / .zip / ইত্যাদি)"
+    },
+    "youtube_url_label": "ভিডিওর URL বা ID",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... বা শুধু ID",
+    "youtube_help": "চূড়ান্ত পণ্যের ভিতরে একটি <iframe> এ রেন্ডার করা হয়।",
+    "html_label": "HTML / টেক্সট",
+    "html_placeholder": "<h1>স্বাগতম</h1>\n<p>আপনার কন্টেন্ট এখানে…</p>",
+    "html_help": "HTML হুবহু ভিউয়ারের প্রধান এলাকায় যুক্ত করা হবে।",
+    "pdf_label": "PDF ফাইল",
+    "pdf_help": "সংরক্ষণের সময় PDF টি dist-assets/ এ কপি করা হবে।",
+    "file_none": "কোনো ফাইল নির্বাচিত হয়নি।",
+    "file_new_prefix": "নতুন ফাইল: ",
+    "file_current_prefix": "বর্তমান ফাইল: ",
+    "webview_url_label": "সফটওয়্যারের ভিতরে খোলার URL",
+    "webview_url_placeholder": "https://example.com",
+    "webview_help": "<webview> এর মাধ্যমে লোড করা হয় — ব্যবহারকারী অ্যাপের ভিতরে থাকেন।",
+    "external_url_label": "সিস্টেম ব্রাউজারে খোলার URL",
+    "external_url_placeholder": "https://example.com/affiliate",
+    "external_help": "অ্যাফিলিয়েট লিঙ্কের জন্য আদর্শ — ডিফল্ট Chrome/Edge এ খোলে।",
+    "launch_label": "চালু করার ফাইল",
+    "launch_help": "যেকোনো ফরম্যাট (.exe, .zip, .doc…)। dist-assets/ এ কপি করা হয়।",
+    "delete_confirm": "মডিউল \"{title}\" মুছবেন? এই ক্রিয়া পূর্বাবস্থায় ফেরানো যাবে না।",
+    "order_updated": "ক্রম আপডেট হয়েছে।",
+    "click_to_edit": "সম্পাদনা করতে ক্লিক করুন",
+    "btn_up": "উপরে",
+    "btn_down": "নিচে",
+    "btn_edit": "সম্পাদনা",
+    "btn_delete": "মুছুন",
+    "reorder_error_prefix": "পুনর্বিন্যাসে ত্রুটি: ",
+    "delete_error_prefix": "মুছতে ত্রুটি: ",
+    "module_deleted": "মডিউল মুছে ফেলা হয়েছে।",
+    "module_saved": "মডিউল সংরক্ষিত হয়েছে।"
+  },
+  "export": {
+    "icon_label": "সফটওয়্যার আইকন",
+    "icon_none": "কোনো আইকন নির্ধারিত নেই।",
+    "icon_current_prefix": "বর্তমান আইকন: ",
+    "icon_help": ".png, .jpg বা .ico গ্রহণ করে। এটি স্বয়ংক্রিয়ভাবে রূপান্তরিত হয়ে চূড়ান্ত .exe এর আইকনে প্রয়োগ হয়।",
+    "icon_must_be_ico": "অনুগ্রহ করে একটি .ico ফাইল নির্বাচন করুন",
+    "summary_label": "প্রকল্পের সারাংশ",
+    "build_btn": "চূড়ান্ত পণ্য এক্সপোর্ট করুন (.exe)",
+    "build_help": "ডেলিভারির জন্য প্রস্তুত একটি একক .exe তৈরি করে। শিক্ষার্থী ডাবল-ক্লিক করলে কোর্স সঙ্গে সঙ্গে খোলে — কিছু ইনস্টল না করেই। তৈরি হতে ৩০ সেকেন্ড থেকে ১ মিনিট লাগতে পারে।",
+    "status_label": "স্ট্যাটাস",
+    "log_empty": "কোনো কার্যকলাপ নেই। শুরু করতে \"এক্সপোর্ট\" এ ক্লিক করুন।",
+    "open_release_btn": "ফোল্ডারে ফাইল দেখান",
+    "summary": {
+      "project": "প্রকল্প",
+      "modules": "মডিউল",
+      "logo": "লোগো",
+      "leads": "অপ্ট-ইন / লিড",
+      "banner": "ব্যানার",
+      "icon": ".exe আইকন",
+      "defined": "নির্ধারিত",
+      "no_logo": "কোনো লোগো নেই",
+      "active": "সক্রিয়",
+      "inactive": "নিষ্ক্রিয়",
+      "default_electron": "ডিফল্ট Electron"
+    },
+    "log": {
+      "starting": "এক্সপোর্ট প্রস্তুত করা হচ্ছে…",
+      "saved_prefix": "কোর্স সংরক্ষিত হয়েছে: ",
+      "cancelled": "অপারেশন বাতিল হয়েছে।",
+      "failed_prefix": "ত্রুটি: "
+    },
+    "icon_must_be_image": "অনুগ্রহ করে একটি .ico, .png বা .jpg ফাইল নির্বাচন করুন"
+  },
+  "viewer": {
+    "menu_empty": "কোনো মডিউল কনফিগার করা হয়নি।",
+    "url_missing": "URL অনুপস্থিত।",
+    "pdf_missing": "PDF ফাইল অনুপস্থিত।",
+    "file_missing": "ফাইল অনুপস্থিত।",
+    "video_missing": "ভিডিও URL অনুপস্থিত।",
+    "external_error_prefix": "লিঙ্ক খুলতে ত্রুটি: ",
+    "launch_error_prefix": "ফাইল চালু করতে ত্রুটি: ",
+    "config_error_prefix": "কনফিগারেশন লোড করতে ত্রুটি: ",
+    "empty_heading": "স্বাগতম",
+    "empty_text": "শুরু করতে মেনু থেকে একটি বিকল্প নির্বাচন করুন।",
+    "optin_default_heading": "কন্টেন্ট অ্যাক্সেস করতে আপনার ইমেল লিখুন",
+    "optin_bypass": "লক বন্ধ করুন / উপেক্ষা করুন (পরীক্ষা)"
+  },
+  "corners": {
+    "music_label": "আমার সঙ্গীত",
+    "author_label": "António Fradique দ্বারা নির্মিত",
+    "plastic_text": "গ্রহকে সাহায্য করে অর্থ উপার্জন করুন! প্লাস্টিককে লাভে রূপান্তরিত করে সমৃদ্ধ হন:",
+    "parking_text": "ঘুরে ঘুরে ক্লান্ত? ParknDgo দিয়ে কয়েক সেকেন্ডে পার্কিং খুঁজুন!"
+  }
+}

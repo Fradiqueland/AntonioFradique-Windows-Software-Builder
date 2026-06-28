@@ -1,0 +1,201 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "المُنشئ"
+  },
+  "lang": {
+    "label": "اللغة"
+  },
+  "tab": {
+    "brand": "العلامة التجارية / التصميم",
+    "leads": "جمع العملاء المحتملين",
+    "banners": "اللافتات",
+    "content": "المحتوى / القوائم",
+    "export": "تصدير"
+  },
+  "header": {
+    "brand": {
+      "title": "العلامة التجارية / التصميم",
+      "subtitle": "خصّص مظهر المنتج النهائي."
+    },
+    "leads": {
+      "title": "جمع العملاء المحتملين",
+      "subtitle": "اضبط صفحة الاشتراك / صفحة الالتقاط الأولية."
+    },
+    "banners": {
+      "title": "اللافتات",
+      "subtitle": "أضف لافتات إعلانية وروابط تابعة."
+    },
+    "content": {
+      "title": "المحتوى / القوائم",
+      "subtitle": "أنشئ قائمة التنقل للمنتج النهائي."
+    },
+    "export": {
+      "title": "تصدير",
+      "subtitle": "اجمع المنتج النهائي في ملف .exe (Windows)."
+    }
+  },
+  "sidebar": {
+    "preview_btn": "معاينة المنتج",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "remove": "إزالة",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم حفظ الإعدادات.",
+    "error_prefix": "خطأ: ",
+    "choose_file": "اختر ملفًا",
+    "no_file_chosen": "لم يتم اختيار ملف",
+    "loading_summary": "جارٍ تحميل الملخص…"
+  },
+  "brand": {
+    "title_label": "عنوان البرنامج",
+    "title_placeholder": "مثال: دورتي الرقمية",
+    "title_help": "يظهر في شريط النافذة وفي رأس قائمة المنتج النهائي.",
+    "logo_label": "الشعار / صورة الرأس",
+    "logo_empty": "لم يتم تحميل شعار",
+    "logo_help": "سيتم نسخ الملف إلى المجلد الداخلي dist-assets/.",
+    "colors_label": "ألوان مخصّصة",
+    "color_sidebar": "لون القائمة الجانبية",
+    "color_background": "لون الخلفية الرئيسي",
+    "color_buttons": "لون الأزرار",
+    "save_btn": "حفظ الإعدادات"
+  },
+  "leads": {
+    "toggle_title": "تفعيل قفل المحتوى (بوابة الاشتراك)",
+    "toggle_sub": "إذا تم التفعيل، لن يرى العميل النهائي المحتوى إلا بعد إرسال النموذج أدناه.",
+    "heading_label": "عنوان القفل",
+    "heading_placeholder": "مثال: أدخل بريدك الإلكتروني للوصول إلى الدورة",
+    "heading_help": "رسالة كبيرة تُعرض أعلى النموذج في العارض.",
+    "html_label": "كود HTML للنموذج",
+    "html_placeholder": "الصق كود النموذج هنا (Mailchimp، AWeber، ActiveCampaign، إلخ)",
+    "html_help": "يتم إدراج HTML كما هو في العارض. تأكد دائمًا أنه من مزوّدك الموثوق.",
+    "save_btn": "حفظ إعدادات العملاء المحتملين",
+    "access_btn": "لقد اشتركت — الوصول إلى المحتوى"
+  },
+  "banner": {
+    "toggle_title": "تفعيل اللافتة الإعلانية",
+    "toggle_sub": "ستبقى اللافتة ثابتة في العارض على جميع الصفحات.",
+    "image_label": "صورة اللافتة",
+    "image_empty": "لم يتم تحميل لافتة",
+    "image_help": "موصى به: صورة أفقية (مثال: 728×90 أو 970×90). تُنسخ إلى dist-assets/.",
+    "url_label": "رابط الوجهة",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "يُفتح الرابط في المتصفح الخارجي عند نقر العميل النهائي على اللافتة.",
+    "position_label": "موضع اللافتة",
+    "position_top": "أعلى الصفحة",
+    "position_bottom": "أسفل الصفحة",
+    "save_btn": "حفظ إعدادات اللافتات",
+    "dims_hint": "الصيغ المقبولة: PNG أو JPG أو GIF متحرك. الحجم الموصى به: 728×90px (تنسيق أفقي).",
+    "top_legend": "اللافتة العلوية",
+    "bottom_legend": "اللافتة السفلية",
+    "top_toggle_title": "تفعيل اللافتة العلوية",
+    "bottom_toggle_title": "تفعيل اللافتة السفلية"
+  },
+  "content": {
+    "list_title": "وحدات القائمة",
+    "add_btn": "+ إضافة وحدة جديدة",
+    "list_empty": "لا توجد وحدات بعد. انقر على \"إضافة وحدة جديدة\" للبدء.",
+    "editor_empty": "اختر وحدة من القائمة، أو انقر على \"+ إضافة وحدة جديدة\" لبدء التحرير.",
+    "editor_new_title": "وحدة جديدة",
+    "editor_edit_title": "تحرير الوحدة",
+    "editor_save": "حفظ الوحدة",
+    "module_title_label": "عنوان الزر",
+    "module_title_placeholder": "مثال: الدرس 1 — مقدمة",
+    "module_type_label": "نوع الإجراء",
+    "type": {
+      "youtube": "فيديو YouTube (Iframe)",
+      "html": "HTML / نص منسّق",
+      "pdf": "ملف PDF محلي",
+      "webview": "متصفح داخلي (Webview)",
+      "external": "متصفح خارجي (Chrome/Edge)",
+      "launch": "تشغيل ملف (.exe / .zip / إلخ)"
+    },
+    "youtube_url_label": "رابط أو معرّف الفيديو",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... أو المعرّف فقط",
+    "youtube_help": "يتم عرضه داخل <iframe> ضمن المنتج النهائي.",
+    "html_label": "HTML / نص",
+    "html_placeholder": "<h1>مرحبًا</h1>\n<p>محتواك هنا…</p>",
+    "html_help": "سيتم إدراج HTML كما هو في المنطقة الرئيسية للعارض.",
+    "pdf_label": "ملف PDF",
+    "pdf_help": "سيتم نسخ ملف PDF إلى dist-assets/ عند الحفظ.",
+    "file_none": "لم يتم اختيار ملف.",
+    "file_new_prefix": "ملف جديد: ",
+    "file_current_prefix": "الملف الحالي: ",
+    "webview_url_label": "الرابط المراد فتحه داخل البرنامج",
+    "webview_url_placeholder": "https://example.com",
+    "webview_help": "يُحمّل عبر <webview> — يبقى المستخدم داخل التطبيق.",
+    "external_url_label": "الرابط المراد فتحه في متصفح النظام",
+    "external_url_placeholder": "https://example.com/affiliate",
+    "external_help": "مثالي للروابط التابعة — يُفتح في Chrome/Edge الافتراضي.",
+    "launch_label": "الملف المراد تشغيله",
+    "launch_help": "أي صيغة (.exe، .zip، .doc…). يُنسخ إلى dist-assets/.",
+    "delete_confirm": "حذف الوحدة \"{title}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+    "order_updated": "تم تحديث الترتيب.",
+    "click_to_edit": "انقر للتحرير",
+    "btn_up": "أعلى",
+    "btn_down": "أسفل",
+    "btn_edit": "تحرير",
+    "btn_delete": "حذف",
+    "reorder_error_prefix": "خطأ في إعادة الترتيب: ",
+    "delete_error_prefix": "خطأ في الحذف: ",
+    "module_deleted": "تم حذف الوحدة.",
+    "module_saved": "تم حفظ الوحدة."
+  },
+  "export": {
+    "icon_label": "أيقونة البرنامج",
+    "icon_none": "لم يتم تحديد أيقونة.",
+    "icon_current_prefix": "الأيقونة الحالية: ",
+    "icon_help": "يقبل .png أو .jpg أو .ico. يتم تحويلها تلقائيًا وتطبيقها على أيقونة ملف .exe النهائي.",
+    "icon_must_be_ico": "يرجى اختيار ملف .ico",
+    "summary_label": "ملخص المشروع",
+    "build_btn": "تصدير المنتج النهائي (.exe)",
+    "build_help": "ينشئ ملف .exe واحدًا جاهزًا للتسليم. ينقر الطالب نقرًا مزدوجًا فتُفتح الدورة فورًا — دون تثبيت أي شيء. قد يستغرق الإنشاء من 30 ثانية إلى دقيقة.",
+    "status_label": "الحالة",
+    "log_empty": "لا يوجد نشاط. انقر على \"تصدير\" للبدء.",
+    "open_release_btn": "إظهار الملف في المجلد",
+    "summary": {
+      "project": "المشروع",
+      "modules": "الوحدات",
+      "logo": "الشعار",
+      "leads": "الاشتراك / العملاء المحتملون",
+      "banner": "اللافتة",
+      "icon": "أيقونة .exe",
+      "defined": "محدّد",
+      "no_logo": "بدون شعار",
+      "active": "مفعّل",
+      "inactive": "غير مفعّل",
+      "default_electron": "Electron الافتراضي"
+    },
+    "log": {
+      "starting": "جارٍ تحضير التصدير…",
+      "saved_prefix": "تم حفظ الدورة في: ",
+      "cancelled": "تم إلغاء العملية.",
+      "failed_prefix": "خطأ: "
+    },
+    "icon_must_be_image": "يرجى اختيار ملف .ico أو .png أو .jpg"
+  },
+  "viewer": {
+    "menu_empty": "لم يتم تكوين أي وحدة.",
+    "url_missing": "الرابط مفقود.",
+    "pdf_missing": "ملف PDF مفقود.",
+    "file_missing": "الملف مفقود.",
+    "video_missing": "رابط الفيديو مفقود.",
+    "external_error_prefix": "خطأ في فتح الرابط: ",
+    "launch_error_prefix": "خطأ في تشغيل الملف: ",
+    "config_error_prefix": "خطأ في تحميل الإعدادات: ",
+    "empty_heading": "مرحبًا",
+    "empty_text": "اختر خيارًا من القائمة للبدء.",
+    "optin_default_heading": "أدخل بريدك الإلكتروني للوصول إلى المحتوى",
+    "optin_bypass": "إغلاق / تجاوز القفل (اختبار)"
+  },
+  "corners": {
+    "music_label": "موسيقاي",
+    "author_label": "من إنشاء António Fradique",
+    "plastic_text": "اكسب المال وأنت تساعد الكوكب! ازدهر بتحويل البلاستيك إلى ربح:",
+    "parking_text": "سئمت الدوران؟ اعثر على موقف سيارات في ثوانٍ مع ParknDgo!"
+  }
+}

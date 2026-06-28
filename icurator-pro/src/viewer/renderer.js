@@ -27,7 +27,13 @@ let i18nDict = {};
 
 /* -------- i18n (com seletor de idioma em direto no Viewer) -------- */
 
-const ALLOWED_LANGS = ['pt', 'en', 'es', 'fr'];
+const ALLOWED_LANGS = ['pt', 'en', 'es', 'fr', 'hi', 'ar', 'zh', 'bn', 'ru', 'id'];
+const RTL_LANGS = ['ar'];
+
+function applyDir(lang) {
+  document.documentElement.setAttribute('lang', lang);
+  document.documentElement.setAttribute('dir', RTL_LANGS.includes(lang) ? 'rtl' : 'ltr');
+}
 
 function tr(key, fallback) {
   const parts = key.split('.');
@@ -348,6 +354,8 @@ async function boot() {
 
   // Seletor de idioma em direto: re-traduz texto estático + dinâmico sem
   // reiniciar o Viewer. Não persiste (o Viewer é um leitor só-de-leitura).
+  applyDir(ALLOWED_LANGS.includes(lang) ? lang : 'pt');
+
   const langSelect = document.getElementById('viewer-lang');
   if (langSelect) {
     langSelect.value = ALLOWED_LANGS.includes(lang) ? lang : 'pt';
@@ -370,12 +378,15 @@ function applyDynamicTexts() {
 }
 
 async function setLanguage(lang) {
+  let applied = lang;
   try {
-    const { dict } = await window.viewer.loadLocale(lang);
-    i18nDict = dict || {};
+    const res = await window.viewer.loadLocale(lang);
+    i18nDict = res.dict || {};
+    if (res.lang) applied = res.lang;
   } catch (_) { return; }
   applyI18n();
   applyDynamicTexts();
+  applyDir(ALLOWED_LANGS.includes(applied) ? applied : 'pt');
 }
 
 /* =========================================================

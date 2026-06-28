@@ -1,0 +1,201 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "构建器"
+  },
+  "lang": {
+    "label": "语言"
+  },
+  "tab": {
+    "brand": "品牌 / 设计",
+    "leads": "潜在客户捕获",
+    "banners": "横幅",
+    "content": "内容 / 菜单",
+    "export": "导出"
+  },
+  "header": {
+    "brand": {
+      "title": "品牌 / 设计",
+      "subtitle": "自定义最终产品的外观。"
+    },
+    "leads": {
+      "title": "潜在客户捕获",
+      "subtitle": "配置初始的订阅 / 落地页。"
+    },
+    "banners": {
+      "title": "横幅",
+      "subtitle": "添加广告横幅和联盟链接。"
+    },
+    "content": {
+      "title": "内容 / 菜单",
+      "subtitle": "构建最终产品的导航菜单。"
+    },
+    "export": {
+      "title": "导出",
+      "subtitle": "将最终产品编译为 .exe（Windows）。"
+    }
+  },
+  "sidebar": {
+    "preview_btn": "预览产品",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "remove": "移除",
+    "saving": "正在保存…",
+    "saved": "设置已保存。",
+    "error_prefix": "错误：",
+    "choose_file": "选择文件",
+    "no_file_chosen": "未选择文件",
+    "loading_summary": "正在加载摘要…"
+  },
+  "brand": {
+    "title_label": "软件标题",
+    "title_placeholder": "例如：我的数字课程",
+    "title_help": "显示在窗口栏和最终产品的菜单标题中。",
+    "logo_label": "徽标 / 页眉图片",
+    "logo_empty": "未加载徽标",
+    "logo_help": "文件将被复制到内部 dist-assets/ 文件夹。",
+    "colors_label": "自定义颜色",
+    "color_sidebar": "侧边菜单颜色",
+    "color_background": "主背景颜色",
+    "color_buttons": "按钮颜色",
+    "save_btn": "保存设置"
+  },
+  "leads": {
+    "toggle_title": "启用内容锁定（订阅门）",
+    "toggle_sub": "启用后，最终客户只有在提交下方表单后才能看到内容。",
+    "heading_label": "锁定标题",
+    "heading_placeholder": "例如：输入您的电子邮件以访问课程",
+    "heading_help": "在查看器中表单上方显示的大号提示信息。",
+    "html_label": "表单 HTML 代码",
+    "html_placeholder": "在此粘贴表单代码（Mailchimp、AWeber、ActiveCampaign 等）",
+    "html_help": "HTML 会原样注入查看器。请始终确认它来自您信任的服务商。",
+    "save_btn": "保存潜在客户设置",
+    "access_btn": "我已订阅 — 访问内容"
+  },
+  "banner": {
+    "toggle_title": "启用广告横幅",
+    "toggle_sub": "横幅将固定显示在查看器的所有页面上。",
+    "image_label": "横幅图片",
+    "image_empty": "未加载横幅",
+    "image_help": "推荐：横向图片（例如 728×90 或 970×90）。复制到 dist-assets/。",
+    "url_label": "目标链接",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "当最终客户点击横幅时，URL 将在外部浏览器中打开。",
+    "position_label": "横幅位置",
+    "position_top": "页面顶部",
+    "position_bottom": "页面底部",
+    "save_btn": "保存横幅设置",
+    "dims_hint": "支持格式：PNG、JPG 或动态 GIF。推荐尺寸：728×90px（横向格式）。",
+    "top_legend": "顶部横幅",
+    "bottom_legend": "底部横幅",
+    "top_toggle_title": "启用顶部横幅",
+    "bottom_toggle_title": "启用底部横幅"
+  },
+  "content": {
+    "list_title": "菜单模块",
+    "add_btn": "+ 添加新模块",
+    "list_empty": "尚无模块。点击“添加新模块”开始。",
+    "editor_empty": "从列表中选择一个模块，或点击“+ 添加新模块”开始编辑。",
+    "editor_new_title": "新模块",
+    "editor_edit_title": "编辑模块",
+    "editor_save": "保存模块",
+    "module_title_label": "按钮标题",
+    "module_title_placeholder": "例如：第 1 课 — 简介",
+    "module_type_label": "操作类型",
+    "type": {
+      "youtube": "YouTube 视频 (Iframe)",
+      "html": "HTML / 富文本",
+      "pdf": "本地 PDF 文件",
+      "webview": "内部浏览器 (Webview)",
+      "external": "外部浏览器 (Chrome/Edge)",
+      "launch": "启动文件 (.exe / .zip / 等)"
+    },
+    "youtube_url_label": "视频 URL 或 ID",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... 或仅 ID",
+    "youtube_help": "在最终产品内的 <iframe> 中渲染。",
+    "html_label": "HTML / 文本",
+    "html_placeholder": "<h1>欢迎</h1>\n<p>您的内容在此…</p>",
+    "html_help": "HTML 将原样注入查看器的主区域。",
+    "pdf_label": "PDF 文件",
+    "pdf_help": "保存时 PDF 将被复制到 dist-assets/。",
+    "file_none": "未选择文件。",
+    "file_new_prefix": "新文件：",
+    "file_current_prefix": "当前文件：",
+    "webview_url_label": "在软件内打开的 URL",
+    "webview_url_placeholder": "https://example.com",
+    "webview_help": "通过 <webview> 加载 — 用户保持在应用内。",
+    "external_url_label": "在系统浏览器中打开的 URL",
+    "external_url_placeholder": "https://example.com/affiliate",
+    "external_help": "适合联盟链接 — 在默认的 Chrome/Edge 中打开。",
+    "launch_label": "要启动的文件",
+    "launch_help": "任何格式（.exe、.zip、.doc…）。复制到 dist-assets/。",
+    "delete_confirm": "删除模块“{title}”？此操作无法撤销。",
+    "order_updated": "顺序已更新。",
+    "click_to_edit": "点击编辑",
+    "btn_up": "上移",
+    "btn_down": "下移",
+    "btn_edit": "编辑",
+    "btn_delete": "删除",
+    "reorder_error_prefix": "重新排序时出错：",
+    "delete_error_prefix": "删除时出错：",
+    "module_deleted": "模块已删除。",
+    "module_saved": "模块已保存。"
+  },
+  "export": {
+    "icon_label": "软件图标",
+    "icon_none": "未定义图标。",
+    "icon_current_prefix": "当前图标：",
+    "icon_help": "接受 .png、.jpg 或 .ico。会自动转换并应用到最终 .exe 的图标。",
+    "icon_must_be_ico": "请选择一个 .ico 文件",
+    "summary_label": "项目摘要",
+    "build_btn": "导出最终产品 (.exe)",
+    "build_help": "创建单个可交付的 .exe。学员双击即可立即打开课程 — 无需安装任何东西。生成可能需要 30 秒到 1 分钟。",
+    "status_label": "状态",
+    "log_empty": "无活动。点击“导出”开始。",
+    "open_release_btn": "在文件夹中显示文件",
+    "summary": {
+      "project": "项目",
+      "modules": "模块",
+      "logo": "徽标",
+      "leads": "订阅 / 潜在客户",
+      "banner": "横幅",
+      "icon": ".exe 图标",
+      "defined": "已定义",
+      "no_logo": "无徽标",
+      "active": "已启用",
+      "inactive": "未启用",
+      "default_electron": "Electron 默认"
+    },
+    "log": {
+      "starting": "正在准备导出…",
+      "saved_prefix": "课程已保存至：",
+      "cancelled": "操作已取消。",
+      "failed_prefix": "错误："
+    },
+    "icon_must_be_image": "请选择一个 .ico、.png 或 .jpg 文件"
+  },
+  "viewer": {
+    "menu_empty": "未配置任何模块。",
+    "url_missing": "缺少 URL。",
+    "pdf_missing": "缺少 PDF 文件。",
+    "file_missing": "缺少文件。",
+    "video_missing": "缺少视频 URL。",
+    "external_error_prefix": "打开链接时出错：",
+    "launch_error_prefix": "启动文件时出错：",
+    "config_error_prefix": "加载配置时出错：",
+    "empty_heading": "欢迎",
+    "empty_text": "从菜单中选择一个选项以开始。",
+    "optin_default_heading": "输入您的电子邮件以访问内容",
+    "optin_bypass": "关闭 / 跳过锁定（测试）"
+  },
+  "corners": {
+    "music_label": "我的音乐",
+    "author_label": "由 António Fradique 创作",
+    "plastic_text": "帮助地球的同时赚钱！将塑料转化为利润，蓬勃发展：",
+    "parking_text": "厌倦了兜圈子？使用 ParknDgo 在几秒钟内找到停车位！"
+  }
+}

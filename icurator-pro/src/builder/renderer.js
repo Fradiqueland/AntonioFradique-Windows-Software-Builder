@@ -36,8 +36,9 @@ function applyI18n(root = document) {
   // Refresh current tab header (it was set imperatively).
   const activeTab = document.querySelector('.tab.active');
   if (activeTab) refreshTabHeader(activeTab.dataset.tab);
-  // Update <html lang>.
+  // Update <html lang> and text direction (RTL for Arabic).
   document.documentElement.setAttribute('lang', I18N.lang);
+  document.documentElement.setAttribute('dir', I18N.lang === 'ar' ? 'rtl' : 'ltr');
 }
 
 async function setLanguage(lang, { persist = true } = {}) {

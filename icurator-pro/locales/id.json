@@ -1,0 +1,201 @@
+{
+  "app": {
+    "brand_title": "LaunchBox Pro",
+    "brand_sub": "Pembuat"
+  },
+  "lang": {
+    "label": "Bahasa"
+  },
+  "tab": {
+    "brand": "Merek / Desain",
+    "leads": "Tangkap Prospek",
+    "banners": "Spanduk",
+    "content": "Konten / Menu",
+    "export": "Ekspor"
+  },
+  "header": {
+    "brand": {
+      "title": "Merek / Desain",
+      "subtitle": "Sesuaikan tampilan produk akhir."
+    },
+    "leads": {
+      "title": "Tangkap Prospek",
+      "subtitle": "Konfigurasikan halaman opt-in / squeeze awal."
+    },
+    "banners": {
+      "title": "Spanduk",
+      "subtitle": "Tambahkan spanduk iklan dan tautan afiliasi."
+    },
+    "content": {
+      "title": "Konten / Menu",
+      "subtitle": "Bangun menu navigasi produk akhir."
+    },
+    "export": {
+      "title": "Ekspor",
+      "subtitle": "Kompilasi produk akhir menjadi .exe (Windows)."
+    }
+  },
+  "sidebar": {
+    "preview_btn": "Pratinjau Produk",
+    "version_suffix": ""
+  },
+  "common": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "close": "Tutup",
+    "remove": "Hapus",
+    "saving": "Menyimpan…",
+    "saved": "Pengaturan disimpan.",
+    "error_prefix": "Kesalahan: ",
+    "choose_file": "Pilih file",
+    "no_file_chosen": "Tidak ada file dipilih",
+    "loading_summary": "Memuat ringkasan…"
+  },
+  "brand": {
+    "title_label": "Judul Perangkat Lunak",
+    "title_placeholder": "Mis: Kursus Digital Saya",
+    "title_help": "Muncul di bilah jendela dan header menu produk akhir.",
+    "logo_label": "Logo / Gambar Header",
+    "logo_empty": "Tidak ada logo dimuat",
+    "logo_help": "File akan disalin ke folder internal dist-assets/.",
+    "colors_label": "Warna Kustom",
+    "color_sidebar": "Warna Menu Samping",
+    "color_background": "Warna Latar Utama",
+    "color_buttons": "Warna Tombol",
+    "save_btn": "Simpan Pengaturan"
+  },
+  "leads": {
+    "toggle_title": "Aktifkan Penguncian Konten (Opt-in Gate)",
+    "toggle_sub": "Jika diaktifkan, pelanggan akhir hanya akan melihat konten setelah mengirim formulir di bawah.",
+    "heading_label": "Judul Penguncian",
+    "heading_placeholder": "Mis: Masukkan email Anda untuk mengakses kursus",
+    "heading_help": "Pesan besar yang ditampilkan di atas formulir di Penampil.",
+    "html_label": "Kode HTML Formulir",
+    "html_placeholder": "Tempel kode formulir di sini (Mailchimp, AWeber, ActiveCampaign, dll.)",
+    "html_help": "HTML disisipkan apa adanya ke Penampil. Selalu pastikan berasal dari penyedia tepercaya Anda.",
+    "save_btn": "Simpan Pengaturan Prospek",
+    "access_btn": "Saya sudah berlangganan — Akses konten"
+  },
+  "banner": {
+    "toggle_title": "Aktifkan Spanduk Iklan",
+    "toggle_sub": "Spanduk akan tetap di Penampil di semua halaman.",
+    "image_label": "Gambar Spanduk",
+    "image_empty": "Tidak ada spanduk dimuat",
+    "image_help": "Disarankan: gambar horizontal (mis: 728×90 atau 970×90). Disalin ke dist-assets/.",
+    "url_label": "Tautan Tujuan",
+    "url_placeholder": "https://example.com/my-affiliate-link",
+    "url_help": "URL dibuka di browser eksternal saat pelanggan akhir mengklik spanduk.",
+    "position_label": "Posisi Spanduk",
+    "position_top": "Atas Halaman",
+    "position_bottom": "Bawah Halaman",
+    "save_btn": "Simpan Pengaturan Spanduk",
+    "dims_hint": "Format yang diterima: PNG, JPG, atau GIF animasi. Ukuran yang disarankan: 728×90px (format horizontal).",
+    "top_legend": "Spanduk Atas",
+    "bottom_legend": "Spanduk Bawah",
+    "top_toggle_title": "Aktifkan Spanduk Atas",
+    "bottom_toggle_title": "Aktifkan Spanduk Bawah"
+  },
+  "content": {
+    "list_title": "Modul Menu",
+    "add_btn": "+ Tambah Modul Baru",
+    "list_empty": "Belum ada modul. Klik \"Tambah Modul Baru\" untuk memulai.",
+    "editor_empty": "Pilih modul dari daftar, atau klik \"+ Tambah Modul Baru\" untuk mulai mengedit.",
+    "editor_new_title": "Modul Baru",
+    "editor_edit_title": "Edit Modul",
+    "editor_save": "Simpan Modul",
+    "module_title_label": "Judul Tombol",
+    "module_title_placeholder": "Mis: Pelajaran 1 — Pengantar",
+    "module_type_label": "Jenis Tindakan",
+    "type": {
+      "youtube": "Video YouTube (Iframe)",
+      "html": "HTML / Teks Kaya",
+      "pdf": "File PDF Lokal",
+      "webview": "Browser Internal (Webview)",
+      "external": "Browser Eksternal (Chrome/Edge)",
+      "launch": "Luncurkan File (.exe / .zip / dll)"
+    },
+    "youtube_url_label": "URL atau ID video",
+    "youtube_url_placeholder": "https://www.youtube.com/watch?v=... atau hanya ID",
+    "youtube_help": "Ditampilkan dalam <iframe> di dalam produk akhir.",
+    "html_label": "HTML / Teks",
+    "html_placeholder": "<h1>Selamat datang</h1>\n<p>Konten Anda di sini…</p>",
+    "html_help": "HTML akan disisipkan apa adanya ke area utama Penampil.",
+    "pdf_label": "File PDF",
+    "pdf_help": "PDF akan disalin ke dist-assets/ saat menyimpan.",
+    "file_none": "Tidak ada file dipilih.",
+    "file_new_prefix": "File baru: ",
+    "file_current_prefix": "File saat ini: ",
+    "webview_url_label": "URL untuk dibuka di dalam perangkat lunak",
+    "webview_url_placeholder": "https://example.com",
+    "webview_help": "Dimuat via <webview> — pengguna tetap di dalam aplikasi.",
+    "external_url_label": "URL untuk dibuka di browser sistem",
+    "external_url_placeholder": "https://example.com/affiliate",
+    "external_help": "Ideal untuk tautan afiliasi — terbuka di Chrome/Edge default.",
+    "launch_label": "File yang akan diluncurkan",
+    "launch_help": "Format apa pun (.exe, .zip, .doc…). Disalin ke dist-assets/.",
+    "delete_confirm": "Hapus modul \"{title}\"? Tindakan ini tidak dapat dibatalkan.",
+    "order_updated": "Urutan diperbarui.",
+    "click_to_edit": "Klik untuk mengedit",
+    "btn_up": "Naik",
+    "btn_down": "Turun",
+    "btn_edit": "Edit",
+    "btn_delete": "Hapus",
+    "reorder_error_prefix": "Kesalahan saat mengurutkan ulang: ",
+    "delete_error_prefix": "Kesalahan saat menghapus: ",
+    "module_deleted": "Modul dihapus.",
+    "module_saved": "Modul disimpan."
+  },
+  "export": {
+    "icon_label": "Ikon Perangkat Lunak",
+    "icon_none": "Tidak ada ikon ditentukan.",
+    "icon_current_prefix": "Ikon saat ini: ",
+    "icon_help": "Menerima .png, .jpg, atau .ico. Dikonversi otomatis dan diterapkan ke ikon .exe akhir.",
+    "icon_must_be_ico": "Silakan pilih file .ico",
+    "summary_label": "Ringkasan Proyek",
+    "build_btn": "Ekspor Produk Akhir (.exe)",
+    "build_help": "Membuat satu .exe siap kirim. Siswa klik dua kali dan kursus langsung terbuka — tanpa menginstal apa pun. Pembuatan bisa memakan 30 detik hingga 1 menit.",
+    "status_label": "Status",
+    "log_empty": "Tidak ada aktivitas. Klik \"Ekspor\" untuk memulai.",
+    "open_release_btn": "Tampilkan file di folder",
+    "summary": {
+      "project": "Proyek",
+      "modules": "Modul",
+      "logo": "Logo",
+      "leads": "Opt-in / Prospek",
+      "banner": "Spanduk",
+      "icon": "Ikon .exe",
+      "defined": "Ditentukan",
+      "no_logo": "Tanpa logo",
+      "active": "Aktif",
+      "inactive": "Tidak aktif",
+      "default_electron": "Electron Default"
+    },
+    "log": {
+      "starting": "Menyiapkan ekspor…",
+      "saved_prefix": "Kursus disimpan di: ",
+      "cancelled": "Operasi dibatalkan.",
+      "failed_prefix": "Kesalahan: "
+    },
+    "icon_must_be_image": "Silakan pilih file .ico, .png, atau .jpg"
+  },
+  "viewer": {
+    "menu_empty": "Tidak ada modul dikonfigurasi.",
+    "url_missing": "URL tidak ada.",
+    "pdf_missing": "File PDF tidak ada.",
+    "file_missing": "File tidak ada.",
+    "video_missing": "URL video tidak ada.",
+    "external_error_prefix": "Kesalahan membuka tautan: ",
+    "launch_error_prefix": "Kesalahan meluncurkan file: ",
+    "config_error_prefix": "Kesalahan memuat konfigurasi: ",
+    "empty_heading": "Selamat datang",
+    "empty_text": "Pilih opsi di menu untuk memulai.",
+    "optin_default_heading": "Masukkan email Anda untuk mengakses konten",
+    "optin_bypass": "Tutup / Lewati Penguncian (uji)"
+  },
+  "corners": {
+    "music_label": "Musik saya",
+    "author_label": "Dibuat oleh António Fradique",
+    "plastic_text": "Hasilkan uang sambil membantu planet ini! Berkembang dengan mengubah plastik menjadi keuntungan:",
+    "parking_text": "Bosan berputar-putar? Temukan parkir dalam hitungan detik dengan ParknDgo!"
+  }
+}
