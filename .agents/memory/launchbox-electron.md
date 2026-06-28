@@ -107,6 +107,17 @@ RunProgram path match. `DEFAULT_CONFIG.brand.title` is the default COURSE brand,
 app name — leave it. Easy-to-miss leaks: the export save-dialog filter `name` and the
 `.brand-title` HTML fallback text.
 
+## Course .exe icon silently falls back to 7-Zip SFX icon → almost always missing deps
+The course `Curso.exe` icon is stamped onto the SFX stub at export time via `rcedit`
+(after converting the user's tab-5 image with `nativeImage` + `png-to-ico`). If the final
+.exe shows the generic "7z SFX" icon, the stub was NOT stamped — the `stampSfxIcon` catch
+branch ran. The #1 cause for this non-technical user is that `png-to-ico`/`rcedit` are not
+in `node_modules` because they build with `npm run build:all` and historically skipped
+`npm install`. Fix applied: `build:all` now runs `npm install` first so the icon deps are
+always present. The export-time icon code (saveIcon persists `export.iconPath`, export
+re-reads config and stamps) is correct — don't chase it; check deps + the export log line
+(success = "Ícone personalizado aplicado…", failure now logs a loud `error`).
+
 ## Builder APP icon (its own exe/window) vs course .exe icon — two separate mechanisms
 The Builder's own icon = electron-builder `build.win.icon` (`build/icon.ico`, multi-size)
 for the installed exe/installer + a `BrowserWindow({icon})` PNG (put it under `src/builder/`

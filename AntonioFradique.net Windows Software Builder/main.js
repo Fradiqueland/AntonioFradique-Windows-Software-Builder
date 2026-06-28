@@ -378,9 +378,9 @@ async function stampSfxIcon(stubPath, iconSourceAbs, tmpDir, send) {
     send('Ícone personalizado aplicado ao executável final.', 'success');
     return stampedStub;
   } catch (err) {
-    send('Aviso: não foi possível aplicar o ícone personalizado (' +
+    send('ERRO: não foi possível aplicar o ícone personalizado ao .exe (' +
       (err && err.message ? err.message : err) +
-      '). Confirme que correu "npm install". A usar o ícone predefinido.', 'info');
+      '). As ferramentas de ícone (png-to-ico / rcedit) podem não estar instaladas — corra "npm install" e reconstrua. O curso foi criado com o ícone predefinido do 7-Zip.', 'error');
     return stubPath;
   }
 }
