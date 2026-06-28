@@ -195,17 +195,33 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
   return path.posix.join('dist-assets', finalName);
 }
 
+/* Extrai o ID (11 caracteres) de qualquer variante de link do YouTube:
+ * watch?v=ID, youtu.be/ID, shorts/ID, embed/ID, live/ID, /v/ID, /e/ID,
+ * m./music./www., com ou sem parâmetros extra, ou um ID isolado. */
+function extractYoutubeId(input) {
+  if (!input) return null;
+  const raw = String(input).trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+  let m;
+  m = raw.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = raw.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = raw.match(/youtube(?:-nocookie)?\.com\/(?:embed|shorts|live|v|e)\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = raw.match(/(?:^|[/=])([A-Za-z0-9_-]{11})(?:[?&/]|$)/);
+  if (m) return m[1];
+  return null;
+}
+
 /* Converte qualquer link/ID de YouTube para o formato de embed obrigatório
  * (https://www.youtube.com/embed/ID). Links normais (watch?v=, youtu.be/,
- * shorts/) injetados diretamente no src do iframe disparam o Erro 153. */
+ * shorts/) injetados diretamente no src disparam o Erro 153. */
 function toYoutubeEmbed(input) {
   if (!input) return '';
-  const raw = String(input).trim();
-  const idMatch =
-    raw.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/) ||
-    raw.match(/^([A-Za-z0-9_-]{6,})$/);
-  if (idMatch) return 'https://www.youtube.com/embed/' + idMatch[1];
-  return raw;
+  const id = extractYoutubeId(input);
+  if (id) return 'https://www.youtube.com/embed/' + id;
+  return String(input).trim();
 }
 
 function deleteAssetIfInside(relativePath) {

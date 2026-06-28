@@ -255,6 +255,7 @@ brandForm.addEventListener('submit', async (e) => {
     const abs = brandState.currentLogoRelative
       ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative) : null;
     setImagePreview(logoPreview, logoEmpty, abs);
+    updateExportSummary(updated);
     showBrandStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);
@@ -348,6 +349,7 @@ bannerForm.addEventListener('submit', async (e) => {
     const abs = bannerState.currentImageRelative
       ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative) : null;
     setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
+    updateExportSummary(updated);
     showBannerStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);

@@ -87,14 +87,28 @@ function showToast(message) {
   setTimeout(() => t.remove(), 4000);
 }
 
-function youtubeEmbedUrl(input) {
+function extractYoutubeId(input) {
   if (!input) return null;
   const raw = String(input).trim();
-  const idMatch =
-    raw.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/) ||
-    raw.match(/^([A-Za-z0-9_-]{6,})$/);
-  if (idMatch) return 'https://www.youtube.com/embed/' + idMatch[1];
-  return raw;
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+  let m;
+  m = raw.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = raw.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = raw.match(/youtube(?:-nocookie)?\.com\/(?:embed|shorts|live|v|e)\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = raw.match(/(?:^|[/=])([A-Za-z0-9_-]{11})(?:[?&/]|$)/);
+  if (m) return m[1];
+  return null;
+}
+
+function youtubeEmbedUrl(input) {
+  if (!input) return null;
+  const id = extractYoutubeId(input);
+  if (id) return 'https://www.youtube.com/embed/' + id;
+  const raw = String(input).trim();
+  return raw || null;
 }
 
 function clearStage() {
@@ -112,11 +126,14 @@ function renderYoutube(data) {
     stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.video_missing', 'URL de vídeo em falta.') + '</p></div>';
     return;
   }
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
-  iframe.setAttribute('allowfullscreen', '');
-  iframe.src = url;
-  stageEl.appendChild(iframe);
+  /* Usa <webview> em vez de <iframe>: dentro de uma página file:// o iframe
+   * envia um referrer file:// que o YouTube rejeita (Erro 153). O webview
+   * navega como documento de topo em youtube.com, sem esse referrer. */
+  const wv = document.createElement('webview');
+  wv.setAttribute('src', url);
+  wv.setAttribute('allowpopups', 'true');
+  wv.setAttribute('allowfullscreen', '');
+  stageEl.appendChild(wv);
 }
 
 function renderHtml(data) {
