@@ -145,9 +145,20 @@ bytes in Node and do NOT use ImageMagick `-define icon:auto-resize` — both pro
 entry table (tell: `magick identify build/icon.ico` showed a bogus ~176 KB 16×16 entry; a valid
 build identifies each entry as `ICO 16x16…` with sane sizes). app-builder validates the .ico and
 rejects malformed ones wholesale → atom icon. **How to apply:** regenerate icon.ico via png-to-ico,
-keep `win.icon:"build/icon.ico"`; success = build log shows NO "application icon is not set" for
-the builder exe. NOTE: the user builds on their own Windows box from a synced copy — if the log is
-unchanged, FIRST confirm they actually pulled the new files; a stale copy reproduces the same line.
+keep `win.icon` pointing at the .ico; success = build log shows NO "application icon is not set"
+for the builder exe.
+
+### ROOT CAUSE of the persistent atom icon: `build/` never reached the user's machine
+The recurring `application icon is not set` was NOT a format problem in the end — the user's
+synced copy on their Windows box had **no `build/` folder at all**, so whatever was in `build/`
+(icon.ico) simply wasn't present at build time. Put the icon in a folder that is provably
+delivered: `src/builder/icon.ico` (src/builder reaches them — the app runs from it), and set
+`win.icon: "src/builder/icon.ico"`. **Why:** the user does not reliably get top-level `build/`
+via their transfer method; assets that must reach them belong under `src/builder/` (already in
+the files glob + proven to sync). **How to apply:** never stash build-time assets the user needs
+in a bare top-level `build/`; co-locate under `src/builder/`. If an icon/asset "won't change" on
+their machine, FIRST have them confirm the file physically exists on disk on their side before
+touching format/config again.
 
 ## Two banners (top + bottom), independent slots
 Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,url} }`.
