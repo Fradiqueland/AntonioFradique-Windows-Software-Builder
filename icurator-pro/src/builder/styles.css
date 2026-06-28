@@ -486,15 +486,20 @@ select.select:focus {
 /* Banner preview a bit wider than logo */
 .banner-preview-wrap {
   min-height: 120px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
-.banner-preview-wrap #banner-image-preview {
+.banner-preview-wrap img {
   max-height: 140px;
   max-width: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   display: none;
   border-radius: 4px;
 }
-.banner-preview-wrap #banner-image-preview.visible { display: block; }
+.banner-preview-wrap img.visible { display: block; }
 
 /* ===== Passo 4 — Conteúdo / Menus ===== */
 
