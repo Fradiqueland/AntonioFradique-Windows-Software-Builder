@@ -94,6 +94,27 @@ Panels (`data-panel`) are shown/hidden by `data-tab` match, so reordering tab bu
 NOT require reordering the `<section>` panels. Current order: brand1, leads2, banners3,
 content4, icon5, export6 (export deliberately last).
 
+## Renaming the Builder app: change display name only, NOT app.setName
+The packaged Builder's writable data (project-config.json, assets) lives under
+`app.getPath('userData')` = `%AppData%\<app.setName>`. So when renaming the app, change
+ONLY the display/product strings (package.json productName + nsis.shortcutName +
+description/author, main.js builderWindow `title`, index.html `<title>` + `.brand-title`
+fallback, and `app.brand_title` in all 10 locales). Do NOT change
+`app.setName('LaunchBox Builder')` or you orphan the user's existing course in the old
+%AppData% folder. Also DO NOT touch Viewer strings (`LaunchBox Viewer.exe`,
+`app.setName('LaunchBox Viewer')`, the SFX `RunProgram`) — renaming breaks the export
+RunProgram path match. `DEFAULT_CONFIG.brand.title` is the default COURSE brand, not the
+app name — leave it. Easy-to-miss leaks: the export save-dialog filter `name` and the
+`.brand-title` HTML fallback text.
+
+## Builder APP icon (its own exe/window) vs course .exe icon — two separate mechanisms
+The Builder's own icon = electron-builder `build.win.icon` (`build/icon.ico`, multi-size)
+for the installed exe/installer + a `BrowserWindow({icon})` PNG (put it under `src/builder/`
+so it's inside the packaged files glob) for the running window. This is UNRELATED to the
+course `Curso.exe` icon, which is stamped onto the SFX stub via rcedit at export time.
+Generate `.ico` from any image with ImageMagick: `magick in.jpg -define
+icon:auto-resize=256,128,64,48,32,16 build/icon.ico` (ImageMagick is available on Replit).
+
 ## Two banners (top + bottom), independent slots
 Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,url} }`.
 `migrateConfig()` (called in readConfig after deepMerge) maps the legacy single

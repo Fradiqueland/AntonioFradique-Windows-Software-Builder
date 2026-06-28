@@ -1,9 +1,9 @@
 {
   "name": "launchbox-pro",
   "version": "0.1.0",
-  "description": "LaunchBox Pro — Construtor (gera .exe único por curso via SFX 7-Zip)",
+  "description": "AntonioFradique.net Windows Software Builder (gera .exe único por curso via SFX 7-Zip)",
   "main": "main.js",
-  "author": "LaunchBox Pro",
+  "author": "AntonioFradique.net",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "com.launchbox.builder",
-    "productName": "LaunchBox Builder",
+    "productName": "AntonioFradique.net Windows Software Builder",
     "directories": {
       "output": "dist/builder"
     },
@@ -41,12 +41,13 @@
       { "from": "src/builder/templates/viewer-core/win-unpacked", "to": "viewer-template", "filter": ["**/*"] }
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "LaunchBox Builder"
+      "shortcutName": "AntonioFradique.net Windows Software Builder"
     }
   },
   "dependencies": {

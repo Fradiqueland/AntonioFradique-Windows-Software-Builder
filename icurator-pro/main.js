@@ -303,7 +303,8 @@ function concatFilesToTarget(sources, target) {
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 1024, minHeight: 680,
-    title: 'LaunchBox Pro — Construtor',
+    title: 'AntonioFradique.net Windows Software Builder',
+    icon: path.join(__dirname, 'src', 'builder', 'app-icon.png'),
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -754,7 +755,7 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     const result = await dialog.showSaveDialog(builderWindow, {
       title: 'Guardar Curso (.exe)',
       defaultPath: defaultName + '.exe',
-      filters: [{ name: 'Curso LaunchBox', extensions: ['exe'] }]
+      filters: [{ name: 'Curso (.exe)', extensions: ['exe'] }]
     });
     if (result.canceled || !result.filePath) {
       send('Operação cancelada.', 'info');
