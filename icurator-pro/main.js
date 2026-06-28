@@ -309,6 +309,10 @@ function attachContextMenu(webContents) {
 
 function createViewerWindow({ standalone = false } = {}) {
   if (viewerWindow && !viewerWindow.isDestroyed()) {
+    // Recarrega para reler o project-config.json atualizado (módulos novos,
+    // logo, banner). Sem isto, reabrir a pré-visualização mostrava o estado
+    // antigo (ecrã "Bem-vindo" vazio) em vez do conteúdo já gravado.
+    viewerWindow.webContents.reload();
     viewerWindow.focus();
     return viewerWindow;
   }

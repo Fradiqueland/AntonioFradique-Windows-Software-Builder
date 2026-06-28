@@ -22,6 +22,21 @@ youtube.com navigation, no file:// referrer), not to change the URL conversion.
 **Why:** the embed-URL conversion was already correct; "fix the regex" does not resolve 153.
 **How to apply:** keep YouTube on `<webview>`; CSS `.viewer-stage.fill` already sizes webview.
 
+## Builder "Preview" window must reload on reopen
+`createViewerWindow` reuses an existing preview window. It MUST call
+`webContents.reload()` before `focus()` when reusing — otherwise content added
+after the first preview (modules, logo, banner) never shows; user sees a stale
+empty "Bem-vindo" screen. `readConfig()` has no cache (reads file each call), so
+reload alone re-renders the latest project-config.json.
+
+## Build-order footgun → preflight guard
+ENOENT on `viewer-template/resources/app.asar` is almost always a build-ORDER
+problem, not a wrong `extraResources.from` path (the path is correct). Building the
+Builder without a fresh viewer template silently ships a broken installer.
+`scripts/check-viewer-template.js` runs before `build:builder` and exits non-zero
+if `win-unpacked/resources/app.asar` is missing. Use `npm run build:all` to do both
+stages in order. npm `&&` chaining works on Windows (cmd.exe).
+
 ## Lead capture
 Lead capture is EXCLUSIVELY via the provider HTML form (`marketing.leads.formHtml`). The native
 First/Last/Email form was removed. Unlock = provider form submit interception OR the

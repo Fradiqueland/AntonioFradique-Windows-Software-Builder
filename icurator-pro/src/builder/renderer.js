@@ -236,6 +236,7 @@ brandForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   brandSaveBtn.disabled = true;
   showBrandStatus(t('common.saving'), '');
+  const justPickedLogo = brandState.pendingLogoSourcePath;
   try {
     const updated = await window.icurator.saveBrandConfig({
       title: titleInput.value,
@@ -252,9 +253,12 @@ brandForm.addEventListener('submit', async (e) => {
     brandState.currentLogoRelative = updated.brand.logo || null;
     logoInput.value = '';
     setFileNameForInput(logoInput, null);
-    const abs = brandState.currentLogoRelative
-      ? await window.icurator.resolveAssetPath(brandState.currentLogoRelative) : null;
-    setImagePreview(logoPreview, logoEmpty, abs);
+    let logoPreviewPath = null;
+    if (brandState.currentLogoRelative) {
+      logoPreviewPath = justPickedLogo
+        || await window.icurator.resolveAssetPath(brandState.currentLogoRelative);
+    }
+    setImagePreview(logoPreview, logoEmpty, logoPreviewPath);
     updateExportSummary(updated);
     showBrandStatus(t('common.saved'), 'success');
   } catch (err) {
@@ -333,6 +337,7 @@ bannerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   bannerSaveBtn.disabled = true;
   showBannerStatus(t('common.saving'), '');
+  const justPickedBanner = bannerState.pendingImageSourcePath;
   try {
     const updated = await window.icurator.saveBannerConfig({
       enabled: bannerEnabled.checked,
@@ -346,9 +351,12 @@ bannerForm.addEventListener('submit', async (e) => {
     bannerState.currentImageRelative = updated.marketing.banner.image || null;
     bannerImageInput.value = '';
     setFileNameForInput(bannerImageInput, null);
-    const abs = bannerState.currentImageRelative
-      ? await window.icurator.resolveAssetPath(bannerState.currentImageRelative) : null;
-    setImagePreview(bannerImagePreview, bannerImageEmpty, abs);
+    let bannerPreviewPath = null;
+    if (bannerState.currentImageRelative) {
+      bannerPreviewPath = justPickedBanner
+        || await window.icurator.resolveAssetPath(bannerState.currentImageRelative);
+    }
+    setImagePreview(bannerImagePreview, bannerImageEmpty, bannerPreviewPath);
     updateExportSummary(updated);
     showBannerStatus(t('common.saved'), 'success');
   } catch (err) {

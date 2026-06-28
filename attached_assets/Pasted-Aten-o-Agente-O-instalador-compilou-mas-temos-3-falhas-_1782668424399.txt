@@ -1,0 +1,18 @@
+Atenção Agente: O instalador compilou, mas temos 3 falhas de lógica (bugs de estado e caminhos) que impedem o funcionamento correto. Por favor, corrige os seguintes pontos:
+
+### 1. BUG NO REACT STATE (Brand/Design Images)
+* **O Problema:** Quando o utilizador escolhe uma imagem (Logo) através do `ipcRenderer.invoke`, o ecrã atualiza e mostra a imagem. Mas ao clicar no botão "Save Settings", a imagem desaparece e volta ao estado "No logo".
+* **A Solução:** O formulário não está a manter o caminho devolvido pelo Node.js. Garante que, ao selecionar o ficheiro, o valor é guardado no estado principal do componente (`setFormData` ou similar) e não apenas num estado temporário visual. Quando o utilizador clica em "Save", o payload submetido tem de conter o caminho correto da imagem para atualizar o `project-config.json`.
+
+### 2. BUG DE PREVIEW VAZIO (IPC State)
+* **O Problema:** O Preview Product abre, mas não carrega os módulos criados, mostrando apenas o ecrã "Welcome".
+* **A Solução:** Quando a janela de Preview é instanciada no `main.js`, garante que o Viewer de preview lê o `project-config.json` atualizado em tempo real da pasta de trabalho (working directory) do Builder, e não uma cache vazia.
+
+### 3. BUG CRÍTICO DE EXPORTAÇÃO (app.asar Missing)
+* **O Problema:** O erro continua exatamente igual no ambiente de produção: `ENOENT, not found in ...\resources\viewer-template\resources\app.asar`.
+* **A Solução:** A configuração do `extraResources` no `package.json` está mal mapeada. O caminho `"from"` tem de apontar EXATAMENTE para a pasta onde o build do template do viewer é cuspido pelo electron-builder (ex: `"from": "build-output-viewer/win-unpacked"`). 
+* Revê o `package.json` para garantir isto:
+  `"extraResources": [ { "from": "CAMINHO_CORRETO_DO_VIEWER_UNPACKED", "to": "viewer-template", "filter": ["**/*"] } ]`
+* Garante também que a script de exportação no `main.js` usa `path.join(process.resourcesPath, 'viewer-template')` no ambiente empacotado.
+
+Corrige estes 3 problemas de sincronização e caminhos e avisa-me quando estiver pronto.
