@@ -135,17 +135,19 @@ a `BrowserWindow({icon})` PNG (put it under `src/builder/` so it's inside the pa
 glob) for the running window. This is UNRELATED to the course `Curso.exe` icon, which is
 stamped onto the SFX stub via rcedit at export time.
 
-### Do NOT hand-build the .ico — let electron-builder generate it from a PNG
-Point `build.win.icon` at a 256×256 (or larger) **PNG** (`build/icon.png`) and electron-builder
-/app-builder converts it to a valid multi-size .ico itself. Hand-assembled .ico files (manual
-Node byte-packing, or ImageMagick `-define icon:auto-resize=...`) were repeatedly REJECTED by
-app-builder, which then silently logs `default Electron icon is used  reason=application icon
-is not set` and ships the atom icon. Diagnosis tell: `magick identify build/icon.ico` showed a
-bogus 16×16 entry of ~176 KB (a tiny icon should be ~hundreds of bytes) → corrupt entry table.
-**Why:** app-builder validates the .ico and rejects malformed ones wholesale; it does NOT
-reject a PNG source — it builds the .ico. **How to apply:** ship `build/icon.png`, set
-`win.icon: "build/icon.png"`, and watch the build log — success = no "application icon is not
-set" line for the builder exe. (Superseded the earlier, wrong "PNG-encoded .ico fixed it" note.)
+### Generate the .ico with png-to-ico — never hand-pack bytes, and keep win.icon=.ico
+`win.icon` must point to a real `.ico` (`build/icon.ico`). Setting it to a `.png` did NOT work
+(builder still logged `default Electron icon is used  reason=application icon is not set`), so
+do not rely on app-builder converting a PNG for Windows. Generate the .ico from a 256² PNG with
+the **png-to-ico** npm lib (note: `require("png-to-ico").default`); feed it explicit per-size
+PNGs (16,24,32,48,64,128,256) made with ImageMagick. Do NOT hand-assemble the .ico by packing
+bytes in Node and do NOT use ImageMagick `-define icon:auto-resize` — both produced a corrupt
+entry table (tell: `magick identify build/icon.ico` showed a bogus ~176 KB 16×16 entry; a valid
+build identifies each entry as `ICO 16x16…` with sane sizes). app-builder validates the .ico and
+rejects malformed ones wholesale → atom icon. **How to apply:** regenerate icon.ico via png-to-ico,
+keep `win.icon:"build/icon.ico"`; success = build log shows NO "application icon is not set" for
+the builder exe. NOTE: the user builds on their own Windows box from a synced copy — if the log is
+unchanged, FIRST confirm they actually pulled the new files; a stale copy reproduces the same line.
 
 ## Two banners (top + bottom), independent slots
 Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,url} }`.
