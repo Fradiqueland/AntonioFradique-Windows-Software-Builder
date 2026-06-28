@@ -501,7 +501,7 @@ select.select:focus {
 }
 .banner-preview-wrap img.visible { display: block; }
 
-/* Icon preview (Passo 6) — auto-fit, never overflow */
+/* Icon preview (Passo 5) — auto-fit, never overflow */
 .icon-preview-wrap {
   width: 100%;
   max-width: 100%;

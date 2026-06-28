@@ -19,6 +19,9 @@
     "directories": {
       "output": "dist/builder"
     },
+    "asarUnpack": [
+      "**/node_modules/rcedit/**"
+    ],
     "files": [
       "main.js",
       "preload.js",

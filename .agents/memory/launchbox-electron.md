@@ -70,6 +70,30 @@ the wrong artifact. **How to apply:** `png-to-ico`+`rcedit` are lazy-required wi
 graceful fallback (export must never fail if deps missing — user runs `npm install`
 first on Windows); keep both as `dependencies` in package.json.
 
+## rcedit (icon stamping) MUST be in asarUnpack or the .exe icon silently stays default
+`stampSfxIcon` uses `rcedit`, which spawns a bundled native binary (`rcedit-x64.exe`).
+A child process CANNOT be executed from inside `app.asar`, so in the packaged Builder
+the spawn throws, the try/catch swallows it, and export falls back to the default icon —
+the user sees "the icon never matches". The save path and `WRITE_BASE/data/icon-source.<ext>`
+resolution are NOT the bug. **Fix:** `build.asarUnpack: ["**/node_modules/rcedit/**"]` in
+package.json so the binary lives in `app.asar.unpacked`. `png-to-ico` is pure JS — it does
+NOT need unpacking. **How to apply:** any new dependency that spawns a bundled binary needs
+the same asarUnpack treatment.
+
+## Export "Resumo" summary refreshes only on the saves that call updateExportSummary
+`updateExportSummary(config)` is NOT auto-bound to config changes — each save handler must
+call it explicitly. Brand/banner/leads/icon saves do; the Content save (`persistContent`)
+originally did NOT, so adding modules left the Export tab showing "0 módulos" until reload.
+**How to apply:** any new save flow that changes a summarized field must call
+`updateExportSummary(updated)` with the fresh config returned by the IPC handler.
+
+## Builder tab order = button order in #tabs nav; data-tab drives panels, not position
+Tab order is purely the DOM order of `<button class="tab" data-tab="...">` in `#tabs`;
+the `tab-num` spans and the PASSO comments are cosmetic and must be kept in sync manually.
+Panels (`data-panel`) are shown/hidden by `data-tab` match, so reordering tab buttons does
+NOT require reordering the `<section>` panels. Current order: brand1, leads2, banners3,
+content4, icon5, export6 (export deliberately last).
+
 ## Two banners (top + bottom), independent slots
 Model is `marketing.banners = { top:{enabled,image,url}, bottom:{enabled,image,url} }`.
 `migrateConfig()` (called in readConfig after deepMerge) maps the legacy single

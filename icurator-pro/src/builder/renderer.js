@@ -616,6 +616,9 @@ async function persistContent(successMessage) {
   pendingFileSourcePath = null;
   pendingFileName = null;
   renderContentList();
+  // Keep the Export summary's module count in sync (it was stale at "0"
+  // after adding modules because only load/brand/banner saves refreshed it).
+  updateExportSummary(updated);
   if (successMessage) showContentStatus(successMessage, 'success');
 }
 
@@ -787,7 +790,7 @@ async function loadInitialConfig() {
 }
 
 /* =========================================================
- * EXPORT (Passo 5)
+ * EXPORT (Passo 6)
  * ========================================================= */
 const exportSummaryEl = document.getElementById('export-summary');
 const exportBuildBtn = document.getElementById('export-build');
@@ -820,7 +823,7 @@ function updateExportSummary(config) {
 }
 
 /* =========================================================
- * ÍCONE (Passo 6) — aba dedicada com gravação explícita.
+ * ÍCONE (Passo 5) — aba dedicada com gravação explícita.
  * O seletor apenas pré-visualiza; o ícone só é gravado quando
  * o utilizador clica em "Guardar Ícone".
  * ========================================================= */
