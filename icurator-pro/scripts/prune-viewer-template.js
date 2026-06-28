@@ -105,6 +105,27 @@ function main() {
     }
   }
 
+  /* 4. Renomear resources/app.asar → resources/app.asar.bin.
+   *    CRÍTICO: o electron-builder DESCARTA silenciosamente ficheiros chamados
+   *    app.asar quando copia uma pasta via "extraResources" (trata-os como o
+   *    asar da própria app). Resultado: o instalador do Construtor ficava com
+   *    resources/viewer-template/resources/ SEM app.asar e a exportação de
+   *    cursos rebentava com ENOENT ...viewer-template\resources\app.asar.
+   *    Com a extensão .bin o ficheiro deixa de ser tratado como asar e é
+   *    copiado normalmente. O export (main.js) volta a renomear para app.asar
+   *    ao montar o SFX, para o Electron do curso o carregar no arranque. */
+  const asarSrc = path.join(TEMPLATE_DIR, 'resources', 'app.asar');
+  const asarBin = path.join(TEMPLATE_DIR, 'resources', 'app.asar.bin');
+  if (fs.existsSync(asarSrc)) {
+    if (fs.existsSync(asarBin)) fs.unlinkSync(asarBin);
+    fs.renameSync(asarSrc, asarBin);
+    console.log('  ✓ app.asar → app.asar.bin (evita o descarte do electron-builder)');
+  } else if (fs.existsSync(asarBin)) {
+    console.log('  ✓ app.asar.bin já presente (template já preparado)');
+  } else {
+    console.error('✗ AVISO: resources/app.asar não encontrado — template incompleto?');
+  }
+
   const sizeAfter = dirSize(TEMPLATE_DIR);
   console.log('');
   console.log('✓ Limpeza concluída.');

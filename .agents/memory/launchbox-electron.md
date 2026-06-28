@@ -29,6 +29,16 @@ after the first preview (modules, logo, banner) never shows; user sees a stale
 empty "Bem-vindo" screen. `readConfig()` has no cache (reads file each call), so
 reload alone re-renders the latest project-config.json.
 
+## electron-builder DROPS nested app.asar in extraResources
+Copying the Viewer template (win-unpacked) into the Builder via `extraResources`
+silently SKIPS any file named `app.asar` — the folder copies, but
+`viewer-template/resources/app.asar` is missing in the installed Builder →
+export fails with ENOENT. The `extraResources.from` path is NOT the problem.
+**Fix:** prune step renames `resources/app.asar` → `app.asar.bin` (not skipped);
+`export:buildExe` renames it back to `app.asar` when staging the SFX. Keep both
+the prune rename and the export rename in lockstep; accept `.asar` or `.bin` in
+preflight checks for backward compat.
+
 ## Build-order footgun → preflight guard
 ENOENT on `viewer-template/resources/app.asar` is almost always a build-ORDER
 problem, not a wrong `extraResources.from` path (the path is correct). Building the

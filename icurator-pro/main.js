@@ -616,6 +616,12 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     if (!fs.existsSync(templateExe)) {
       throw new Error('Template do Viewer em falta em ' + templateDir + '. Execute primeiro: npm run build:viewer-template');
     }
+    // O código do Viewer vive em resources/app.asar.bin (renomeado pelo prune
+    // para sobreviver ao electron-builder). Aceitamos também app.asar legado.
+    if (!fs.existsSync(path.join(templateDir, 'resources', 'app.asar.bin'))
+      && !fs.existsSync(path.join(templateDir, 'resources', 'app.asar'))) {
+      throw new Error('Template do Viewer incompleto: falta resources/app.asar(.bin) em ' + templateDir + '. Reconstrua: npm run build:viewer-template');
+    }
 
     const defaultName = sanitizeFilename((payload && payload.defaultName) || 'meu-curso');
     const result = await dialog.showSaveDialog(builderWindow, {
@@ -634,6 +640,19 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     send('A copiar template do Viewer…');
     fs.mkdirSync(stagingRoot, { recursive: true });
     copyDirRecursive(templateDir, stagingRoot);
+
+    /* O template guarda o código do Viewer como resources/app.asar.bin (ver
+     * scripts/prune-viewer-template.js — contorna o electron-builder, que
+     * descarta ficheiros app.asar ao copiar via extraResources). Repor o nome
+     * real para o Electron do curso o carregar no arranque. */
+    const stagedAsarBin = path.join(stagingRoot, 'resources', 'app.asar.bin');
+    const stagedAsar = path.join(stagingRoot, 'resources', 'app.asar');
+    if (fs.existsSync(stagedAsarBin)) {
+      if (fs.existsSync(stagedAsar)) fs.rmSync(stagedAsar, { force: true });
+      fs.renameSync(stagedAsarBin, stagedAsar);
+    } else if (!fs.existsSync(stagedAsar)) {
+      throw new Error('Template do Viewer sem app.asar após a cópia. Reconstrua: npm run build:viewer-template');
+    }
 
     /* 2. Inject the current project under <stage>/resources/ so the Viewer
      *    finds it at process.resourcesPath/data/* exactly like in dev. */

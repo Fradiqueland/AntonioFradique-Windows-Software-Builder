@@ -1,0 +1,21 @@
+Atenção Agente: O último build continuou com 4 falhas estruturais graves. Precisamos de correções profundas no código e não apenas pensos rápidos. Corrige exatamente os 4 pontos abaixo:
+
+### 1. BUG DO DUPLO SAVE (Brand/Design & Banners)
+* **O Problema:** Ao selecionar uma imagem e clicar em "Save Settings", ela grava. Mas se o utilizador clicar em "Save Settings" uma 2ª vez, a imagem desaparece e o config grava um valor nulo/vazio.
+* **A Solução:** Corrige a gestão de estado (state) no JS do formulário. Quando o `ipcRenderer` devolve o caminho da imagem, o estado do formulário TEM de manter esse valor. O segundo "Save" não pode limpar os dados do `project-config.json`. Apenas o botão "Remover" deve poder limpar a imagem.
+
+### 2. MENU DO PREVIEW SÓ COM NÚMEROS
+* **O Problema:** A barra lateral do Viewer (produto final e preview) está a mostrar números (1, 2, 3...) em vez dos Nomes/Títulos dos módulos.
+* **A Solução:** Vai ao script que faz o render do menu lateral no Viewer (`renderer.js` ou equivalente). Altera a injeção de HTML para ler e imprimir a propriedade do nome do módulo (ex: `module.title` ou `module.name`) em vez do `index` do loop.
+
+### 3. ERRO YOUTUBE 153 (Conversão Embed Obrigatória)
+* **O Problema:** O erro 153 persiste. O YouTube bloqueia iframes/webviews com links normais no Electron.
+* **A Solução:** Aplica uma conversão (Regex) agressiva no **MOMENTO DE GUARDAR** o módulo. Se o utilizador colar `https://www.youtube.com/watch?v=XYZ` ou `https://youtu.be/XYZ`, o Node.js/JS tem de transformar e guardar isso no `project-config.json` obrigatoriamente como `https://www.youtube.com/embed/XYZ`. Usa um `<iframe>` simples no Viewer, o `/embed/` não dá erro 153.
+
+### 4. ERRO ENOENT (viewer-template/resources/app.asar)
+* **O Problema:** O instalador de produção continua sem a pasta do template.
+* **A Solução:** Verifica fisicamente onde o script `build:viewer-template` cospe a pasta do Windows (ex: `dist/win-unpacked` ou `build/viewer-template`). Depois, vai ao `package.json` na configuração do `build` e coloca o caminho `"from"` CORRETO e verificado.
+Exemplo:
+`"extraResources": [ { "from": "CAMINHO_EXATO_ONDE_O_TEMPLATE_ESTA", "to": "viewer-template", "filter": ["**/*"] } ]`
+
+Aplica e confirma que testaste a lógica de estado, a regex do youtube e os caminhos de build. Avisa-me quando estiver pronto!
