@@ -74,14 +74,7 @@
     "html_placeholder": "Cole aqui o código do formulário (Mailchimp, AWeber, ActiveCampaign, etc.)",
     "html_help": "O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.",
     "save_btn": "Guardar Definições de Leads",
-    "field_first_name": "Primeiro Nome",
-    "field_last_name": "Último Nome",
-    "field_email": "Email",
-    "field_first_name_placeholder": "Ex: Maria",
-    "field_last_name_placeholder": "Ex: Silva",
-    "field_email_placeholder": "nome@exemplo.com",
-    "submit_btn": "Aceder ao conteúdo",
-    "required_error": "Por favor preencha o nome, apelido e email."
+    "access_btn": "Já me inscrevi — Aceder ao conteúdo"
   },
   "banner": {
     "toggle_title": "Ativar Banner de Publicidade",

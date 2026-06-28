@@ -13,26 +13,17 @@
       <div class="optin-modal">
         <h2 id="optin-heading" data-i18n="viewer.optin_default_heading">Insira o seu email para aceder ao conteúdo</h2>
 
-        <!-- Captura de leads nativa (Nome, Apelido, Email — obrigatórios) -->
-        <form id="optin-native-form" class="optin-native-form">
-          <label for="optin-first-name" data-i18n="leads.field_first_name">Primeiro Nome</label>
-          <input type="text" id="optin-first-name" autocomplete="given-name" required
-                 data-i18n-placeholder="leads.field_first_name_placeholder" placeholder="Ex: Maria" />
-
-          <label for="optin-last-name" data-i18n="leads.field_last_name">Último Nome</label>
-          <input type="text" id="optin-last-name" autocomplete="family-name" required
-                 data-i18n-placeholder="leads.field_last_name_placeholder" placeholder="Ex: Silva" />
-
-          <label for="optin-email" data-i18n="leads.field_email">Email</label>
-          <input type="email" id="optin-email" autocomplete="email" required
-                 data-i18n-placeholder="leads.field_email_placeholder" placeholder="nome@exemplo.com" />
-
-          <div id="optin-error" class="optin-error hidden"></div>
-          <button type="submit" class="optin-submit" data-i18n="leads.submit_btn">Aceder ao conteúdo</button>
-        </form>
-
-        <!-- HTML de formulário opcional do fornecedor (Mailchimp, etc.) -->
+        <!-- Formulário do fornecedor (Mailchimp, Mailwizz, E-goi, etc.),
+             injetado tal e qual a partir das definições do Construtor. -->
         <div id="optin-form-html" class="optin-form-html"></div>
+
+        <!-- Botão inteligente de desbloqueio: o aluno carrega depois de se
+             inscrever no formulário acima. -->
+        <div class="optin-actions">
+          <button type="button" id="optin-access" class="optin-submit" data-i18n="leads.access_btn">
+            Já me inscrevi — Aceder ao conteúdo
+          </button>
+        </div>
       </div>
     </div>
 

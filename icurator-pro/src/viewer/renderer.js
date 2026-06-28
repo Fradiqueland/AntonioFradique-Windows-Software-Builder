@@ -17,11 +17,7 @@ const stageEl = document.getElementById('viewer-stage');
 const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
 const optinFormHtml = document.getElementById('optin-form-html');
-const optinNativeForm = document.getElementById('optin-native-form');
-const optinFirstName = document.getElementById('optin-first-name');
-const optinLastName = document.getElementById('optin-last-name');
-const optinEmail = document.getElementById('optin-email');
-const optinError = document.getElementById('optin-error');
+const optinAccess = document.getElementById('optin-access');
 
 const bannerTopEl = document.getElementById('banner-top');
 const bannerBottomEl = document.getElementById('banner-bottom');
@@ -255,12 +251,11 @@ async function renderBanner(banner) {
 
 function showOptinGate(leads) {
   optinHeading.textContent = leads.heading || tr('viewer.optin_default_heading', 'Insira o seu email para aceder ao conteúdo');
-  // O formulário nativo (Nome, Apelido, Email) é a captura por defeito. Só
-  // quando o autor define um formulário de fornecedor (Mailchimp, etc.) é que
-  // esse substitui o nativo — nunca os dois ao mesmo tempo.
-  const hasProviderForm = !!(leads.formHtml && leads.formHtml.trim());
-  optinFormHtml.innerHTML = hasProviderForm ? leads.formHtml : '';
-  if (optinNativeForm) optinNativeForm.classList.toggle('hidden', hasProviderForm);
+  // A captura de leads é EXCLUSIVAMENTE feita pelo formulário HTML do
+  // fornecedor (Mailchimp, Mailwizz, E-goi, etc.), injetado tal e qual.
+  optinFormHtml.innerHTML = (leads.formHtml && leads.formHtml.trim())
+    ? leads.formHtml
+    : '<p style="color:#64748b;text-align:center">(O criador não definiu um formulário de inscrição.)</p>';
   optinOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
@@ -270,28 +265,19 @@ function hideOptinGate() {
   document.body.style.overflow = '';
 }
 
-optinFormHtml.addEventListener('submit', (e) => { e.preventDefault(); hideOptinGate(); });
+/* Desbloqueio do conteúdo. Existem dois caminhos, ambos exigem que o aluno
+ * tenha interagido com o formulário do fornecedor:
+ *  1) Interceção (best-effort) do submit de qualquer <form> colado no HTML.
+ *     Muitos fornecedores fazem POST cross-origin ou abrem nova janela, pelo
+ *     que isto nem sempre dispara — daí o botão explícito abaixo.
+ *  2) Botão "Já me inscrevi — Aceder ao conteúdo". */
+optinFormHtml.addEventListener('submit', (e) => {
+  e.preventDefault();
+  hideOptinGate();
+});
 
-/* Native lead capture: First Name, Last Name and Email are all required.
- * No backend is wired (the course runs offline from a temp folder), so a
- * valid submission simply unlocks the content. */
-if (optinNativeForm) {
-  optinNativeForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const first = (optinFirstName.value || '').trim();
-    const last = (optinLastName.value || '').trim();
-    const email = (optinEmail.value || '').trim();
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!first || !last || !emailOk) {
-      if (optinError) {
-        optinError.textContent = tr('leads.required_error', 'Por favor preencha o nome, apelido e email.');
-        optinError.classList.remove('hidden');
-      }
-      return;
-    }
-    if (optinError) optinError.classList.add('hidden');
-    hideOptinGate();
-  });
+if (optinAccess) {
+  optinAccess.addEventListener('click', hideOptinGate);
 }
 
 /* -------- Boot -------- */
