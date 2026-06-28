@@ -58,13 +58,9 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 10px;
+  object-fit: cover;
+  display: block;
   background: linear-gradient(135deg, #2563eb, #7c3aed);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #fff;
-  font-size: 16px;
 }
 
 .brand-title { font-weight: 600; font-size: 15px; color: #fff; }

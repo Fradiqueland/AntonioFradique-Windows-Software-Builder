@@ -332,7 +332,7 @@ async function boot() {
   applyI18n();
 
   applyTheme(config.brand);
-  const title = (config.brand && config.brand.title) || 'LaunchBox Pro';
+  const title = (config.brand && config.brand.title) || 'O Meu Software';
   titleEl.textContent = title;
   document.title = title;
 

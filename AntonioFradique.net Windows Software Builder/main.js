@@ -111,7 +111,7 @@ function getViewerTemplateDir() {
 const DEFAULT_CONFIG = {
   language: 'pt',
   brand: {
-    title: 'LaunchBox Pro',
+    title: 'O Meu Software',
     logo: null,
     colors: { sidebar: '#111827', background: '#f8fafc', buttons: '#2563eb' }
   },
