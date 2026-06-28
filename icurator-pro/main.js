@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -264,8 +264,31 @@ function createBuilderWindow() {
     }
   });
   builderWindow.setMenuBarVisibility(false);
+  attachContextMenu(builderWindow.webContents);
   builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
   builderWindow.on('closed', () => { builderWindow = null; });
+}
+
+/* Menu de contexto nativo (botão direito) para Cortar/Copiar/Colar nos
+ * campos de texto e áreas de HTML do Construtor. Mostra apenas as ações
+ * relevantes ao contexto: edição quando há campo editável, e Copiar quando
+ * há texto selecionado. */
+function attachContextMenu(webContents) {
+  webContents.on('context-menu', (_event, params) => {
+    const items = [];
+    const hasText = !!(params.selectionText && params.selectionText.trim());
+    if (params.isEditable) {
+      items.push({ role: 'cut', label: 'Cortar', enabled: hasText });
+      items.push({ role: 'copy', label: 'Copiar', enabled: hasText });
+      items.push({ role: 'paste', label: 'Colar' });
+      items.push({ type: 'separator' });
+      items.push({ role: 'selectAll', label: 'Selecionar Tudo' });
+    } else if (hasText) {
+      items.push({ role: 'copy', label: 'Copiar' });
+    }
+    if (items.length === 0) return;
+    Menu.buildFromTemplate(items).popup({ window: BrowserWindow.fromWebContents(webContents) });
+  });
 }
 
 function createViewerWindow({ standalone = false } = {}) {
