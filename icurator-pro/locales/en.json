@@ -73,7 +73,15 @@
     "html_label": "Form HTML Code",
     "html_placeholder": "Paste the form code here (Mailchimp, AWeber, ActiveCampaign, etc.)",
     "html_help": "The HTML is injected as-is in the Viewer. Always confirm it comes from a trusted provider.",
-    "save_btn": "Save Lead Settings"
+    "save_btn": "Save Lead Settings",
+    "field_first_name": "First Name",
+    "field_last_name": "Last Name",
+    "field_email": "Email",
+    "field_first_name_placeholder": "e.g. Mary",
+    "field_last_name_placeholder": "e.g. Smith",
+    "field_email_placeholder": "name@example.com",
+    "submit_btn": "Access content",
+    "required_error": "Please fill in first name, last name and email."
   },
   "banner": {
     "toggle_title": "Enable Advertising Banner",

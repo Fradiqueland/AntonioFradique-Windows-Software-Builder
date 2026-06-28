@@ -1,0 +1,24 @@
+Atenção Agente: Temos uma lista de bugs críticos e ajustes funcionais que precisam de ser resolvidos imediatamente para que o Construtor funcione em ambiente de produção (pós-instalação). Por favor, aplica as seguintes 5 correções:
+
+### 1. ERRO CRÍTICO DE EXPORTAÇÃO (Falta o app.asar do Viewer)
+* **O Problema:** Quando o utilizador instala o LaunchBox Builder e clica em Exportar, dá o erro `ENOENT, not found in C:\Program Files\...\viewer-template\resources\app.asar`. O `electron-builder` não está a empacotar o template do viewer no instalador final.
+* **A Solução:** No `package.json`, dentro das configurações do `"build"` (electron-builder config), tens de adicionar uma diretiva `"extraResources"` ou `"extraFiles"` que garanta que a pasta inteira do `viewer-template` (gerada previamente) é copiada para a pasta `resources` do instalador final. 
+
+### 2. ERRO NOS UPLOADS LOCAIS (Imagens, PDFs, .exe, .zip não carregam)
+* **O Problema:** Os inputs de ficheiro no frontend não estão a conseguir copiar os ficheiros para o interior do projeto.
+* **A Solução:** Em Electron, inputs de `<input type="file">` limitados ao HTML falham por questões de segurança de path. Substitui o processo para usar o `ipcRenderer.invoke` chamando uma função no `main.js` (usando `dialog.showOpenDialog`) que permita ao utilizador selecionar o ficheiro. O Node.js (`fs`) deve ler esse ficheiro e copiá-lo fisicamente para a pasta interna `dist-assets/`. Certifica-te de que permites filtros para `.pdf`, `.zip`, `.exe`, `.jpg`, `.png`, etc.
+
+### 3. ERRO YOUTUBE 153 (Iframe Configuration)
+* **O Problema:** O leitor dá Erro 153 porque os links normais (`youtube.com/watch?v=XYZ` ou `youtu.be/XYZ`) estão a ser injetados diretamente no `src` do iframe.
+* **A Solução:** Cria uma função com Regex no momento de guardar/injetar o vídeo que intercete o link e o converta obrigatoriamente para o formato `https://www.youtube.com/embed/XYZ`.
+
+### 4. BANNERS: SUBSTITUIR POR TEXTOS ROLANTES (Marquee)
+* **O Problema:** Os banners fixos atuais precisam de ser removidos e substituídos por faixas de texto rolante.
+* **A Solução:** Remove os blocos fixos dos cantos do ecrã. Em vez disso, cria duas barras horizontais (uma colada ao topo, outra colada ao fundo). Usa CSS Animations (`@keyframes`, `white-space: nowrap`) para criar um efeito de *scrolling text*. 
+* Coloca **2 links a rolar na barra superior** e **2 links a rolar na barra inferior**. Garante que estas barras têm o z-index correto e `pointer-events: auto` nos links, mas que não se sobrepõem de forma a bloquear cliques nos botões da interface.
+
+### 5. CAPTURA DE LEADS (Nome e Apelido)
+* **O Problema:** O formulário nativo/opt-in gate só está a pedir o email.
+* **A Solução:** Atualiza o HTML e o código que gera o "Lead Capture". Além do input de Email, passa a ser obrigatório ter dois novos inputs de texto: "Primeiro Nome" e "Último Nome" (First Name e Last Name).
+
+Por favor, analisa, corrige estas 5 frentes no código (main.js, renderer.js, index.html e estilos) e avisa-me quando estiverem prontas para eu gerar as novas builds e testar.

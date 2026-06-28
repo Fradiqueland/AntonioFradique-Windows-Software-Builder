@@ -12,12 +12,47 @@
     <div id="optin-overlay" class="optin-overlay hidden">
       <div class="optin-modal">
         <h2 id="optin-heading" data-i18n="viewer.optin_default_heading">Insira o seu email para aceder ao conteúdo</h2>
+
+        <!-- Captura de leads nativa (Nome, Apelido, Email — obrigatórios) -->
+        <form id="optin-native-form" class="optin-native-form">
+          <label for="optin-first-name" data-i18n="leads.field_first_name">Primeiro Nome</label>
+          <input type="text" id="optin-first-name" autocomplete="given-name" required
+                 data-i18n-placeholder="leads.field_first_name_placeholder" placeholder="Ex: Maria" />
+
+          <label for="optin-last-name" data-i18n="leads.field_last_name">Último Nome</label>
+          <input type="text" id="optin-last-name" autocomplete="family-name" required
+                 data-i18n-placeholder="leads.field_last_name_placeholder" placeholder="Ex: Silva" />
+
+          <label for="optin-email" data-i18n="leads.field_email">Email</label>
+          <input type="email" id="optin-email" autocomplete="email" required
+                 data-i18n-placeholder="leads.field_email_placeholder" placeholder="nome@exemplo.com" />
+
+          <div id="optin-error" class="optin-error hidden"></div>
+          <button type="submit" class="optin-submit" data-i18n="leads.submit_btn">Aceder ao conteúdo</button>
+        </form>
+
+        <!-- HTML de formulário opcional do fornecedor (Mailchimp, etc.) -->
         <div id="optin-form-html" class="optin-form-html"></div>
+
         <div class="optin-actions">
           <button type="button" id="optin-bypass" class="optin-bypass">
             Fechar / Ignorar Bloqueio (teste)
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Faixas de texto rolante (marquee) promocionais — sempre visíveis -->
+    <div class="marquee-bar marquee-top">
+      <div class="marquee-track">
+        <span class="marquee-item">
+          <span data-i18n="corners.author_label">Criado por António Fradique</span>
+          <a href="#" class="corner-link" data-ext="https://antoniofradique.net">antoniofradique.net</a>
+        </span>
+        <span class="marquee-item">
+          <span data-i18n="corners.music_label">Minha música</span>
+          <a href="#" class="corner-link" data-ext="https://mymusic.antoniofradique.net">mymusic.antoniofradique.net</a>
+        </span>
       </div>
     </div>
 
@@ -46,26 +81,21 @@
     <!-- Bottom banner (renderizado dinamicamente se posição = bottom) -->
     <div id="banner-bottom" class="banner-bar hidden"></div>
 
-    <!-- ===== Cantos promocionais (Powered by Antonio Fradique) ============
-         OBRIGATÓRIOS no produto final. NÃO existe opção no Construtor para
-         desligar/esconder. Posição fixa + z-index máximo para nunca serem
-         tapados por conteúdo, iframes do YouTube, webviews ou banners.
+    <!-- ===== Faixa de texto rolante inferior (Powered by Antonio Fradique) ==
+         OBRIGATÓRIA no produto final. Sem opção no Construtor para desligar.
+         z-index máximo para nunca ser tapada por conteúdo/iframes/webviews.
          =================================================================== -->
-    <div class="corner corner-tl">
-      <div class="corner-text" data-i18n="corners.music_label">Minha música</div>
-      <a href="#" class="corner-link" data-ext="https://mymusic.antoniofradique.net">mymusic.antoniofradique.net</a>
-    </div>
-    <div class="corner corner-tr">
-      <div class="corner-text" data-i18n="corners.author_label">Criado por António Fradique</div>
-      <a href="#" class="corner-link" data-ext="https://antoniofradique.net">antoniofradique.net</a>
-    </div>
-    <div class="corner corner-bl">
-      <span class="corner-text" data-i18n="corners.plastic_text">Ganhe dinheiro ajudando o planeta! Prospere transformando plástico em lucro:</span>
-      <a href="#" class="corner-link" data-ext="https://corsairconnect.antoniofradique.net">corsairconnect.antoniofradique.net</a>
-    </div>
-    <div class="corner corner-br">
-      <div class="corner-text" data-i18n="corners.parking_text">Farto de dar voltas? Encontra estacionamento em segundos com a ParknDgo!</div>
-      <a href="#" class="corner-link" data-ext="https://parkndgo.antoniofradique.net">parkndgo.antoniofradique.net</a>
+    <div class="marquee-bar marquee-bottom">
+      <div class="marquee-track">
+        <span class="marquee-item">
+          <span data-i18n="corners.plastic_text">Ganhe dinheiro ajudando o planeta! Prospere transformando plástico em lucro:</span>
+          <a href="#" class="corner-link" data-ext="https://corsairconnect.antoniofradique.net">corsairconnect.antoniofradique.net</a>
+        </span>
+        <span class="marquee-item">
+          <span data-i18n="corners.parking_text">Farto de dar voltas? Encontra estacionamento em segundos com a ParknDgo!</span>
+          <a href="#" class="corner-link" data-ext="https://parkndgo.antoniofradique.net">parkndgo.antoniofradique.net</a>
+        </span>
+      </div>
     </div>
 
     <script src="renderer.js"></script>

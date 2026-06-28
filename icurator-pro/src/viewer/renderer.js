@@ -18,6 +18,11 @@ const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
 const optinFormHtml = document.getElementById('optin-form-html');
 const optinBypass = document.getElementById('optin-bypass');
+const optinNativeForm = document.getElementById('optin-native-form');
+const optinFirstName = document.getElementById('optin-first-name');
+const optinLastName = document.getElementById('optin-last-name');
+const optinEmail = document.getElementById('optin-email');
+const optinError = document.getElementById('optin-error');
 
 const bannerTopEl = document.getElementById('banner-top');
 const bannerBottomEl = document.getElementById('banner-bottom');
@@ -49,6 +54,10 @@ function applyI18n(root = document) {
   root.querySelectorAll('[data-i18n-html]').forEach((el) => {
     const v = tr(el.getAttribute('data-i18n-html'), null);
     if (typeof v === 'string') el.innerHTML = v;
+  });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    const v = tr(el.getAttribute('data-i18n-placeholder'), null);
+    if (typeof v === 'string') el.setAttribute('placeholder', v);
   });
 }
 
@@ -247,7 +256,12 @@ async function renderBanner(banner) {
 
 function showOptinGate(leads) {
   optinHeading.textContent = leads.heading || tr('viewer.optin_default_heading', 'Insira o seu email para aceder ao conteúdo');
-  optinFormHtml.innerHTML = leads.formHtml || '<p style="color:#64748b;text-align:center">(Sem formulário definido.)</p>';
+  // O formulário nativo (Nome, Apelido, Email) é a captura por defeito. Só
+  // quando o autor define um formulário de fornecedor (Mailchimp, etc.) é que
+  // esse substitui o nativo — nunca os dois ao mesmo tempo.
+  const hasProviderForm = !!(leads.formHtml && leads.formHtml.trim());
+  optinFormHtml.innerHTML = hasProviderForm ? leads.formHtml : '';
+  if (optinNativeForm) optinNativeForm.classList.toggle('hidden', hasProviderForm);
   optinOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
@@ -259,6 +273,28 @@ function hideOptinGate() {
 
 optinBypass.addEventListener('click', hideOptinGate);
 optinFormHtml.addEventListener('submit', (e) => { e.preventDefault(); hideOptinGate(); });
+
+/* Native lead capture: First Name, Last Name and Email are all required.
+ * No backend is wired (the course runs offline from a temp folder), so a
+ * valid submission simply unlocks the content. */
+if (optinNativeForm) {
+  optinNativeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const first = (optinFirstName.value || '').trim();
+    const last = (optinLastName.value || '').trim();
+    const email = (optinEmail.value || '').trim();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!first || !last || !emailOk) {
+      if (optinError) {
+        optinError.textContent = tr('leads.required_error', 'Por favor preencha o nome, apelido e email.');
+        optinError.classList.remove('hidden');
+      }
+      return;
+    }
+    if (optinError) optinError.classList.add('hidden');
+    hideOptinGate();
+  });
+}
 
 /* -------- Boot -------- */
 
@@ -327,6 +363,16 @@ function wireCornerLinks() {
     });
   });
 }
+
+/* Duplica o conteúdo de cada faixa para criar um scroll contínuo e sem
+ * "salto" (a animação translada -50%, exatamente uma cópia). */
+function setupMarquees() {
+  document.querySelectorAll('.marquee-track').forEach((track) => {
+    track.innerHTML += track.innerHTML;
+  });
+}
+
+setupMarquees();
 wireCornerLinks();
 
 boot();

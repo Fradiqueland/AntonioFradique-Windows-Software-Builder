@@ -73,7 +73,15 @@
     "html_label": "Code HTML du Formulaire",
     "html_placeholder": "Collez ici le code du formulaire (Mailchimp, AWeber, ActiveCampaign, etc.)",
     "html_help": "Le HTML est injecté tel quel dans la Visionneuse. Vérifiez toujours qu'il provient d'un fournisseur de confiance.",
-    "save_btn": "Enregistrer les Paramètres Leads"
+    "save_btn": "Enregistrer les Paramètres Leads",
+    "field_first_name": "Prénom",
+    "field_last_name": "Nom",
+    "field_email": "E-mail",
+    "field_first_name_placeholder": "Ex : Marie",
+    "field_last_name_placeholder": "Ex : Dupont",
+    "field_email_placeholder": "nom@exemple.com",
+    "submit_btn": "Accéder au contenu",
+    "required_error": "Veuillez renseigner le prénom, le nom et l'e-mail."
   },
   "banner": {
     "toggle_title": "Activer la Bannière Publicitaire",

@@ -114,6 +114,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const sel = document.getElementById('lang-select');
   if (sel) sel.addEventListener('change', (e) => setLanguage(e.target.value));
 
+  document.querySelectorAll('.marquee-track').forEach((track) => {
+    track.innerHTML += track.innerHTML;
+  });
+
   document.querySelectorAll('.corner-link[data-ext]').forEach((a) => {
     a.addEventListener('click', (ev) => {
       ev.preventDefault();
@@ -209,14 +213,15 @@ Object.keys(colorInputs).forEach((key) => {
   });
 });
 
-logoInput.addEventListener('change', (e) => {
-  const file = e.target.files && e.target.files[0];
-  if (!file) return;
-  brandState.pendingLogoSourcePath = file.path || null;
+const logoPickLabel = document.querySelector('label[for="brand-logo"]');
+if (logoPickLabel) logoPickLabel.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const picked = await window.icurator.pickFile('image');
+  if (!picked) return;
+  brandState.pendingLogoSourcePath = picked.path;
   brandState.pendingRemoveLogo = false;
-  if (brandState.pendingLogoSourcePath) {
-    setImagePreview(logoPreview, logoEmpty, brandState.pendingLogoSourcePath);
-  }
+  setFileNameForInput(logoInput, picked.name);
+  setImagePreview(logoPreview, logoEmpty, picked.path);
 });
 
 logoRemoveBtn.addEventListener('click', () => {
@@ -304,14 +309,15 @@ const showBannerStatus = makeStatus(document.getElementById('banner-status'));
 
 const bannerState = { pendingImageSourcePath: null, pendingRemoveImage: false, currentImageRelative: null };
 
-bannerImageInput.addEventListener('change', (e) => {
-  const file = e.target.files && e.target.files[0];
-  if (!file) return;
-  bannerState.pendingImageSourcePath = file.path || null;
+const bannerPickLabel = document.querySelector('label[for="banner-image"]');
+if (bannerPickLabel) bannerPickLabel.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const picked = await window.icurator.pickFile('image');
+  if (!picked) return;
+  bannerState.pendingImageSourcePath = picked.path;
   bannerState.pendingRemoveImage = false;
-  if (bannerState.pendingImageSourcePath) {
-    setImagePreview(bannerImagePreview, bannerImageEmpty, bannerState.pendingImageSourcePath);
-  }
+  setFileNameForInput(bannerImageInput, picked.name);
+  setImagePreview(bannerImagePreview, bannerImageEmpty, picked.path);
 });
 
 bannerImageRemoveBtn.addEventListener('click', () => {
@@ -608,14 +614,16 @@ moduleType.addEventListener('change', () => {
 
 function bindFilePicker(type) {
   const input = dyn[type].file;
-  input.addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    pendingFileSourcePath = file.path || null;
-    pendingFileName = file.name || null;
-    if (pendingFileSourcePath) {
-      setFileCurrentText(type, t('content.file_new_prefix') + (pendingFileName || pendingFileSourcePath), true);
-    }
+  const label = document.querySelector('label[for="' + input.id + '"]');
+  const category = type === 'pdf' ? 'pdf' : 'launch';
+  if (label) label.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const picked = await window.icurator.pickFile(category);
+    if (!picked) return;
+    pendingFileSourcePath = picked.path;
+    pendingFileName = picked.name;
+    setFileNameForInput(input, picked.name);
+    setFileCurrentText(type, t('content.file_new_prefix') + (pendingFileName || pendingFileSourcePath), true);
   });
 }
 bindFilePicker('pdf');
@@ -779,21 +787,21 @@ function updateExportSummary(config) {
   exportSummaryEl.querySelector('.summary-row .summary-value').textContent = title;
 }
 
-exportIconInput.addEventListener('change', async (e) => {
-  const file = e.target.files && e.target.files[0];
-  if (!file || !file.path) return;
-  if (!file.name.toLowerCase().endsWith('.ico')) {
+const iconPickLabel = document.querySelector('label[for="export-icon"]');
+if (iconPickLabel) iconPickLabel.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const picked = await window.icurator.pickFile('icon');
+  if (!picked) return;
+  if (!picked.name.toLowerCase().endsWith('.ico')) {
     alert(t('export.icon_must_be_ico'));
-    exportIconInput.value = '';
     return;
   }
   try {
-    const updated = await window.icurator.saveIcon({ sourcePath: file.path });
+    const updated = await window.icurator.saveIcon({ sourcePath: picked.path });
     exportIconCurrent.textContent = t('export.icon_current_prefix') + updated.export.iconPath;
     exportIconCurrent.classList.add('has-file');
     updateExportSummary(updated);
-    exportIconInput.value = '';
-    setFileNameForInput(exportIconInput, null);
+    setFileNameForInput(exportIconInput, picked.name);
   } catch (err) {
     alert(t('common.error_prefix') + err.message);
   }

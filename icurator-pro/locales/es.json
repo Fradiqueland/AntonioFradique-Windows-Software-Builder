@@ -73,7 +73,15 @@
     "html_label": "Código HTML del Formulario",
     "html_placeholder": "Pega aquí el código del formulario (Mailchimp, AWeber, ActiveCampaign, etc.)",
     "html_help": "El HTML se inyecta tal cual en el Visualizador. Confirma siempre que viene de un proveedor de confianza.",
-    "save_btn": "Guardar Configuración de Leads"
+    "save_btn": "Guardar Configuración de Leads",
+    "field_first_name": "Nombre",
+    "field_last_name": "Apellido",
+    "field_email": "Correo electrónico",
+    "field_first_name_placeholder": "Ej: María",
+    "field_last_name_placeholder": "Ej: García",
+    "field_email_placeholder": "nombre@ejemplo.com",
+    "submit_btn": "Acceder al contenido",
+    "required_error": "Por favor rellene nombre, apellido y correo electrónico."
   },
   "banner": {
     "toggle_title": "Activar Banner Publicitario",

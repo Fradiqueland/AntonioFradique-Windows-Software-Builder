@@ -195,6 +195,19 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
   return path.posix.join('dist-assets', finalName);
 }
 
+/* Converte qualquer link/ID de YouTube para o formato de embed obrigatório
+ * (https://www.youtube.com/embed/ID). Links normais (watch?v=, youtu.be/,
+ * shorts/) injetados diretamente no src do iframe disparam o Erro 153. */
+function toYoutubeEmbed(input) {
+  if (!input) return '';
+  const raw = String(input).trim();
+  const idMatch =
+    raw.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/) ||
+    raw.match(/^([A-Za-z0-9_-]{6,})$/);
+  if (idMatch) return 'https://www.youtube.com/embed/' + idMatch[1];
+  return raw;
+}
+
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
   const abs = path.join(WRITE_BASE, relativePath);
@@ -419,7 +432,10 @@ ipcMain.handle('content:save', (_event, payload) => {
       }
     } else {
       const d = mod.data || {};
-      if (mod.type === 'youtube' || mod.type === 'webview' || mod.type === 'external') {
+      if (mod.type === 'youtube') {
+        const url = typeof d.url === 'string' ? d.url.trim() : '';
+        mod.data = { url: toYoutubeEmbed(url) };
+      } else if (mod.type === 'webview' || mod.type === 'external') {
         mod.data = { url: typeof d.url === 'string' ? d.url.trim() : '' };
       } else if (mod.type === 'html') {
         mod.data = { html: typeof d.html === 'string' ? d.html : '' };
@@ -438,6 +454,33 @@ ipcMain.handle('content:save', (_event, payload) => {
   const updated = { ...current, content: nextModules };
   writeConfig(updated);
   return updated;
+});
+
+/* -------- IPC: file picker (Builder only) --------
+ * Em Electron moderno, File.path foi removido do renderer por segurança, por
+ * isso <input type="file"> deixou de expor o caminho real do ficheiro. Para
+ * copiar ficheiros para dist-assets/ usamos o diálogo nativo no processo
+ * principal e devolvemos o caminho absoluto ao renderer. */
+ipcMain.handle('dialog:pickFile', async (_event, category) => {
+  assertBuilder();
+  const FILTERS = {
+    image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
+    icon: [{ name: 'Ícone Windows (.ico)', extensions: ['ico'] }],
+    pdf: [{ name: 'PDF', extensions: ['pdf'] }],
+    launch: [{
+      name: 'Ficheiros',
+      extensions: ['exe', 'zip', 'rar', '7z', 'msi', 'pdf', 'jpg', 'jpeg', 'png', 'gif',
+        'mp4', 'mov', 'mp3', 'wav', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']
+    }]
+  };
+  const filters = (FILTERS[category] || []).concat([{ name: 'Todos os ficheiros', extensions: ['*'] }]);
+  const result = await dialog.showOpenDialog(builderWindow, {
+    properties: ['openFile'],
+    filters
+  });
+  if (result.canceled || !Array.isArray(result.filePaths) || result.filePaths.length === 0) return null;
+  const filePath = result.filePaths[0];
+  return { path: filePath, name: path.basename(filePath) };
 });
 
 /* -------- IPC: viewer + shell -------- */
