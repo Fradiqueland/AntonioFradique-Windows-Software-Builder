@@ -89,7 +89,7 @@
     "position_top": "Arriba de la Página",
     "position_bottom": "Abajo de la Página",
     "save_btn": "Guardar Configuración del Banner",
-    "dims_hint": "Tamaño recomendado: 728×90px (o formato horizontal equivalente).",
+    "dims_hint": "Formatos aceptados: PNG, JPG o GIF animado. Tamaño recomendado: 728×90px (formato horizontal).",
     "top_legend": "Banner Superior",
     "bottom_legend": "Banner Inferior",
     "top_toggle_title": "Activar Banner Superior",

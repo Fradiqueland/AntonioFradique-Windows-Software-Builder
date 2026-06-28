@@ -89,7 +89,7 @@
     "position_top": "Topo da Página",
     "position_bottom": "Rodapé da Página",
     "save_btn": "Guardar Definições de Banners",
-    "dims_hint": "Dimensões recomendadas: 728×90px (ou formato horizontal equivalente).",
+    "dims_hint": "Formatos aceites: PNG, JPG ou GIF animado. Dimensões recomendadas: 728×90px (formato horizontal).",
     "top_legend": "Banner de Topo",
     "bottom_legend": "Banner de Rodapé",
     "top_toggle_title": "Ativar Banner de Topo",

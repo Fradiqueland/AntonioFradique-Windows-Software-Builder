@@ -89,7 +89,7 @@
     "position_top": "Haut de Page",
     "position_bottom": "Bas de Page",
     "save_btn": "Enregistrer les Paramètres de Bannière",
-    "dims_hint": "Taille recommandée : 728×90px (ou format horizontal équivalent).",
+    "dims_hint": "Formats acceptés : PNG, JPG ou GIF animé. Taille recommandée : 728×90px (format horizontal).",
     "top_legend": "Bannière du Haut",
     "bottom_legend": "Bannière du Bas",
     "top_toggle_title": "Activer la Bannière du Haut",

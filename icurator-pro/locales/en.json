@@ -89,7 +89,7 @@
     "position_top": "Top of Page",
     "position_bottom": "Bottom of Page",
     "save_btn": "Save Banner Settings",
-    "dims_hint": "Recommended size: 728×90px (or equivalent horizontal format).",
+    "dims_hint": "Accepted formats: PNG, JPG or animated GIF. Recommended size: 728×90px (horizontal format).",
     "top_legend": "Top Banner",
     "bottom_legend": "Bottom Banner",
     "top_toggle_title": "Enable Top Banner",
