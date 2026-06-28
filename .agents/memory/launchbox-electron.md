@@ -29,6 +29,17 @@ after the first preview (modules, logo, banner) never shows; user sees a stale
 empty "Bem-vindo" screen. `readConfig()` has no cache (reads file each call), so
 reload alone re-renders the latest project-config.json.
 
+## deepMerge null-default crash silently wiped config (the real "double save" bug)
+readConfig() = deepMerge(DEFAULT_CONFIG, parsed) wrapped in try/catch that returns
+DEFAULT on error. deepMerge's guard `typeof defaults !== 'object'` does NOT catch
+`null` (typeof null === 'object'), so a null default (brand.logo, banner.image,
+icon) merged with a real saved value hit `Object.keys(null)` → throw → readConfig
+returns DEFAULT (everything null/empty). Symptom: 1st save OK (returns in-memory
+obj), 2nd save re-reads → crash → writes null over logo/banner; export shows
+"No logo / 0 modules". **Fix:** guard must include `defaults === null`. Lesson:
+any try/catch-returns-default config reader hides merge crashes — test round-trip
+of null-default fields transitioning to concrete values.
+
 ## electron-builder DROPS nested app.asar in extraResources
 Copying the Viewer template (win-unpacked) into the Builder via `extraResources`
 silently SKIPS any file named `app.asar` — the folder copies, but

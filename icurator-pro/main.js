@@ -139,7 +139,12 @@ function hasProject() {
 
 function deepMerge(defaults, override) {
   if (override === null || override === undefined) return structuredClone(defaults);
-  if (typeof defaults !== 'object' || Array.isArray(defaults)) return override;
+  // CRÍTICO: typeof null === 'object', por isso um default null (ex.: brand.logo,
+  // banner.image, icon) caía neste ramo e rebentava em Object.keys(null) quando
+  // o config já tinha um valor real — o try/catch do readConfig devolvia então o
+  // DEFAULT_CONFIG, apagando logo/banner/módulos no 2.º Save. Tratar null (e
+  // arrays/primitivos) como "o override ganha".
+  if (defaults === null || typeof defaults !== 'object' || Array.isArray(defaults)) return override;
   const out = {};
   for (const key of Object.keys(defaults)) {
     if (override && Object.prototype.hasOwnProperty.call(override, key)) {
