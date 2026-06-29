@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('icurator', {
-  version: '1.1.0',
+  version: '1.3.0',
   loadConfig: () => ipcRenderer.invoke('config:load'),
   saveBrandConfig: (data) => ipcRenderer.invoke('brand:save', data),
   saveLeadsConfig: (data) => ipcRenderer.invoke('marketing:saveLeads', data),
