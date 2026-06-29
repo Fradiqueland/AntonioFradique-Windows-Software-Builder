@@ -193,3 +193,12 @@ never block saving or export.
 Lead capture is EXCLUSIVELY via the provider HTML form (`marketing.leads.formHtml`). The native
 First/Last/Email form was removed. Unlock = provider form submit interception OR the
 "Já me inscrevi" (#optin-access) button; both call hideOptinGate().
+
+## Path guards & markdown safety (Mega Upgrade)
+Any IPC that resolves a stored relative path to a real file (launchFile, saveFileAs,
+deleteAssetIfInside) MUST validate with canonical boundary: `path.resolve(abs).startsWith(path.resolve(ASSETS_DIR) + path.sep)`.
+**Why:** a plain `abs.startsWith(ASSETS_DIR)` is bypassable by prefix confusion (e.g. `dist-assets-evil`). Use the shared `isInsideAssetsDir()` helper.
+The viewer's `miniMarkdown` builds HTML by string concat: it escapes `<>&` for text, but link/image URLs must be quote-escaped AND allowlisted to `^https?://` (drop the tag otherwise) or it's XSS-able via `[x](" onclick=...)` / `javascript:`.
+
+## Module types (viewer dispatchModule must stay in sync with builder TYPE_KEYS + main.js ALL_TYPES)
+single-file types (local-video, local-audio, download-vault) + gallery (image-gallery) copy assets to dist-assets/ via moduleAssetFiles() + unified GC. download-vault has buttonLabel; gallery save accepts edit-time `items` OR persisted `images` (avoids wipe-on-reorder). smart-embed reuses renderWebview. community-link opens external browser.

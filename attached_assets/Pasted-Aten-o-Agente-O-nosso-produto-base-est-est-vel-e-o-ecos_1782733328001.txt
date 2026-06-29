@@ -1,0 +1,51 @@
+Atenção Agente: O nosso produto base está estável e o ecossistema de compilação está perfeito. Agora precisamos de expandir o valor da aplicação, adicionando 3 novos tipos de módulos e uma funcionalidade global de proteção. 
+
+Por favor, atualiza a lógica do Construtor (`builder/renderer.js` e funções de gravação) e do Visualizador (`viewer/renderer.js`) com as seguintes implementações:
+
+### 1. MÓDULOS DE MÉDIA LOCAL (offline-video e offline-audio)
+* **No Construtor:** Cria duas novas opções no dropdown de tipos de módulo: "Local Video (MP4)" e "Local Audio (MP3/WAV)". Quando selecionados, mostra um `<input type="file">` para o utilizador escolher o ficheiro multimédia do seu PC.
+* **Na Exportação/Save:** O ficheiro tem de ser copiado para a pasta do projeto (da mesma forma que os PDFs/Imagens são geridos atualmente) e o caminho guardado no `project-config.json`.
+* **No Visualizador:** Quando o aluno clica nestes módulos, injeta as tags nativas HTML5 `<video controls style="width: 100%; max-height: 100vh;">` ou `<audio controls>` com a `src` a apontar para o ficheiro local (usando protocolo `file://`).
+
+### 2. MÓDULO COFRE DE DOWNLOADS (download-vault)
+* **No Construtor:** Adiciona o tipo "Downloadable File (ZIP, DOCX, etc)". Mostra um `<input type="file">` e um campo de texto para o "Nome do Botão" (ex: "Descarregar Template").
+* **Na Exportação:** Copia o ficheiro para o payload.
+* **No Visualizador:** Apresenta um ecrã limpo com um botão centralizado apelativo. Como estamos em ambiente Electron, usa o Node.js interno (`fs` e `dialog` se possível) ou uma simples tag `<a href="caminho-local" download>` para permitir que o utilizador guarde o ficheiro no seu computador.
+
+### 3. PROTEÇÃO POR PASSWORD GLOBAL (Upsell Feature)
+* **No Construtor (Para TODOS os módulos):** Adiciona um campo de texto opcional chamado "Password Lock (Optional)" na interface de adição/edição de qualquer módulo. Se o utilizador escrever algo aqui, guarda esse valor na chave `password` do respetivo módulo no `project-config.json`. Se estiver vazio, guarda como `null`.
+* **No Visualizador (A Magia):** Quando o aluno clica num módulo na barra lateral, antes de renderizares o conteúdo desse módulo, verifica se `module.password` existe.
+  * **Se NÃO tiver password:** Renderiza normalmente.
+  * **Se TIVER password:** Não mostres o conteúdo. Em vez disso, injeta um ecrã (HTML) a dizer "Módulo Protegido" com um campo de `<input type="password">` e um botão "Desbloquear". 
+  * Se o aluno inserir a password correta (comparada em tempo real via JS), limpa esse ecrã de bloqueio e renderiza o conteúdo real do módulo.
+
+Garante que o CSS destes novos elementos no Viewer se alinha com o design limpo que já temos (cores e botões modernos). Escreve o código, faz os testes de sintaxe e avisa-me quando estiver pronto para compilar a nova versão!
+
+Atenção Agente: Vamos fazer um "Mega Upgrade" ao nosso Construtor, transformando-o numa plataforma completa de criação de software. Preciso que adiciones 6 novos tipos de módulos ao nosso motor. O objetivo é atualizar o `builder/renderer.js` (interface e gravação) e o `viewer/renderer.js` (renderização final).
+
+Por favor, implementa os seguintes módulos passo-a-passo, garantindo que o CSS no Viewer fica moderno e responsivo:
+
+### 1 & 2. REPRODUTORES DE MÉDIA NATIVA (Vídeo MP4 e Áudio MP3)
+* **Tipos:** `local-video` e `local-audio`.
+* **Construtor:** Mostra um `<input type="file" accept="video/mp4,video/webm">` para vídeo e `accept="audio/mp3,audio/wav"` para áudio. 
+* **Exportação:** Copia o ficheiro escolhido para a pasta local do projeto.
+* **Viewer:** Para vídeo, injeta `<video controls style="width: 100%; max-height: 100vh; border-radius: 8px;">` com a source local (`file://`). Para áudio, injeta um leitor moderno `<audio controls style="width: 100%; margin-top: 20px;">`.
+
+### 3. MÓDULO DE GALERIA DE IMAGENS (image-gallery)
+* **Construtor:** Usa um `<input type="file" multiple accept="image/*">` para permitir ao criador escolher várias imagens de uma vez.
+* **Exportação:** Copia todas as imagens selecionadas e guarda os seus caminhos numa array dentro da configuração do módulo.
+* **Viewer:** Injeta um layout em CSS Grid (ex: `display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;`) onde cada imagem tem `object-fit: cover`, `width: 100%`, `border-radius: 8px` e uma pequena transição de *hover*.
+
+### 4. LEITOR DE ARTIGOS / NOTAS (rich-text)
+* **Construtor:** Adiciona o tipo `article-reader`. Mostra uma `<textarea>` grande (com algumas linhas de altura) para o criador escrever notas em formato Markdown ou Texto Simples.
+* **Viewer:** Lê o texto do `project-config.json`. Se possível, usa uma biblioteca simples de parser Markdown (ou apenas converte quebras de linha `\n` em `<br>`). Renderiza o texto num bloco estilo "artigo de blog", com uma fonte legível, fundo claro (ou escuro adaptativo), *padding* generoso e espaçamento de linha apropriado.
+
+### 5. INTEGRAÇÃO DE COMUNIDADE (community-link)
+* **Construtor:** Adiciona campos para "Nome do Botão" (ex: Entrar no VIP), "Link de Convite (Discord/Telegram/WhatsApp)" e um dropdown para escolher a Plataforma (para definir a cor do botão).
+* **Viewer:** Renderiza um ecrã centralizado limpo com um botão Call-to-Action grande e atrativo. Ao clicar, o link deve abrir no navegador padrão do utilizador usando a API do Electron `shell.openExternal()`, para não prender o utilizador dentro do Viewer.
+
+### 6. FORMULÁRIOS E QUIZZES - EMBED SMART (smart-embed)
+* **Construtor:** Pede ao utilizador para colar um Link/URL (Google Forms, Typeform, Calendly).
+* **Viewer:** Tal como no YouTube, injeta a tag `<webview>` (com as permissões necessárias já configuradas) e faz o `src` apontar para o link do formulário, ocupando 100% da largura e altura disponível do ecrã do módulo.
+
+Garante que as funções de leitura e escrita lidam perfeitamente com o estado de cada módulo, sem sobrepor dados (o mesmo cuidado que tiveste ao corrigir o duplo-save de imagens). Aplica esta grande atualização e diz-me quando estiver pronto para compilar a nova versão!
