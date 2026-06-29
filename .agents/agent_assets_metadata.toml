@@ -6,3 +6,9 @@ id = "S1lVBOGrOIq4iNANiamqO"
 uri = "file://exports/AntonioFradique-Builder-v1.1.zip"
 type = "unspecified"
 title = "AntonioFradique.net Windows Software Builder — v1.1 (galeria com zoom + download)"
+
+[[outputs]]
+id = "r4lJ-oSz2waUvKNBG9qpk"
+uri = "file://exports/AntonioFradique-Builder-v1.3.zip"
+type = "unspecified"
+title = "AntonioFradique.net Windows Software Builder — v1.3"
