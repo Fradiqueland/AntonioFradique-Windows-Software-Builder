@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('viewer', {
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   launchFile: (relativePath) => ipcRenderer.invoke('shell:launchFile', relativePath),
+  saveFileAs: (payload) => ipcRenderer.invoke('dialog:saveFileAs', payload),
   loadLocale: (lang) => ipcRenderer.invoke('i18n:loadLocale', lang)
 });

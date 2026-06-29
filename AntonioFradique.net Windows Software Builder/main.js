@@ -89,8 +89,13 @@ const ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
 const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
 const ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
 
-const FILE_TYPES = new Set(['pdf', 'launch']);
-const ALL_TYPES = new Set(['youtube', 'html', 'pdf', 'webview', 'external', 'launch']);
+const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault']);
+const GALLERY_TYPES = new Set(['image-gallery']);
+const ALL_TYPES = new Set([
+  'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
+  'local-video', 'local-audio', 'download-vault', 'image-gallery',
+  'article-reader', 'community-link', 'smart-embed'
+]);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
 const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr', 'hi', 'ar', 'zh', 'bn', 'ru', 'id']);
@@ -258,10 +263,17 @@ function toYoutubeEmbed(input) {
   return String(input).trim();
 }
 
+function isInsideAssetsDir(abs) {
+  if (!abs) return false;
+  const real = path.resolve(abs);
+  const root = path.resolve(ASSETS_DIR) + path.sep;
+  return real.startsWith(root);
+}
+
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
   const abs = path.join(WRITE_BASE, relativePath);
-  if (abs.startsWith(ASSETS_DIR) && fs.existsSync(abs)) {
+  if (isInsideAssetsDir(abs) && fs.existsSync(abs)) {
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
   }
 }
@@ -551,6 +563,19 @@ function findModuleById(list, id) {
   return list.find((m) => m && m.id === id) || null;
 }
 
+/* Lista de caminhos (relativos) de assets usados por um módulo — cobre os
+ * tipos de ficheiro único e a galeria (array de imagens). Usado para a
+ * recolha de lixo (apagar ficheiros órfãos) ao guardar. */
+function moduleAssetFiles(mod) {
+  const out = [];
+  if (!mod || !mod.data) return out;
+  if (SINGLE_FILE_TYPES.has(mod.type) && mod.data.file) out.push(mod.data.file);
+  if (GALLERY_TYPES.has(mod.type) && Array.isArray(mod.data.images)) {
+    for (const img of mod.data.images) { if (img && img.file) out.push(img.file); }
+  }
+  return out;
+}
+
 ipcMain.handle('content:save', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
@@ -561,39 +586,73 @@ ipcMain.handle('content:save', (_event, payload) => {
     const mod = sanitizeModule(raw);
     if (!mod) continue;
     const prev = findModuleById(previous, mod.id);
-    if (FILE_TYPES.has(mod.type)) {
-      const sourcePath = mod.data && typeof mod.data.sourcePath === 'string' ? mod.data.sourcePath : null;
+    const d = mod.data || {};
+    if (SINGLE_FILE_TYPES.has(mod.type)) {
+      const sourcePath = typeof d.sourcePath === 'string' ? d.sourcePath : null;
+      let file, fileName;
       if (sourcePath) {
         if (!fs.existsSync(sourcePath)) throw new Error('Ficheiro não encontrado: ' + sourcePath);
         if (prev && prev.data && prev.data.file) deleteAssetIfInside(prev.data.file);
-        const prefix = mod.type === 'pdf' ? 'pdf' : 'file';
-        const relative = copyAssetToProject(sourcePath, prefix);
-        mod.data = { file: relative, fileName: path.basename(sourcePath) };
+        const prefix = mod.type === 'pdf' ? 'pdf'
+          : mod.type === 'local-video' ? 'video'
+          : mod.type === 'local-audio' ? 'audio'
+          : mod.type === 'download-vault' ? 'download' : 'file';
+        file = copyAssetToProject(sourcePath, prefix);
+        fileName = path.basename(sourcePath);
       } else {
-        const prevFile = (prev && prev.data && prev.data.file) || null;
-        const prevName = (prev && prev.data && prev.data.fileName) || null;
-        mod.data = { file: prevFile, fileName: prevName };
+        file = (prev && prev.data && prev.data.file) || null;
+        fileName = (prev && prev.data && prev.data.fileName) || null;
       }
+      const out = { file, fileName };
+      if (mod.type === 'download-vault') {
+        out.buttonLabel = typeof d.buttonLabel === 'string' ? d.buttonLabel.trim() : '';
+      }
+      mod.data = out;
+    } else if (GALLERY_TYPES.has(mod.type)) {
+      // Aceita tanto a lista de edição (`items`, com sourcePath p/ novas) como
+      // o estado já persistido (`images`) — evita apagar a galeria num re-save
+      // (ex.: reordenar módulos), à imagem do cuidado com o duplo-save.
+      let items = Array.isArray(d.items) ? d.items : null;
+      if (!items && Array.isArray(d.images)) {
+        items = d.images.map((i) => ({ file: i.file, fileName: i.fileName }));
+      }
+      items = items || [];
+      const images = [];
+      for (const it of items) {
+        if (!it) continue;
+        if (typeof it.sourcePath === 'string' && it.sourcePath) {
+          if (!fs.existsSync(it.sourcePath)) continue;
+          const rel = copyAssetToProject(it.sourcePath, 'img');
+          images.push({ file: rel, fileName: path.basename(it.sourcePath) });
+        } else if (typeof it.file === 'string' && it.file) {
+          images.push({ file: it.file, fileName: it.fileName || path.basename(it.file) });
+        }
+      }
+      mod.data = { images };
+    } else if (mod.type === 'youtube') {
+      mod.data = { url: toYoutubeEmbed(typeof d.url === 'string' ? d.url.trim() : '') };
+    } else if (mod.type === 'webview' || mod.type === 'external' || mod.type === 'smart-embed') {
+      mod.data = { url: typeof d.url === 'string' ? d.url.trim() : '' };
+    } else if (mod.type === 'community-link') {
+      mod.data = {
+        url: typeof d.url === 'string' ? d.url.trim() : '',
+        buttonLabel: typeof d.buttonLabel === 'string' ? d.buttonLabel.trim() : '',
+        platform: typeof d.platform === 'string' ? d.platform.trim() : 'generic'
+      };
+    } else if (mod.type === 'html') {
+      mod.data = { html: typeof d.html === 'string' ? d.html : '' };
+    } else if (mod.type === 'article-reader') {
+      mod.data = { text: typeof d.text === 'string' ? d.text : '' };
     } else {
-      const d = mod.data || {};
-      if (mod.type === 'youtube') {
-        const url = typeof d.url === 'string' ? d.url.trim() : '';
-        mod.data = { url: toYoutubeEmbed(url) };
-      } else if (mod.type === 'webview' || mod.type === 'external') {
-        mod.data = { url: typeof d.url === 'string' ? d.url.trim() : '' };
-      } else if (mod.type === 'html') {
-        mod.data = { html: typeof d.html === 'string' ? d.html : '' };
-      }
+      mod.data = {};
     }
     nextModules.push(mod);
   }
-  const keptFiles = new Set(
-    nextModules.filter((m) => FILE_TYPES.has(m.type) && m.data && m.data.file).map((m) => m.data.file)
-  );
+  // GC de assets órfãos em todos os tipos com ficheiros (único + galeria).
+  const kept = new Set();
+  for (const m of nextModules) for (const f of moduleAssetFiles(m)) kept.add(f);
   for (const prev of previous) {
-    if (!prev || !FILE_TYPES.has(prev.type)) continue;
-    const prevFile = prev.data && prev.data.file;
-    if (prevFile && !keptFiles.has(prevFile)) deleteAssetIfInside(prevFile);
+    for (const f of moduleAssetFiles(prev)) { if (!kept.has(f)) deleteAssetIfInside(f); }
   }
   const updated = { ...current, content: nextModules };
   writeConfig(updated);
@@ -605,26 +664,67 @@ ipcMain.handle('content:save', (_event, payload) => {
  * isso <input type="file"> deixou de expor o caminho real do ficheiro. Para
  * copiar ficheiros para dist-assets/ usamos o diálogo nativo no processo
  * principal e devolvemos o caminho absoluto ao renderer. */
+const PICK_FILTERS = {
+  image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
+  icon: [{ name: 'Ícone / Imagem', extensions: ['ico', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] }],
+  pdf: [{ name: 'PDF', extensions: ['pdf'] }],
+  video: [{ name: 'Vídeo', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
+  audio: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] }],
+  download: [{
+    name: 'Ficheiros',
+    extensions: ['zip', 'rar', '7z', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+      'txt', 'csv', 'epub', 'mobi', 'mp3', 'mp4', 'png', 'jpg']
+  }],
+  launch: [{
+    name: 'Ficheiros',
+    extensions: ['exe', 'zip', 'rar', '7z', 'msi', 'pdf', 'jpg', 'jpeg', 'png', 'gif',
+      'mp4', 'mov', 'mp3', 'wav', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']
+  }]
+};
+
+function pickFilters(category) {
+  return (PICK_FILTERS[category] || []).concat([{ name: 'Todos os ficheiros', extensions: ['*'] }]);
+}
+
 ipcMain.handle('dialog:pickFile', async (_event, category) => {
   assertBuilder();
-  const FILTERS = {
-    image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
-    icon: [{ name: 'Ícone / Imagem', extensions: ['ico', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] }],
-    pdf: [{ name: 'PDF', extensions: ['pdf'] }],
-    launch: [{
-      name: 'Ficheiros',
-      extensions: ['exe', 'zip', 'rar', '7z', 'msi', 'pdf', 'jpg', 'jpeg', 'png', 'gif',
-        'mp4', 'mov', 'mp3', 'wav', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']
-    }]
-  };
-  const filters = (FILTERS[category] || []).concat([{ name: 'Todos os ficheiros', extensions: ['*'] }]);
   const result = await dialog.showOpenDialog(builderWindow, {
     properties: ['openFile'],
-    filters
+    filters: pickFilters(category)
   });
   if (result.canceled || !Array.isArray(result.filePaths) || result.filePaths.length === 0) return null;
   const filePath = result.filePaths[0];
   return { path: filePath, name: path.basename(filePath) };
+});
+
+ipcMain.handle('dialog:pickFiles', async (_event, category) => {
+  assertBuilder();
+  const result = await dialog.showOpenDialog(builderWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: pickFilters(category)
+  });
+  if (result.canceled || !Array.isArray(result.filePaths)) return [];
+  return result.filePaths.map((p) => ({ path: p, name: path.basename(p) }));
+});
+
+/* Viewer: "Guardar como" para o módulo Cofre de Downloads. Copia o ficheiro
+ * (que vive em dist-assets/) para o local escolhido pelo aluno. */
+ipcMain.handle('dialog:saveFileAs', async (_event, payload) => {
+  const rel = payload && typeof payload.file === 'string' ? payload.file : null;
+  const suggested = (payload && typeof payload.fileName === 'string' && payload.fileName) || 'ficheiro';
+  if (!rel) throw new Error('Ficheiro inválido.');
+  const abs = resolveRelativeAsset(rel);
+  // Validação de fronteira canónica (resolve + separador) — evita bypass por
+  // confusão de prefixo (ex.: ../dist-assets-evil/x começa por "dist-assets").
+  const real = abs ? path.resolve(abs) : null;
+  const root = path.resolve(ASSETS_DIR) + path.sep;
+  if (!real || !real.startsWith(root)) throw new Error('Caminho não permitido: ' + rel);
+  if (!fs.existsSync(real)) throw new Error('Ficheiro não existe: ' + real);
+  const win = BrowserWindow.getFocusedWindow() || viewerWindow || builderWindow;
+  const result = await dialog.showSaveDialog(win, { defaultPath: suggested });
+  if (result.canceled || !result.filePath) return { ok: false, cancelled: true };
+  fs.copyFileSync(real, result.filePath);
+  return { ok: true, path: result.filePath };
 });
 
 /* -------- IPC: viewer + shell -------- */
@@ -646,7 +746,7 @@ ipcMain.handle('shell:openExternal', async (_event, url) => {
 ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
   if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro vazio.');
   const abs = path.join(WRITE_BASE, relativePath);
-  if (!abs.startsWith(ASSETS_DIR)) throw new Error('Caminho não permitido: ' + relativePath);
+  if (!isInsideAssetsDir(abs)) throw new Error('Caminho não permitido: ' + relativePath);
   if (!fs.existsSync(abs)) throw new Error('Ficheiro não existe: ' + abs);
   const errMsg = await shell.openPath(abs);
   if (errMsg) throw new Error(errMsg);

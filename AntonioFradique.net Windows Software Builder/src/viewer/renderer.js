@@ -200,6 +200,178 @@ async function handleLaunch(data) {
   }
 }
 
+async function renderLocalVideo(data) {
+  clearStage();
+  stageEl.classList.add('media-mode');
+  const url = await relToFileUrl(data && data.file);
+  if (!url) {
+    stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.local_video_missing', 'Ficheiro de vídeo em falta.') + '</p></div>';
+    return;
+  }
+  const v = document.createElement('video');
+  v.setAttribute('controls', '');
+  v.className = 'media-video';
+  v.src = url;
+  stageEl.appendChild(v);
+}
+
+async function renderLocalAudio(data) {
+  clearStage();
+  stageEl.classList.add('media-mode');
+  const url = await relToFileUrl(data && data.file);
+  if (!url) {
+    stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.local_audio_missing', 'Ficheiro de áudio em falta.') + '</p></div>';
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'media-audio-wrap';
+  const a = document.createElement('audio');
+  a.setAttribute('controls', '');
+  a.className = 'media-audio';
+  a.src = url;
+  wrap.appendChild(a);
+  stageEl.appendChild(wrap);
+}
+
+async function renderGallery(data) {
+  clearStage();
+  stageEl.classList.add('gallery-mode');
+  const images = (data && Array.isArray(data.images)) ? data.images : [];
+  if (images.length === 0) {
+    stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.gallery_empty', 'Galeria sem imagens.') + '</p></div>';
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'gallery-grid';
+  for (const img of images) {
+    const url = await relToFileUrl(img && img.file);
+    if (!url) continue;
+    const cell = document.createElement('div');
+    cell.className = 'gallery-cell';
+    const el = document.createElement('img');
+    el.src = url;
+    el.alt = (img && img.fileName) || '';
+    el.loading = 'lazy';
+    cell.appendChild(el);
+    grid.appendChild(cell);
+  }
+  stageEl.appendChild(grid);
+}
+
+function renderArticle(data) {
+  clearStage();
+  stageEl.classList.add('html-mode');
+  const host = document.createElement('div');
+  host.className = 'html-host article-host';
+  host.innerHTML = miniMarkdown((data && data.text) || '');
+  stageEl.appendChild(host);
+}
+
+function renderDownloadVault(data) {
+  clearStage();
+  const host = document.createElement('div');
+  host.className = 'viewer-empty';
+  const card = document.createElement('div');
+  card.className = 'dl-card';
+  const icon = document.createElement('div');
+  icon.className = 'dl-icon';
+  icon.textContent = '📦';
+  const name = document.createElement('p');
+  name.className = 'dl-name';
+  name.textContent = (data && data.fileName) || '';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dl-btn';
+  btn.textContent = (data && data.buttonLabel) || tr('viewer.download_btn_default', 'Descarregar ficheiro');
+  if (!data || !data.file) {
+    btn.disabled = true;
+  } else {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const res = await window.viewer.saveFileAs({ file: data.file, fileName: data.fileName });
+        if (res && res.ok) showToast(tr('viewer.download_done', 'Ficheiro guardado.'));
+      } catch (err) {
+        showToast(tr('viewer.download_error_prefix', 'Erro ao guardar: ') + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+  card.append(icon, name, btn);
+  host.appendChild(card);
+  stageEl.appendChild(host);
+}
+
+function renderCommunity(data) {
+  clearStage();
+  const url = (data && data.url) || '';
+  const platform = (data && data.platform) || 'generic';
+  const host = document.createElement('div');
+  host.className = 'viewer-empty';
+  const card = document.createElement('div');
+  card.className = 'community-card platform-' + platform;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'community-btn platform-' + platform;
+  btn.textContent = (data && data.buttonLabel) || tr('viewer.community_btn_default', 'Entrar na comunidade');
+  if (!url) {
+    btn.disabled = true;
+  } else {
+    btn.addEventListener('click', async () => {
+      try { await window.viewer.openExternal(url); }
+      catch (err) { showToast(tr('viewer.external_error_prefix', 'Erro ao abrir link: ') + err.message); }
+    });
+  }
+  card.append(btn);
+  host.appendChild(card);
+  stageEl.appendChild(host);
+}
+
+/* Conversor Markdown minimalista e seguro: escapa HTML primeiro e só depois
+ * aplica títulos, listas, negrito/itálico, código e links. */
+function miniMarkdown(src) {
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escAttr = (s) => s.replace(/"/g, '&quot;');
+  const safeUrl = (u) => /^https?:\/\//i.test(u) ? u : '';
+  const text = esc(String(src || '')).replace(/\r\n/g, '\n');
+  const inline = (s) => s
+    .replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, url) => {
+      const u = safeUrl(url);
+      return u ? '<img alt="' + escAttr(alt) + '" src="' + escAttr(u) + '" />' : escAttr(alt);
+    })
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, url) => {
+      const u = safeUrl(url);
+      return u ? '<a href="' + escAttr(u) + '" target="_blank" rel="noopener">' + label + '</a>' : label;
+    })
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+  const lines = text.split('\n');
+  let html = '';
+  let inList = false;
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    const li = line.match(/^[-*]\s+(.*)$/);
+    if (h) {
+      if (inList) { html += '</ul>'; inList = false; }
+      const lvl = h[1].length;
+      html += '<h' + lvl + '>' + inline(h[2]) + '</h' + lvl + '>';
+    } else if (li) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + inline(li[1]) + '</li>';
+    } else if (line.trim() === '') {
+      if (inList) { html += '</ul>'; inList = false; }
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<p>' + inline(line) + '</p>';
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
 /* -------- Menu + dispatch -------- */
 
 function buildMenu(modules) {
@@ -254,6 +426,13 @@ async function dispatchModule(mod, btn) {
     case 'html':     setActiveMenuBtn(btn); renderHtml(mod.data); break;
     case 'pdf':      setActiveMenuBtn(btn); await renderPdf(mod.data); break;
     case 'webview':  setActiveMenuBtn(btn); renderWebview(mod.data); break;
+    case 'smart-embed':    setActiveMenuBtn(btn); renderWebview(mod.data); break;
+    case 'local-video':    setActiveMenuBtn(btn); await renderLocalVideo(mod.data); break;
+    case 'local-audio':    setActiveMenuBtn(btn); await renderLocalAudio(mod.data); break;
+    case 'image-gallery':  setActiveMenuBtn(btn); await renderGallery(mod.data); break;
+    case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
+    case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
+    case 'community-link': setActiveMenuBtn(btn); renderCommunity(mod.data); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;
     default: break;

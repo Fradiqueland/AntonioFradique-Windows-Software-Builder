@@ -838,3 +838,12 @@ select.select:focus {
 }
 .lang-select:focus { outline: none; border-color: rgba(255, 255, 255, 0.3); }
 .lang-select option { color: #0f172a; background: #fff; }
+
+/* ===== Mega Upgrade: editor da galeria de imagens ===== */
+.gallery-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gallery-list-empty { font-size: 13px; color: #64748b; padding: 4px 2px; }
+.gallery-list-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+}
+.gallery-item-name { font-size: 13px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -411,7 +411,9 @@ bannerForm.addEventListener('submit', async (e) => {
 // Module type labels are now resolved from the active locale via
 // `content.type.<key>` so the list stays in the user's chosen language
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
-const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch'];
+const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch',
+  'local-video', 'local-audio', 'download-vault', 'image-gallery',
+  'article-reader', 'community-link', 'smart-embed'];
 function typeLabel(type) {
   const key = 'content.type.' + type;
   const v = t(key);
@@ -444,6 +446,34 @@ const dyn = {
   launch: {
     file: document.getElementById('dyn-launch-file'),
     current: document.getElementById('dyn-launch-current')
+  },
+  'local-video': {
+    file: document.getElementById('dyn-local-video-file'),
+    current: document.getElementById('dyn-local-video-current')
+  },
+  'local-audio': {
+    file: document.getElementById('dyn-local-audio-file'),
+    current: document.getElementById('dyn-local-audio-current')
+  },
+  'download-vault': {
+    file: document.getElementById('dyn-download-vault-file'),
+    current: document.getElementById('dyn-download-vault-current'),
+    btn: document.getElementById('dyn-download-vault-btn')
+  },
+  'image-gallery': {
+    addBtn: document.getElementById('dyn-gallery-add'),
+    list: document.getElementById('dyn-gallery-list')
+  },
+  'article-reader': {
+    text: document.getElementById('dyn-article-text')
+  },
+  'community-link': {
+    btn: document.getElementById('dyn-community-btn'),
+    url: document.getElementById('dyn-community-url'),
+    platform: document.getElementById('dyn-community-platform')
+  },
+  'smart-embed': {
+    url: document.getElementById('dyn-smart-embed-url')
   }
 };
 
@@ -453,6 +483,7 @@ let contentModules = [];
 let editingId = null;        // id of module being edited (null = creating new)
 let pendingFileSourcePath = null;  // absolute path picked in <input type=file> for current edit
 let pendingFileName = null;
+let galleryItems = [];       // current gallery editor items ({kind:'existing'|'new', ...})
 
 function showDynamicGroup(type) {
   dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
@@ -469,6 +500,7 @@ function clearEditor() {
   editingId = null;
   pendingFileSourcePath = null;
   pendingFileName = null;
+  galleryItems = [];
   moduleTitle.value = '';
   moduleType.value = 'youtube';
   if (modulePassword) modulePassword.value = '';
@@ -478,13 +510,24 @@ function clearEditor() {
   dyn.external.url.value = '';
   dyn.pdf.file.value = '';
   dyn.launch.file.value = '';
-  setFileCurrentText('pdf', t('content.file_none'), false);
-  setFileCurrentText('launch', t('content.file_none'), false);
+  if (dyn['local-video'].file) dyn['local-video'].file.value = '';
+  if (dyn['local-audio'].file) dyn['local-audio'].file.value = '';
+  if (dyn['download-vault'].file) dyn['download-vault'].file.value = '';
+  if (dyn['download-vault'].btn) dyn['download-vault'].btn.value = '';
+  if (dyn['article-reader'].text) dyn['article-reader'].text.value = '';
+  if (dyn['community-link'].btn) dyn['community-link'].btn.value = '';
+  if (dyn['community-link'].url) dyn['community-link'].url.value = '';
+  if (dyn['community-link'].platform) dyn['community-link'].platform.value = 'discord';
+  if (dyn['smart-embed'].url) dyn['smart-embed'].url.value = '';
+  ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault'].forEach((k) => {
+    setFileCurrentText(k, t('content.file_none'), false);
+  });
   // Reset visible filename labels for the dynamic file pickers — otherwise
   // the previous module's name would linger when reopening / editing.
-  ['pdf', 'launch'].forEach((k) => {
+  ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault'].forEach((k) => {
     if (dyn[k] && dyn[k].file) setFileNameForInput(dyn[k].file, null);
   });
+  renderGalleryList();
   showDynamicGroup('youtube');
 }
 
@@ -524,12 +567,26 @@ function openEditorForEdit(id) {
   else if (mod.type === 'html') dyn.html.code.value = d.html || '';
   else if (mod.type === 'webview') dyn.webview.url.value = d.url || '';
   else if (mod.type === 'external') dyn.external.url.value = d.url || '';
-  else if (mod.type === 'pdf' || mod.type === 'launch') {
+  else if (mod.type === 'smart-embed') dyn['smart-embed'].url.value = d.url || '';
+  else if (mod.type === 'article-reader') dyn['article-reader'].text.value = d.text || '';
+  else if (mod.type === 'community-link') {
+    dyn['community-link'].btn.value = d.buttonLabel || '';
+    dyn['community-link'].url.value = d.url || '';
+    dyn['community-link'].platform.value = d.platform || 'discord';
+  } else if (mod.type === 'image-gallery') {
+    galleryItems = (Array.isArray(d.images) ? d.images : []).map((i) => ({
+      kind: 'existing', file: i.file, fileName: i.fileName
+    }));
+    renderGalleryList();
+  } else if (mod.type === 'pdf' || mod.type === 'launch'
+             || mod.type === 'local-video' || mod.type === 'local-audio'
+             || mod.type === 'download-vault') {
     if (d.file) {
       setFileCurrentText(mod.type, t('content.file_current_prefix') + (d.fileName || d.file), true);
     } else {
       setFileCurrentText(mod.type, t('content.file_none'), false);
     }
+    if (mod.type === 'download-vault') dyn['download-vault'].btn.value = d.buttonLabel || '';
   }
 
   // Highlight active item
@@ -666,10 +723,18 @@ moduleType.addEventListener('change', () => {
   showDynamicGroup(moduleType.value);
 });
 
+const FILE_PICK_CATEGORY = {
+  pdf: 'pdf',
+  launch: 'launch',
+  'local-video': 'video',
+  'local-audio': 'audio',
+  'download-vault': 'download'
+};
+
 function bindFilePicker(type) {
   const input = dyn[type].file;
   const label = document.querySelector('label[for="' + input.id + '"]');
-  const category = type === 'pdf' ? 'pdf' : 'launch';
+  const category = FILE_PICK_CATEGORY[type] || 'launch';
   if (label) label.addEventListener('click', async (e) => {
     e.preventDefault();
     const picked = await window.icurator.pickFile(category);
@@ -682,6 +747,47 @@ function bindFilePicker(type) {
 }
 bindFilePicker('pdf');
 bindFilePicker('launch');
+bindFilePicker('local-video');
+bindFilePicker('local-audio');
+bindFilePicker('download-vault');
+
+/* ---- Image gallery editor ---- */
+function renderGalleryList() {
+  const list = dyn['image-gallery'].list;
+  if (!list) return;
+  list.innerHTML = '';
+  if (galleryItems.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'gallery-list-empty';
+    li.textContent = t('content.gallery_empty', 'Nenhuma imagem adicionada.');
+    list.appendChild(li);
+    return;
+  }
+  galleryItems.forEach((it, idx) => {
+    const li = document.createElement('li');
+    li.className = 'gallery-list-item';
+    const name = document.createElement('span');
+    name.className = 'gallery-item-name';
+    name.textContent = it.fileName || it.name || '(imagem)';
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'icon-btn danger';
+    rm.textContent = '✕';
+    rm.title = t('content.btn_delete');
+    rm.addEventListener('click', () => { galleryItems.splice(idx, 1); renderGalleryList(); });
+    li.append(name, rm);
+    list.appendChild(li);
+  });
+}
+
+if (dyn['image-gallery'].addBtn) {
+  dyn['image-gallery'].addBtn.addEventListener('click', async () => {
+    const picked = await window.icurator.pickFiles('image');
+    if (!Array.isArray(picked) || picked.length === 0) return;
+    for (const p of picked) galleryItems.push({ kind: 'new', path: p.path, name: p.name });
+    renderGalleryList();
+  });
+}
 
 contentForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -698,13 +804,30 @@ contentForm.addEventListener('submit', async (e) => {
   else if (type === 'html') data = { html: dyn.html.code.value };
   else if (type === 'webview') data = { url: dyn.webview.url.value.trim() };
   else if (type === 'external') data = { url: dyn.external.url.value.trim() };
-  else if (type === 'pdf' || type === 'launch') {
+  else if (type === 'smart-embed') data = { url: dyn['smart-embed'].url.value.trim() };
+  else if (type === 'article-reader') data = { text: dyn['article-reader'].text.value };
+  else if (type === 'community-link') {
+    data = {
+      url: dyn['community-link'].url.value.trim(),
+      buttonLabel: dyn['community-link'].btn.value.trim(),
+      platform: dyn['community-link'].platform.value
+    };
+  } else if (type === 'image-gallery') {
+    data = {
+      items: galleryItems.map((it) => it.kind === 'new'
+        ? { sourcePath: it.path, fileName: it.name }
+        : { file: it.file, fileName: it.fileName })
+    };
+  } else if (type === 'pdf' || type === 'launch'
+             || type === 'local-video' || type === 'local-audio'
+             || type === 'download-vault') {
     if (pendingFileSourcePath) {
       data = { sourcePath: pendingFileSourcePath };
     } else {
       // Keep whatever was there (main.js falls back to previous file when no sourcePath)
       data = {};
     }
+    if (type === 'download-vault') data.buttonLabel = dyn['download-vault'].btn.value.trim();
   }
 
   // Update or insert in the local list

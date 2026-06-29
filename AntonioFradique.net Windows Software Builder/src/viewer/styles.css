@@ -382,3 +382,71 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* ===== Mega Upgrade: novos tipos de módulo ===== */
+.viewer-stage.media-mode {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.media-video {
+  width: 100%;
+  max-height: 100vh;
+  border-radius: 8px;
+  background: #000;
+}
+.media-audio-wrap { width: 100%; max-width: 640px; }
+.media-audio { width: 100%; margin-top: 20px; }
+
+.viewer-stage.gallery-mode { padding: 24px; overflow-y: auto; }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+.gallery-cell { overflow: hidden; border-radius: 8px; }
+.gallery-cell img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+  transition: transform .25s ease;
+}
+.gallery-cell img:hover { transform: scale(1.04); }
+
+.article-host { font-size: 16px; line-height: 1.7; }
+.article-host h1, .article-host h2, .article-host h3,
+.article-host h4, .article-host h5, .article-host h6 { margin: 1.2em 0 .5em; line-height: 1.25; }
+.article-host p { margin: 0 0 1em; }
+.article-host ul { margin: 0 0 1em 1.25em; }
+.article-host li { margin: .25em 0; }
+.article-host a { color: var(--v-button); }
+.article-host code {
+  background: rgba(0, 0, 0, .06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: .9em;
+}
+
+.dl-card, .community-card { max-width: 460px; width: 100%; text-align: center; }
+.dl-icon { font-size: 48px; margin-bottom: 12px; }
+.dl-name { font-size: 14px; color: var(--v-text-dark); margin-bottom: 20px; word-break: break-word; }
+.dl-btn, .community-btn {
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--v-button-text);
+  background: var(--v-button);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
+  transition: transform .15s ease, filter .15s ease;
+}
+.dl-btn:hover, .community-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.dl-btn:disabled, .community-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.community-btn.platform-discord { background: #5865F2; color: #fff; }
+.community-btn.platform-telegram { background: #229ED9; color: #fff; }
+.community-btn.platform-whatsapp { background: #25D366; color: #fff; }

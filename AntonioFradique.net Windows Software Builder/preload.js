@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('icurator', {
   saveContent: (data) => ipcRenderer.invoke('content:save', data),
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   pickFile: (category) => ipcRenderer.invoke('dialog:pickFile', category),
+  pickFiles: (category) => ipcRenderer.invoke('dialog:pickFiles', category),
   openViewer: () => ipcRenderer.invoke('viewer:open'),
   saveIcon: (data) => ipcRenderer.invoke('export:saveIcon', data),
   buildExe: (data) => ipcRenderer.invoke('export:buildExe', data),
