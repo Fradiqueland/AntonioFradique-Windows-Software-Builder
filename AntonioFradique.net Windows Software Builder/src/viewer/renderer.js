@@ -244,18 +244,79 @@ async function renderGallery(data) {
   const grid = document.createElement('div');
   grid.className = 'gallery-grid';
   for (const img of images) {
-    const url = await relToFileUrl(img && img.file);
+    const relFile = img && img.file;
+    const url = await relToFileUrl(relFile);
     if (!url) continue;
+    const fileName = (img && img.fileName) || '';
     const cell = document.createElement('div');
     cell.className = 'gallery-cell';
     const el = document.createElement('img');
     el.src = url;
-    el.alt = (img && img.fileName) || '';
+    el.alt = fileName;
     el.loading = 'lazy';
     cell.appendChild(el);
+    cell.addEventListener('click', () => openLightbox(url, fileName, relFile));
     grid.appendChild(cell);
   }
   stageEl.appendChild(grid);
+}
+
+/* Janela ampliada (lightbox) para a galeria: clicar numa imagem abre-a em
+ * grande sobre o curso, com botão para descarregar. Fecha com ×, clique no
+ * fundo ou Escape. */
+function openLightbox(url, fileName, relFile) {
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox-overlay';
+
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const box = document.createElement('div');
+  box.className = 'lightbox-box';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'lightbox-close';
+  closeBtn.textContent = '×';
+  closeBtn.addEventListener('click', close);
+
+  const bigImg = document.createElement('img');
+  bigImg.className = 'lightbox-img';
+  bigImg.src = url;
+  bigImg.alt = fileName;
+
+  const bar = document.createElement('div');
+  bar.className = 'lightbox-bar';
+
+  const dlBtn = document.createElement('button');
+  dlBtn.type = 'button';
+  dlBtn.className = 'dl-btn lightbox-dl';
+  dlBtn.textContent = tr('viewer.download_btn_default', 'Descarregar ficheiro');
+  if (!relFile) {
+    dlBtn.disabled = true;
+  } else {
+    dlBtn.addEventListener('click', async () => {
+      dlBtn.disabled = true;
+      try {
+        const res = await window.viewer.saveFileAs({ file: relFile, fileName });
+        if (res && res.ok) showToast(tr('viewer.download_done', 'Ficheiro guardado.'));
+      } catch (err) {
+        showToast(tr('viewer.download_error_prefix', 'Erro ao guardar: ') + err.message);
+      } finally {
+        dlBtn.disabled = false;
+      }
+    });
+  }
+  bar.appendChild(dlBtn);
+
+  box.append(closeBtn, bigImg, bar);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 
 function renderArticle(data) {
