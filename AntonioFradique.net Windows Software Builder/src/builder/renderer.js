@@ -428,6 +428,7 @@ const contentEditorClose = document.getElementById('content-editor-close');
 const contentEditorCancel = document.getElementById('content-editor-cancel');
 const moduleTitle = document.getElementById('module-title');
 const moduleType = document.getElementById('module-type');
+const modulePassword = document.getElementById('module-password');
 const dynGroups = document.querySelectorAll('[data-dyn]');
 const showContentStatus = makeStatus(document.getElementById('content-status'));
 
@@ -470,6 +471,7 @@ function clearEditor() {
   pendingFileName = null;
   moduleTitle.value = '';
   moduleType.value = 'youtube';
+  if (modulePassword) modulePassword.value = '';
   dyn.youtube.url.value = '';
   dyn.html.code.value = '';
   dyn.webview.url.value = '';
@@ -514,6 +516,7 @@ function openEditorForEdit(id) {
 
   moduleTitle.value = mod.title || '';
   moduleType.value = mod.type;
+  if (modulePassword) modulePassword.value = mod.password || '';
   showDynamicGroup(mod.type);
 
   const d = mod.data || {};
@@ -607,7 +610,8 @@ async function persistContent(successMessage) {
       id: m.id,
       title: m.title,
       type: m.type,
-      data: m.data || {}
+      data: m.data || {},
+      password: m.password || ''
     }))
   };
   const updated = await window.icurator.saveContent(payload);
@@ -684,6 +688,7 @@ contentForm.addEventListener('submit', async (e) => {
 
   const title = moduleTitle.value.trim();
   const type = moduleType.value;
+  const password = modulePassword ? modulePassword.value.trim() : '';
   if (!title) { moduleTitle.focus(); return; }
   if (!TYPE_KEYS.includes(type)) return;
 
@@ -713,11 +718,12 @@ contentForm.addEventListener('submit', async (e) => {
         id: old.id,
         title,
         type,
-        data: typeChanged ? data : data
+        data: typeChanged ? data : data,
+        password
       };
     }
   } else {
-    const newMod = { id: uuid(), title, type, data };
+    const newMod = { id: uuid(), title, type, data, password };
     contentModules.push(newMod);
     editingId = newMod.id;
   }

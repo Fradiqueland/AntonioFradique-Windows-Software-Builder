@@ -148,7 +148,10 @@
     "reorder_error_prefix": "Reorder error: ",
     "delete_error_prefix": "Delete error: ",
     "module_deleted": "Module deleted.",
-    "module_saved": "Module saved."
+    "module_saved": "Module saved.",
+    "module_password_label": "Password (optional)",
+    "module_password_placeholder": "Leave blank for free access",
+    "module_password_help": "If set, the student must enter this password to open the module."
   },
   "export": {
     "icon_label": "Software Icon",
@@ -195,7 +198,13 @@
     "empty_heading": "Welcome",
     "empty_text": "Select an option from the menu to start.",
     "optin_default_heading": "Enter your email to access the content",
-    "optin_bypass": "Close / Bypass Gate (test)"
+    "optin_bypass": "Close / Bypass Gate (test)",
+    "pw_title": "Protected module",
+    "pw_prompt": "Enter the password to access this module.",
+    "pw_submit": "Access",
+    "pw_wrong": "Incorrect password.",
+    "pw_placeholder": "Password",
+    "locked_hint": "Password protected"
   },
   "corners": {
     "music_label": "My music",

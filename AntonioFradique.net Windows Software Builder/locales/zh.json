@@ -148,7 +148,10 @@
     "reorder_error_prefix": "重新排序时出错：",
     "delete_error_prefix": "删除时出错：",
     "module_deleted": "模块已删除。",
-    "module_saved": "模块已保存。"
+    "module_saved": "模块已保存。",
+    "module_password_label": "密码（可选）",
+    "module_password_placeholder": "留空表示自由访问",
+    "module_password_help": "设置后，学员必须输入此密码才能打开该模块。"
   },
   "export": {
     "icon_label": "软件图标",
@@ -195,7 +198,13 @@
     "empty_heading": "欢迎",
     "empty_text": "从菜单中选择一个选项以开始。",
     "optin_default_heading": "输入您的电子邮件以访问内容",
-    "optin_bypass": "关闭 / 跳过锁定（测试）"
+    "optin_bypass": "关闭 / 跳过锁定（测试）",
+    "pw_title": "受保护的模块",
+    "pw_prompt": "请输入密码以访问此模块。",
+    "pw_submit": "进入",
+    "pw_wrong": "密码错误。",
+    "pw_placeholder": "密码",
+    "locked_hint": "受密码保护"
   },
   "corners": {
     "music_label": "我的音乐",

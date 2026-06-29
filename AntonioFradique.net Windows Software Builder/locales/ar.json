@@ -148,7 +148,10 @@
     "reorder_error_prefix": "خطأ في إعادة الترتيب: ",
     "delete_error_prefix": "خطأ في الحذف: ",
     "module_deleted": "تم حذف الوحدة.",
-    "module_saved": "تم حفظ الوحدة."
+    "module_saved": "تم حفظ الوحدة.",
+    "module_password_label": "كلمة المرور (اختياري)",
+    "module_password_placeholder": "اتركه فارغًا للوصول الحر",
+    "module_password_help": "في حال تعيينها، سيتعين على الطالب إدخال كلمة المرور هذه لفتح الوحدة."
   },
   "export": {
     "icon_label": "أيقونة البرنامج",
@@ -195,7 +198,13 @@
     "empty_heading": "مرحبًا",
     "empty_text": "اختر خيارًا من القائمة للبدء.",
     "optin_default_heading": "أدخل بريدك الإلكتروني للوصول إلى المحتوى",
-    "optin_bypass": "إغلاق / تجاوز القفل (اختبار)"
+    "optin_bypass": "إغلاق / تجاوز القفل (اختبار)",
+    "pw_title": "وحدة محمية",
+    "pw_prompt": "أدخل كلمة المرور للوصول إلى هذه الوحدة.",
+    "pw_submit": "دخول",
+    "pw_wrong": "كلمة المرور غير صحيحة.",
+    "pw_placeholder": "كلمة المرور",
+    "locked_hint": "محمي بكلمة مرور"
   },
   "corners": {
     "music_label": "موسيقاي",

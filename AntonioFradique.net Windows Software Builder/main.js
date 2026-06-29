@@ -543,7 +543,8 @@ function sanitizeModule(mod) {
   const id = (typeof mod.id === 'string' && mod.id.trim()) ? mod.id.trim() : crypto.randomUUID();
   const title = (typeof mod.title === 'string' && mod.title.trim()) ? mod.title.trim() : 'Sem título';
   const data = (mod.data && typeof mod.data === 'object') ? { ...mod.data } : {};
-  return { id, title, type, data };
+  const password = (typeof mod.password === 'string') ? mod.password.trim() : '';
+  return { id, title, type, data, password };
 }
 
 function findModuleById(list, id) {

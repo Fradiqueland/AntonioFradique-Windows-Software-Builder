@@ -148,7 +148,10 @@
     "reorder_error_prefix": "Error al reordenar: ",
     "delete_error_prefix": "Error al eliminar: ",
     "module_deleted": "Módulo eliminado.",
-    "module_saved": "Módulo guardado."
+    "module_saved": "Módulo guardado.",
+    "module_password_label": "Contraseña (opcional)",
+    "module_password_placeholder": "Déjelo en blanco para acceso libre",
+    "module_password_help": "Si la define, el alumno deberá introducir esta contraseña para abrir el módulo."
   },
   "export": {
     "icon_label": "Icono del Software",
@@ -195,7 +198,13 @@
     "empty_heading": "Bienvenido",
     "empty_text": "Selecciona una opción del menú para comenzar.",
     "optin_default_heading": "Introduzca su correo electrónico para acceder al contenido",
-    "optin_bypass": "Cerrar / Omitir Bloqueo (prueba)"
+    "optin_bypass": "Cerrar / Omitir Bloqueo (prueba)",
+    "pw_title": "Módulo protegido",
+    "pw_prompt": "Introduzca la contraseña para acceder a este módulo.",
+    "pw_submit": "Acceder",
+    "pw_wrong": "Contraseña incorrecta.",
+    "pw_placeholder": "Contraseña",
+    "locked_hint": "Protegido con contraseña"
   },
   "corners": {
     "music_label": "Mi música",

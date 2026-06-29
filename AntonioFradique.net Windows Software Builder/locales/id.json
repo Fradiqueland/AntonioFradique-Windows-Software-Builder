@@ -148,7 +148,10 @@
     "reorder_error_prefix": "Kesalahan saat mengurutkan ulang: ",
     "delete_error_prefix": "Kesalahan saat menghapus: ",
     "module_deleted": "Modul dihapus.",
-    "module_saved": "Modul disimpan."
+    "module_saved": "Modul disimpan.",
+    "module_password_label": "Kata sandi (opsional)",
+    "module_password_placeholder": "Biarkan kosong untuk akses bebas",
+    "module_password_help": "Jika diatur, peserta harus memasukkan kata sandi ini untuk membuka modul."
   },
   "export": {
     "icon_label": "Ikon Perangkat Lunak",
@@ -195,7 +198,13 @@
     "empty_heading": "Selamat datang",
     "empty_text": "Pilih opsi di menu untuk memulai.",
     "optin_default_heading": "Masukkan email Anda untuk mengakses konten",
-    "optin_bypass": "Tutup / Lewati Penguncian (uji)"
+    "optin_bypass": "Tutup / Lewati Penguncian (uji)",
+    "pw_title": "Modul terlindungi",
+    "pw_prompt": "Masukkan kata sandi untuk mengakses modul ini.",
+    "pw_submit": "Akses",
+    "pw_wrong": "Kata sandi salah.",
+    "pw_placeholder": "Kata sandi",
+    "locked_hint": "Dilindungi kata sandi"
   },
   "corners": {
     "music_label": "Musik saya",

@@ -216,6 +216,15 @@ function buildMenu(modules) {
     btn.type = 'button';
     btn.className = 'viewer-menu-btn';
     btn.textContent = mod.title;
+    const hasPwd = mod && typeof mod.password === 'string' && mod.password.trim() !== '';
+    if (hasPwd) {
+      btn.classList.add('locked');
+      const lock = document.createElement('span');
+      lock.className = 'viewer-menu-lock';
+      lock.textContent = '🔒';
+      lock.title = tr('viewer.locked_hint', 'Protegido por senha');
+      btn.appendChild(lock);
+    }
     btn.dataset.id = mod.id;
     btn.addEventListener('click', () => handleModuleClick(mod, btn));
     menuEl.appendChild(btn);
@@ -227,7 +236,19 @@ function setActiveMenuBtn(btn) {
   if (btn) btn.classList.add('active');
 }
 
+const unlockedModules = new Set();
+
 async function handleModuleClick(mod, btn) {
+  const pwd = (mod && typeof mod.password === 'string') ? mod.password.trim() : '';
+  if (pwd && !unlockedModules.has(mod.id)) {
+    setActiveMenuBtn(btn);
+    renderPasswordGate(mod, btn, pwd);
+    return;
+  }
+  await dispatchModule(mod, btn);
+}
+
+async function dispatchModule(mod, btn) {
   switch (mod.type) {
     case 'youtube':  setActiveMenuBtn(btn); renderYoutube(mod.data); break;
     case 'html':     setActiveMenuBtn(btn); renderHtml(mod.data); break;
@@ -237,6 +258,68 @@ async function handleModuleClick(mod, btn) {
     case 'launch':   await handleLaunch(mod.data); break;
     default: break;
   }
+}
+
+/* In-stage password gate for protected modules. Once the correct password is
+ * entered, the module stays unlocked for the rest of the viewing session. */
+function renderPasswordGate(mod, btn, pwd) {
+  clearStage();
+  const host = document.createElement('div');
+  host.className = 'viewer-empty';
+
+  const card = document.createElement('div');
+  card.className = 'pw-gate';
+
+  const icon = document.createElement('div');
+  icon.className = 'pw-gate-icon';
+  icon.textContent = '🔒';
+
+  const h = document.createElement('h2');
+  h.textContent = tr('viewer.pw_title', 'Módulo protegido');
+
+  const p = document.createElement('p');
+  p.textContent = tr('viewer.pw_prompt', 'Introduza a senha para aceder a este módulo.');
+
+  const form = document.createElement('form');
+  form.className = 'pw-gate-form';
+  form.autocomplete = 'off';
+
+  const input = document.createElement('input');
+  input.type = 'password';
+  input.className = 'pw-gate-input';
+  input.autocomplete = 'off';
+  input.setAttribute('placeholder', tr('viewer.pw_placeholder', 'Senha'));
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'pw-gate-btn';
+  submit.textContent = tr('viewer.pw_submit', 'Aceder');
+
+  const error = document.createElement('div');
+  error.className = 'pw-gate-error';
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (input.value === pwd) {
+      unlockedModules.add(mod.id);
+      if (btn) {
+        btn.classList.remove('locked');
+        const lock = btn.querySelector('.viewer-menu-lock');
+        if (lock) lock.remove();
+      }
+      await dispatchModule(mod, btn);
+    } else {
+      error.textContent = tr('viewer.pw_wrong', 'Senha incorreta.');
+      input.value = '';
+      input.focus();
+    }
+  });
+
+  form.append(input, submit);
+  card.append(icon, h, p, form, error);
+  host.appendChild(card);
+  stageEl.appendChild(host);
+  input.focus();
 }
 
 /* -------- Banner -------- */

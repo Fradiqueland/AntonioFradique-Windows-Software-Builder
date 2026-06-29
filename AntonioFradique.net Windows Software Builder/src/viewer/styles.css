@@ -205,6 +205,36 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
 .viewer-empty h2 { font-size: 22px; font-weight: 600; color: var(--v-text-dark); margin-bottom: 8px; }
 .viewer-empty p  { font-size: 14px; }
 
+/* ===== Password gate (protected modules) ===== */
+.pw-gate { max-width: 420px; width: 100%; }
+.pw-gate-icon { font-size: 40px; margin-bottom: 12px; }
+.pw-gate h2 { font-size: 22px; font-weight: 600; color: var(--v-text-dark); margin-bottom: 8px; }
+.pw-gate p { font-size: 14px; margin-bottom: 20px; }
+.pw-gate-form { display: flex; gap: 8px; justify-content: center; }
+.pw-gate-input {
+  flex: 1 1 auto;
+  max-width: 240px;
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  outline: none;
+}
+.pw-gate-input:focus { border-color: var(--v-button); }
+.pw-gate-btn {
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--v-button-text);
+  background: var(--v-button);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pw-gate-btn:hover { filter: brightness(1.05); }
+.pw-gate-error { color: #dc2626; font-size: 14px; min-height: 20px; margin-top: 12px; }
+.viewer-menu-lock { margin-inline-start: auto; font-size: 12px; opacity: 0.9; }
+
 /* ===== Opt-in overlay ===== */
 .optin-overlay {
   position: fixed;
