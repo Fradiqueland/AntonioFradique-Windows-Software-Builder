@@ -189,7 +189,7 @@
     "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "Accepts .png, .jpg, .ico, .gif, .webp or .bmp. It is automatically converted and applied to the final .exe icon.",
+    "icon_help": "Accepts .png, .jpg or .ico. It is automatically converted and applied to the final .exe icon. (GIF is not supported — Windows icons are static.)",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
     "build_btn": "Export Final Product (.exe)",

@@ -361,7 +361,7 @@ async function buildIcoFromSource(sourceAbs, outIcoPath) {
   const ext = path.extname(sourceAbs).toLowerCase();
   if (ext === '.ico') { fs.copyFileSync(sourceAbs, outIcoPath); return outIcoPath; }
   const img = nativeImage.createFromPath(sourceAbs);
-  if (img.isEmpty()) throw new Error('Imagem de ícone inválida: ' + sourceAbs);
+  if (img.isEmpty()) throw new Error('Imagem de ícone inválida ou formato não suportado (use .png, .jpg ou .ico): ' + sourceAbs);
   const pngToIco = require('png-to-ico');
   const sizes = [256, 128, 64, 48, 32, 16];
   const buffers = sizes
@@ -666,7 +666,7 @@ ipcMain.handle('content:save', (_event, payload) => {
  * principal e devolvemos o caminho absoluto ao renderer. */
 const PICK_FILTERS = {
   image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
-  icon: [{ name: 'Ícone / Imagem', extensions: ['ico', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] }],
+  icon: [{ name: 'Ícone / Imagem (.ico, .png, .jpg)', extensions: ['ico', 'png', 'jpg', 'jpeg'] }],
   pdf: [{ name: 'PDF', extensions: ['pdf'] }],
   video: [{ name: 'Vídeo', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
   audio: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] }],
@@ -755,7 +755,7 @@ ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
 
 /* -------- IPC: export (Builder only) — SFX pipeline -------- */
 
-const ICON_ALLOWED_EXTS = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+const ICON_ALLOWED_EXTS = ['.ico', '.png', '.jpg', '.jpeg'];
 const ICON_SOURCE_NAMES = ICON_ALLOWED_EXTS.map((e) => 'icon-source' + e);
 
 function clearStoredIcons() {
@@ -784,7 +784,7 @@ ipcMain.handle('export:saveIcon', (_event, payload) => {
   if (!fs.existsSync(payload.sourcePath)) throw new Error('Ficheiro de ícone não encontrado.');
   const ext = path.extname(payload.sourcePath).toLowerCase();
   if (!ICON_ALLOWED_EXTS.includes(ext)) {
-    throw new Error('O ícone tem de ser .ico, .png, .jpg, .gif, .webp ou .bmp');
+    throw new Error('O ícone tem de ser .ico, .png ou .jpg. O GIF não é suportado — os ícones de Windows são estáticos. Converta a imagem para PNG e tente de novo.');
   }
   clearStoredIcons();
   const destName = 'icon-source' + ext;

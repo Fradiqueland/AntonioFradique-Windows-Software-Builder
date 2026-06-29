@@ -189,7 +189,7 @@
     "icon_label": "Icône du Logiciel",
     "icon_none": "Aucune icône définie.",
     "icon_current_prefix": "Icône actuelle : ",
-    "icon_help": "Accepte .png, .jpg, .ico, .gif, .webp ou .bmp. Converti automatiquement et appliqué à l'icône du .exe final.",
+    "icon_help": "Accepte .png, .jpg ou .ico. Converti automatiquement et appliqué à l'icône du .exe final. (Le GIF n'est pas pris en charge : les icônes Windows sont statiques.)",
     "icon_must_be_ico": "Veuillez choisir un fichier .ico",
     "summary_label": "Résumé du Projet",
     "build_btn": "Exporter le Produit Final (.exe)",

@@ -1010,7 +1010,7 @@ async function loadIconState(config) {
 if (iconPickBtn) iconPickBtn.addEventListener('click', async () => {
   const picked = await window.icurator.pickFile('icon');
   if (!picked) return;
-  if (!/\.(ico|png|jpe?g|gif|webp|bmp)$/i.test(picked.name)) {
+  if (!/\.(ico|png|jpe?g)$/i.test(picked.name)) {
     alert(t('export.icon_must_be_image'));
     return;
   }

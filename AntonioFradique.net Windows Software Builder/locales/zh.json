@@ -189,7 +189,7 @@
     "icon_label": "软件图标",
     "icon_none": "未定义图标。",
     "icon_current_prefix": "当前图标：",
-    "icon_help": "支持 .png、.jpg、.ico、.gif、.webp 或 .bmp。会自动转换并应用到最终 .exe 的图标。",
+    "icon_help": "支持 .png、.jpg 或 .ico。会自动转换并应用到最终 .exe 的图标。（不支持 GIF —— Windows 图标是静态的。）",
     "icon_must_be_ico": "请选择一个 .ico 文件",
     "summary_label": "项目摘要",
     "build_btn": "导出最终产品 (.exe)",

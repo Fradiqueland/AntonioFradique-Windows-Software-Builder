@@ -189,7 +189,7 @@
     "icon_label": "Ikon Perangkat Lunak",
     "icon_none": "Tidak ada ikon ditentukan.",
     "icon_current_prefix": "Ikon saat ini: ",
-    "icon_help": "Menerima .png, .jpg, .ico, .gif, .webp, atau .bmp. Dikonversi otomatis dan diterapkan ke ikon .exe akhir.",
+    "icon_help": "Menerima .png, .jpg, atau .ico. Dikonversi otomatis dan diterapkan ke ikon .exe akhir. (GIF tidak didukung — ikon Windows bersifat statis.)",
     "icon_must_be_ico": "Silakan pilih file .ico",
     "summary_label": "Ringkasan Proyek",
     "build_btn": "Ekspor Produk Akhir (.exe)",
