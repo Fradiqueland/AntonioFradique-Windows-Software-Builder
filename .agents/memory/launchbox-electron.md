@@ -216,3 +216,21 @@ Viewer, so it is the single correct resolver in both modes — grep for stray `W
 
 ## Module types (viewer dispatchModule must stay in sync with builder TYPE_KEYS + main.js ALL_TYPES)
 single-file types (local-video, local-audio, download-vault) + gallery (image-gallery) copy assets to dist-assets/ via moduleAssetFiles() + unified GC. download-vault has buttonLabel; gallery save accepts edit-time `items` OR persisted `images` (avoids wipe-on-reorder). smart-embed reuses renderWebview. community-link opens external browser.
+
+## IPTV module (v1.5): channels resolved at BUILD time, played with vendored hls.js
+The `iptv` type has 4 sources (xtream / m3u8 / m3u / manual). Channels are fetched+parsed in
+main.js at build time (Node `iptv:load` IPC → iptvLoadXtream/iptvLoadM3UFromUrl/FromFile), NOT in
+the renderer — this dodges CORS entirely during authoring. Saved config holds only resolved
+`channels:[{name,url,logo,group}]` (+ source, xtreamUrl or playlistUrl). `.m3u` is parsed only, so
+iptv is NOT in SINGLE_FILE_TYPES/moduleAssetFiles (nothing copied to dist-assets).
+**Credentials caveat:** Xtream stream URLs inherently embed user/pass in the path
+(`base/live/USER/PASS/ID.m3u8`), so credentials unavoidably ship to students — that is the intended
+"share my IPTV" behaviour. Do NOT additionally persist standalone `xtreamUser`/`xtreamPass` in the
+saved config (redundant leak; only `xtreamUrl` is kept for re-edit context).
+**Viewer playback:** hls.js is vendored at `src/viewer/vendor/hls.min.js` (offline; loaded before
+renderer.js). Must destroy the active instance on every stage change AND before each play
+(`currentHls`/`destroyHls`) or you leak HLS workers/buffers. Native `<video>.src` is the fallback.
+**CORS:** viewer runs file:// (origin null); `onHeadersReceived` forces `Access-Control-Allow-Origin:*`
+but ONLY for resourceType in {xhr,media,object,other} — do not broaden to all responses or you weaken
+CORS for embedded pages/scripts. Viewer index.html CSP was relaxed (blob: worker/child, http(s)/blob/data
+for connect/media/img) to allow hls.js + remote segments.
