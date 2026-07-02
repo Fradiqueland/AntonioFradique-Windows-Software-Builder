@@ -234,3 +234,18 @@ renderer.js). Must destroy the active instance on every stage change AND before 
 but ONLY for resourceType in {xhr,media,object,other} — do not broaden to all responses or you weaken
 CORS for embedded pages/scripts. Viewer index.html CSP was relaxed (blob: worker/child, http(s)/blob/data
 for connect/media/img) to allow hls.js + remote segments.
+**Channel cap:** import/save honour a single shared `IPTV_MAX_CHANNELS` (200000). There were TWO caps
+to keep in lockstep: the `iptv:load` handlers AND the `content:save` normalization loop (was a hardcoded
+`20000` that silently truncated big lists even after load returned more). iptvFetch abort timeout is 120s
+(large M3U playlists are multi-MB). Viewer only renders the first 500 channels (`RENDER_CAP`) + search,
+so a 55k+ import doesn't freeze the list.
+
+## Builder deleteProject: refresh the list BEFORE applyConfig, or a failed apply leaves a stale row
+`deleteProject` (builder renderer) must call `renderProjectsList()` immediately after updating
+`projectsCache`, THEN run `applyConfig(res.config)` inside its own try/catch. **Why:** the delete IPC
+returns the newly-active project's config; if `applyConfig` throws (e.g. an asset resolve rejects),
+the old order skipped `renderProjectsList()` so the just-deleted project stayed visible and the user
+reported "apagar não apaga" even though the index was already updated server-side. The main-process
+`projects:delete` handler itself is correct (rmSync is best-effort/caught; index filter+write always
+runs; deleting the last project recreates an empty "Projeto 1"). **How to apply:** any list-mutating IPC
+that also repaints other tabs should refresh its own list first and isolate the secondary repaint.
