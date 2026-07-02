@@ -240,6 +240,22 @@ to keep in lockstep: the `iptv:load` handlers AND the `content:save` normalizati
 (large M3U playlists are multi-MB). Viewer only renders the first 500 channels (`RENDER_CAP`) + search,
 so a 55k+ import doesn't freeze the list.
 
+## Viewer IPTV favourites + live language switch
+Favourites (star channels + create/rename/delete folders, add/remove channels) live ONLY in the viewer's
+`renderIptv`, persisted in **localStorage** keyed `lbxIptvFav::<document.title>::<moduleId>`. **Why namespaced:**
+all courses share the same Viewer `app.setName('LaunchBox Viewer')` → same `%AppData%` userData → shared
+localStorage; without the per-course+module key, favourites would bleed across courses. `renderIptv` must be
+called with `mod.id` (call site in dispatchModule). **Electron gotcha:** `window.prompt` is disabled in
+Electron renderers — folder create/rename use inline text inputs, and delete uses an inline ✓/✕ confirm row,
+NOT `prompt()`/`confirm()`. The star opens a `position:fixed` popover appended to `document.body` with a
+capture-phase document click listener; its teardown (`closePicker`) is exposed via a module-level `iptvCleanup`
+that `clearStage()` invokes, so switching module/language can't orphan the popover or leak the listener.
+**Live language switch (`setLanguage`)** re-runs `handleModuleClick(activeModuleRef)` so the OPEN module's
+JS-rendered chrome (e.g. IPTV "Escolha um canal…") re-translates — data-i18n alone doesn't cover stage text.
+`activeModuleRef` is set only for stage-rendering module types: **exclude `external` and `launch`** or a language
+change would re-fire openExternal/launchFile side effects. The 10 locales already had the 6 base `viewer.iptv_*`
+keys fully translated; the "only in one language" bug was the missing re-render, not a missing key.
+
 ## Builder deleteProject: refresh the list BEFORE applyConfig, or a failed apply leaves a stale row
 `deleteProject` (builder renderer) must call `renderProjectsList()` immediately after updating
 `projectsCache`, THEN run `applyConfig(res.config)` inside its own try/catch. **Why:** the delete IPC
