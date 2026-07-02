@@ -200,5 +200,19 @@ deleteAssetIfInside) MUST validate with canonical boundary: `path.resolve(abs).s
 **Why:** a plain `abs.startsWith(ASSETS_DIR)` is bypassable by prefix confusion (e.g. `dist-assets-evil`). Use the shared `isInsideAssetsDir()` helper.
 The viewer's `miniMarkdown` builds HTML by string concat: it escapes `<>&` for text, but link/image URLs must be quote-escaped AND allowlisted to `^https?://` (drop the tag otherwise) or it's XSS-able via `[x](" onclick=...)` / `javascript:`.
 
+## Multi-project layout (v1.4): resolve stored relative paths via relToAbs(), never WRITE_BASE
+Builder now keeps each project isolated under `WRITE_BASE/projects/<id>/{data,dist-assets}` with an
+index at `WRITE_BASE/projects.json`; `DATA_DIR/ASSETS_DIR/CONFIG_PATH/ICON_DEST_PATH` are `let`
+reassigned by `applyActiveProjectPaths()` to the active project. First run migrates the legacy flat
+`WRITE_BASE/{data,dist-assets}` into "Projeto 1". The Viewer stays FLAT (never calls
+applyActiveProjectPaths); export injects the active project's config+assets flattened.
+**Rule:** any code turning a config-stored relative path (icon `export.iconPath`, logo, banners,
+module assets) into an absolute path MUST go through `relToAbs()` (or the reassigned DATA_DIR/
+ASSETS_DIR), NEVER `path.join(WRITE_BASE, rel)`. **Why:** the export icon-stamping used
+`path.join(WRITE_BASE, iconRel)` and silently fell back to the default SFX icon for every
+non-legacy project because the icon lives in `projects/<id>/data/`, not `WRITE_BASE/data/`.
+**How to apply:** `relToAbs()` already routes to the active project in Builder and stays flat in
+Viewer, so it is the single correct resolver in both modes — grep for stray `WRITE_BASE` joins.
+
 ## Module types (viewer dispatchModule must stay in sync with builder TYPE_KEYS + main.js ALL_TYPES)
 single-file types (local-video, local-audio, download-vault) + gallery (image-gallery) copy assets to dist-assets/ via moduleAssetFiles() + unified GC. download-vault has buttonLabel; gallery save accepts edit-time `items` OR persisted `images` (avoids wipe-on-reorder). smart-embed reuses renderWebview. community-link opens external browser.

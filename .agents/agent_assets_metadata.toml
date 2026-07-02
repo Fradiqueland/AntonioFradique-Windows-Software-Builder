@@ -12,3 +12,9 @@ id = "r4lJ-oSz2waUvKNBG9qpk"
 uri = "file://exports/AntonioFradique-Builder-v1.3.zip"
 type = "unspecified"
 title = "AntonioFradique.net Windows Software Builder — v1.3"
+
+[[outputs]]
+id = "IawlFfJgLaWa7_a5XXTT4"
+uri = "file://exports/AntonioFradique-Builder-v1.4.zip"
+type = "unspecified"
+title = "AntonioFradique.net Windows Software Builder — v1.4"
