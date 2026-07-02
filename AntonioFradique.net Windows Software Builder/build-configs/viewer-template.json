@@ -9,6 +9,7 @@
     "preload.js",
     "preload-viewer.js",
     "src/viewer/**/*",
+    "src/shared/**/*",
     "locales/**/*",
     "!src/builder/**",
     "!build-configs/**",

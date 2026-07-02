@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileP = promisify(execFile);
+const iptvCipher = require('./src/shared/iptv-cipher');
 
 /* =========================================================
  * APP MODE: Builder vs Viewer (SFX-stamped)
@@ -618,7 +619,10 @@ function createViewerWindow({ standalone = false } = {}) {
 
 /* -------- IPC: shared -------- */
 
-ipcMain.handle('config:load', () => readConfig());
+// Decifra os url de IPTV em memória antes de entregar a config à janela. A
+// config do Builder está em texto simples (sem marcador) → passa intacta; só a
+// config embutida num curso gerado vem cifrada e é aqui decifrada.
+ipcMain.handle('config:load', () => iptvCipher.decryptConfigIptv(readConfig()));
 ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
 
 /* -------- IPC: projetos (Builder only) -------- */
@@ -1302,7 +1306,12 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     const stageAssets = path.join(stageResources, 'dist-assets');
     fs.mkdirSync(stageData, { recursive: true });
     fs.mkdirSync(stageAssets, { recursive: true });
-    fs.copyFileSync(CONFIG_PATH, path.join(stageData, 'project-config.json'));
+    // Cifra os url dos canais IPTV (que contêm o utilizador/password Xtream) e
+    // remove metadados só-do-Builder (xtreamUrl/playlistUrl) para que nenhuma
+    // credencial fique em texto simples dentro do curso. O Viewer decifra os
+    // canais em memória no config:load. Módulos não-IPTV ficam inalterados.
+    const courseConfig = iptvCipher.sanitizeConfigForCourse(readConfig());
+    fs.writeFileSync(path.join(stageData, 'project-config.json'), JSON.stringify(courseConfig, null, 2), 'utf-8');
     if (fs.existsSync(ASSETS_DIR)) {
       for (const name of fs.readdirSync(ASSETS_DIR)) {
         const src = path.join(ASSETS_DIR, name);
