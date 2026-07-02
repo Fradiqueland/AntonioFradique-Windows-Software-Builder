@@ -1270,9 +1270,15 @@ async function deleteProject(project) {
   try {
     const res = await window.icurator.projectsDelete(project.id);
     projectsCache = res.state;
-    if (res.config) await applyConfig(res.config);
+    // Atualiza a lista PRIMEIRO: assim a linha do projeto apagado desaparece
+    // sempre, mesmo que o applyConfig do novo projeto ativo falhe a seguir
+    // (caso contrário parecia que "não apagava").
     renderProjectsList();
     showProjectsStatus(t('projects.deleted_ok'), 'success');
+    if (res.config) {
+      try { await applyConfig(res.config); }
+      catch (cfgErr) { console.error('Falha a aplicar config do projeto ativo:', cfgErr); }
+    }
   } catch (err) {
     console.error('Falha a apagar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');

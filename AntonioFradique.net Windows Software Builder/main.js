@@ -903,7 +903,7 @@ ipcMain.handle('content:save', (_event, payload) => {
         const logo = typeof c.logo === 'string' ? c.logo.trim() : '';
         const group = typeof c.group === 'string' ? c.group.trim() : '';
         channels.push({ name, url, logo, group });
-        if (channels.length >= 20000) break;
+        if (channels.length >= IPTV_MAX_CHANNELS) break;
       }
       const out = { source, channels };
       if (source === 'xtream') {
@@ -936,7 +936,7 @@ ipcMain.handle('content:save', (_event, payload) => {
  * com o painel Xtream Codes ou descarregamos uma lista M3U. Os canais resolvidos
  * ({name,url,logo,group}) ficam guardados no config e o Viewer apenas os
  * reproduz (hls.js) — não precisa de rede para os listar. */
-const IPTV_MAX_CHANNELS = 20000;
+const IPTV_MAX_CHANNELS = 200000;
 const IPTV_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
 
 function iptvNormalizeBase(raw) {
@@ -950,7 +950,9 @@ function iptvNormalizeBase(raw) {
 
 async function iptvFetch(url, asJson) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  // Listas M3U grandes (dezenas de milhares de canais) podem ser vários MB;
+  // damos margem generosa para o download não abortar a meio.
+  const timer = setTimeout(() => controller.abort(), 120000);
   try {
     const resp = await fetch(url, {
       signal: controller.signal,
