@@ -223,10 +223,21 @@ main.js at build time (Node `iptv:load` IPC → iptvLoadXtream/iptvLoadM3UFromUr
 the renderer — this dodges CORS entirely during authoring. Saved config holds only resolved
 `channels:[{name,url,logo,group}]` (+ source, xtreamUrl or playlistUrl). `.m3u` is parsed only, so
 iptv is NOT in SINGLE_FILE_TYPES/moduleAssetFiles (nothing copied to dist-assets).
-**Credentials caveat:** Xtream stream URLs inherently embed user/pass in the path
-(`base/live/USER/PASS/ID.m3u8`), so credentials unavoidably ship to students — that is the intended
-"share my IPTV" behaviour. Do NOT additionally persist standalone `xtreamUser`/`xtreamPass` in the
-saved config (redundant leak; only `xtreamUrl` is kept for re-edit context).
+**Credentials (v1.5.3 — encrypted in exported course):** Xtream stream URLs embed user/pass in the
+path (`base/live/USER/PASS/ID.m3u8`). The Builder's own working project-config.json stays PLAINTEXT
+(local to the author). The EXPORTED course config must go through `iptvCipher.sanitizeConfigForCourse()`
+(shared module `src/shared/iptv-cipher.js`, AES-256-GCM, marker `enc1:`) which (1) encrypts every
+`channels[].url` and (2) DELETES `xtreamUrl`/`playlistUrl` (Builder-only metadata the Viewer never
+reads — verified: viewer renderer uses only `channels[]`, not `source`/`xtreamUrl`/`playlistUrl`).
+The Viewer decrypts in memory in the `config:load` IPC handler (`iptvCipher.decryptConfigIptv`);
+plaintext/unmarked configs pass through untouched so the Builder editor is unaffected. **Invariant:**
+`sanitizeConfigForCourse` is the single mandatory export gate — any new credential-bearing IPTV field
+must be encrypted or stripped there. **Packaging:** `src/shared/**/*` must stay in BOTH build file
+lists (package.json Builder build + build-configs/viewer-template.json) or `require('./src/shared/iptv-cipher')`
+throws at startup. **Honest limit:** obfuscation-grade — the key is embedded client-side (in asar);
+stops casual file inspection (99.9%), not a determined reverse-engineer (a proxy server would be the
+only true fix, rejected to keep the app offline/server-free). Still do NOT persist standalone
+`xtreamUser`/`xtreamPass`.
 **Viewer playback:** hls.js is vendored at `src/viewer/vendor/hls.min.js` (offline; loaded before
 renderer.js). Must destroy the active instance on every stage change AND before each play
 (`currentHls`/`destroyHls`) or you leak HLS workers/buffers. Native `<video>.src` is the fallback.

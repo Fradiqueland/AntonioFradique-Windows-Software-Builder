@@ -36,3 +36,9 @@ id = "t1BmwS_rxbHKACG-lrGh6"
 uri = "file://exports/AntonioFradique-Builder-v1.5.2.zip"
 type = "unspecified"
 title = "AntonioFradique.net Windows Software Builder v1.5.2 (favoritos IPTV + correção de idioma)"
+
+[[outputs]]
+id = "d2svWsLZGWPfMIpEu_wtp"
+uri = "file://exports/AntonioFradique-Builder-v1.5.3.zip"
+type = "unspecified"
+title = "AntonioFradique.net Windows Software Builder v1.5.3"
