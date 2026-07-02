@@ -129,7 +129,8 @@
       "gallery": "Galeri Gambar",
       "article": "Pembaca Artikel / Catatan",
       "community": "Komunitas (Discord/Telegram…)",
-      "embed": "Formulir / Kuis (Embed)"
+      "embed": "Formulir / Kuis (Embed)",
+      "iptv": "Pemutar IPTV"
     },
     "youtube_url_label": "URL atau ID video",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... atau hanya ID",
@@ -188,7 +189,39 @@
     "community_help": "Terbuka di peramban bawaan siswa (tidak terkunci di aplikasi).",
     "embed_url_label": "Tautan untuk disematkan",
     "embed_url_placeholder": "Google Forms, Typeform, Calendly…",
-    "embed_help": "Dimuat di dalam aplikasi via webview — formulir, kuis, penjadwalan."
+    "embed_help": "Dimuat di dalam aplikasi via webview — formulir, kuis, penjadwalan.",
+    "iptv": {
+      "source_label": "Sumber saluran",
+      "source_xtream": "Login Xtream Codes API",
+      "source_m3u8": "Tautan .m3u8",
+      "source_m3u": "Berkas .m3u",
+      "source_manual": "Tambah saluran satu per satu",
+      "xtream_url_label": "URL server",
+      "xtream_url_ph": "http://server:port",
+      "xtream_user_label": "Pengguna / Email",
+      "xtream_user_ph": "Pengguna atau email Anda",
+      "xtream_pass_label": "Kata sandi",
+      "xtream_pass_ph": "Kata sandi Anda",
+      "m3u8_url_label": "Tautan .m3u8",
+      "m3u8_url_ph": "http://.../list.m3u8",
+      "m3u_label": "Berkas daftar (.m3u)",
+      "m3u_pick": "Pilih berkas .m3u",
+      "manual_label": "Saluran",
+      "manual_add": "+ Tambah saluran",
+      "manual_empty": "Belum ada saluran ditambahkan.",
+      "manual_name_ph": "Nama saluran",
+      "manual_url_ph": "Tautan saluran (.m3u8)",
+      "manual_remove": "Hapus",
+      "load_btn": "Muat saluran",
+      "loading": "Memuat saluran…",
+      "loaded_count": "{count} saluran dimuat",
+      "no_channels": "Belum ada saluran dimuat.",
+      "load_error": "Tidak dapat memuat saluran.",
+      "xtream_missing": "Isi URL, pengguna, dan kata sandi.",
+      "m3u8_missing": "Masukkan tautan .m3u8.",
+      "pick_file_first": "Pilih berkas .m3u terlebih dahulu.",
+      "help": "Saluran dimuat di sini dan disimpan ke dalam kursus. Siswa melihat daftar dan pemutar video. Bekerja paling baik dengan saluran .m3u8 (HLS)."
+    }
   },
   "export": {
     "icon_label": "Ikon Perangkat Lunak",
@@ -248,7 +281,13 @@
     "download_btn_default": "Unduh berkas",
     "download_done": "Berkas tersimpan.",
     "download_error_prefix": "Gagal menyimpan: ",
-    "community_btn_default": "Gabung komunitas"
+    "community_btn_default": "Gabung komunitas",
+    "iptv_empty": "Tidak ada saluran untuk ditampilkan.",
+    "iptv_search": "Cari saluran…",
+    "iptv_pick": "Pilih saluran untuk memulai.",
+    "iptv_play_error": "Saluran ini tidak dapat diputar.",
+    "iptv_more": "Menampilkan 500 pertama — gunakan pencarian untuk memfilter.",
+    "iptv_no_results": "Tidak ada saluran ditemukan."
   },
   "corners": {
     "music_label": "Musik saya",

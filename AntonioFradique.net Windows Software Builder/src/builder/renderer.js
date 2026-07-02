@@ -413,7 +413,7 @@ bannerForm.addEventListener('submit', async (e) => {
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
 const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'community-link', 'smart-embed'];
+  'article-reader', 'community-link', 'smart-embed', 'iptv'];
 function typeLabel(type) {
   const key = 'content.type.' + type;
   const v = t(key);
@@ -474,6 +474,20 @@ const dyn = {
   },
   'smart-embed': {
     url: document.getElementById('dyn-smart-embed-url')
+  },
+  iptv: {
+    source: document.getElementById('dyn-iptv-source'),
+    xtreamUrl: document.getElementById('dyn-iptv-xtream-url'),
+    xtreamUser: document.getElementById('dyn-iptv-xtream-user'),
+    xtreamPass: document.getElementById('dyn-iptv-xtream-pass'),
+    m3u8Url: document.getElementById('dyn-iptv-m3u8-url'),
+    m3uPick: document.getElementById('dyn-iptv-m3u-pick'),
+    m3uName: document.getElementById('dyn-iptv-m3u-name'),
+    manualAdd: document.getElementById('dyn-iptv-manual-add'),
+    manualList: document.getElementById('dyn-iptv-manual-list'),
+    load: document.getElementById('dyn-iptv-load'),
+    loadRow: document.getElementById('dyn-iptv-loadrow'),
+    status: document.getElementById('dyn-iptv-status')
   }
 };
 
@@ -484,6 +498,9 @@ let editingId = null;        // id of module being edited (null = creating new)
 let pendingFileSourcePath = null;  // absolute path picked in <input type=file> for current edit
 let pendingFileName = null;
 let galleryItems = [];       // current gallery editor items ({kind:'existing'|'new', ...})
+let iptvChannels = [];       // resolved channels for the module being edited (non-manual sources)
+let iptvManual = [];         // manual channel rows [{name,url}]
+let iptvM3uPath = null;      // absolute path of a picked .m3u file
 
 function showDynamicGroup(type) {
   dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
@@ -519,6 +536,18 @@ function clearEditor() {
   if (dyn['community-link'].url) dyn['community-link'].url.value = '';
   if (dyn['community-link'].platform) dyn['community-link'].platform.value = 'discord';
   if (dyn['smart-embed'].url) dyn['smart-embed'].url.value = '';
+  iptvChannels = [];
+  iptvManual = [];
+  iptvM3uPath = null;
+  if (dyn.iptv.source) dyn.iptv.source.value = 'xtream';
+  if (dyn.iptv.xtreamUrl) dyn.iptv.xtreamUrl.value = '';
+  if (dyn.iptv.xtreamUser) dyn.iptv.xtreamUser.value = '';
+  if (dyn.iptv.xtreamPass) dyn.iptv.xtreamPass.value = '';
+  if (dyn.iptv.m3u8Url) dyn.iptv.m3u8Url.value = '';
+  if (dyn.iptv.m3uName) dyn.iptv.m3uName.textContent = t('common.no_file_chosen');
+  renderIptvManualList();
+  updateIptvSourceUI();
+  setIptvStatus(t('content.iptv.no_channels'), '');
   ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault'].forEach((k) => {
     setFileCurrentText(k, t('content.file_none'), false);
   });
@@ -587,6 +616,30 @@ function openEditorForEdit(id) {
       setFileCurrentText(mod.type, t('content.file_none'), false);
     }
     if (mod.type === 'download-vault') dyn['download-vault'].btn.value = d.buttonLabel || '';
+  } else if (mod.type === 'iptv') {
+    const src = ['xtream', 'm3u8', 'm3u', 'manual'].includes(d.source) ? d.source : 'manual';
+    dyn.iptv.source.value = src;
+    const chans = Array.isArray(d.channels) ? d.channels : [];
+    if (src === 'manual') {
+      iptvManual = chans.map((c) => ({ name: c.name || '', url: c.url || '' }));
+      iptvChannels = [];
+    } else {
+      iptvChannels = chans.slice();
+      iptvManual = [];
+      if (src === 'xtream') {
+        dyn.iptv.xtreamUrl.value = d.xtreamUrl || '';
+        dyn.iptv.xtreamUser.value = d.xtreamUser || '';
+        dyn.iptv.xtreamPass.value = d.xtreamPass || '';
+      } else if (src === 'm3u8') {
+        dyn.iptv.m3u8Url.value = d.playlistUrl || '';
+      }
+    }
+    renderIptvManualList();
+    updateIptvSourceUI();
+    const total = (src === 'manual') ? iptvManual.length : iptvChannels.length;
+    setIptvStatus(total > 0
+      ? t('content.iptv.loaded_count').replace('{count}', String(total))
+      : t('content.iptv.no_channels'), total > 0 ? 'success' : '');
   }
 
   // Highlight active item
@@ -789,6 +842,128 @@ if (dyn['image-gallery'].addBtn) {
   });
 }
 
+/* ---- IPTV editor ---- */
+function setIptvStatus(text, kind) {
+  const el = dyn.iptv.status;
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('has-file', 'is-error');
+  if (kind === 'success') el.classList.add('has-file');
+  else if (kind === 'error') el.classList.add('is-error');
+}
+
+function updateIptvSourceUI() {
+  const src = dyn.iptv.source ? dyn.iptv.source.value : 'xtream';
+  document.querySelectorAll('#dyn-iptv [data-iptv-src]').forEach((g) => {
+    g.classList.toggle('hidden', g.dataset.iptvSrc !== src);
+  });
+  // O botão "Carregar canais" não se aplica ao modo manual.
+  if (dyn.iptv.loadRow) dyn.iptv.loadRow.classList.toggle('hidden', src === 'manual');
+}
+
+function renderIptvManualList() {
+  const list = dyn.iptv.manualList;
+  if (!list) return;
+  list.innerHTML = '';
+  if (iptvManual.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'iptv-manual-empty';
+    li.textContent = t('content.iptv.manual_empty', 'Nenhum canal adicionado.');
+    list.appendChild(li);
+    return;
+  }
+  iptvManual.forEach((row, idx) => {
+    const li = document.createElement('li');
+    li.className = 'iptv-manual-item';
+    const nameIn = document.createElement('input');
+    nameIn.type = 'text';
+    nameIn.className = 'iptv-manual-name';
+    nameIn.value = row.name || '';
+    nameIn.placeholder = t('content.iptv.manual_name_ph', 'Nome do canal');
+    nameIn.addEventListener('input', () => { iptvManual[idx].name = nameIn.value; });
+    const urlIn = document.createElement('input');
+    urlIn.type = 'text';
+    urlIn.className = 'iptv-manual-url';
+    urlIn.value = row.url || '';
+    urlIn.placeholder = t('content.iptv.manual_url_ph', 'Ligação do canal (.m3u8)');
+    urlIn.addEventListener('input', () => { iptvManual[idx].url = urlIn.value; });
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'icon-btn danger';
+    rm.textContent = '✕';
+    rm.title = t('content.iptv.manual_remove', 'Remover');
+    rm.addEventListener('click', () => { iptvManual.splice(idx, 1); renderIptvManualList(); });
+    li.append(nameIn, urlIn, rm);
+    list.appendChild(li);
+  });
+}
+
+if (dyn.iptv.source) {
+  dyn.iptv.source.addEventListener('change', () => updateIptvSourceUI());
+}
+if (dyn.iptv.manualAdd) {
+  dyn.iptv.manualAdd.addEventListener('click', () => {
+    iptvManual.push({ name: '', url: '' });
+    renderIptvManualList();
+  });
+}
+if (dyn.iptv.m3uPick) {
+  dyn.iptv.m3uPick.addEventListener('click', async () => {
+    const picked = await window.icurator.pickFile('playlist');
+    if (!picked) return;
+    iptvM3uPath = picked.path;
+    if (dyn.iptv.m3uName) dyn.iptv.m3uName.textContent = picked.name;
+  });
+}
+if (dyn.iptv.load) {
+  dyn.iptv.load.addEventListener('click', async () => {
+    const source = dyn.iptv.source.value;
+    const payload = { source };
+    if (source === 'xtream') {
+      payload.xtream = {
+        url: dyn.iptv.xtreamUrl.value.trim(),
+        username: dyn.iptv.xtreamUser.value.trim(),
+        password: dyn.iptv.xtreamPass.value.trim()
+      };
+      if (!payload.xtream.url || !payload.xtream.username || !payload.xtream.password) {
+        setIptvStatus(t('content.iptv.xtream_missing', 'Preencha URL, utilizador e palavra-passe.'), 'error');
+        return;
+      }
+    } else if (source === 'm3u8') {
+      payload.playlistUrl = dyn.iptv.m3u8Url.value.trim();
+      if (!payload.playlistUrl) {
+        setIptvStatus(t('content.iptv.m3u8_missing', 'Introduza a ligação .m3u8.'), 'error');
+        return;
+      }
+    } else if (source === 'm3u') {
+      if (!iptvM3uPath) {
+        setIptvStatus(t('content.iptv.pick_file_first', 'Escolha primeiro um ficheiro .m3u.'), 'error');
+        return;
+      }
+      payload.filePath = iptvM3uPath;
+    } else {
+      return;
+    }
+    dyn.iptv.load.disabled = true;
+    setIptvStatus(t('content.iptv.loading', 'A carregar canais…'), '');
+    try {
+      const res = await window.icurator.iptvLoad(payload);
+      if (res && res.ok) {
+        iptvChannels = Array.isArray(res.channels) ? res.channels : [];
+        setIptvStatus(t('content.iptv.loaded_count').replace('{count}', String(res.count || iptvChannels.length)), 'success');
+      } else {
+        iptvChannels = [];
+        setIptvStatus((res && res.error) ? res.error : t('content.iptv.load_error', 'Não foi possível carregar os canais.'), 'error');
+      }
+    } catch (err) {
+      iptvChannels = [];
+      setIptvStatus(t('content.iptv.load_error', 'Não foi possível carregar os canais.') + ' ' + (err && err.message ? err.message : ''), 'error');
+    } finally {
+      dyn.iptv.load.disabled = false;
+    }
+  });
+}
+
 contentForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -806,6 +981,25 @@ contentForm.addEventListener('submit', async (e) => {
   else if (type === 'external') data = { url: dyn.external.url.value.trim() };
   else if (type === 'smart-embed') data = { url: dyn['smart-embed'].url.value.trim() };
   else if (type === 'article-reader') data = { text: dyn['article-reader'].text.value };
+  else if (type === 'iptv') {
+    const source = dyn.iptv.source.value;
+    const out = { source };
+    if (source === 'manual') {
+      out.channels = iptvManual
+        .map((r) => ({ name: (r.name || '').trim(), url: (r.url || '').trim(), logo: '', group: '' }))
+        .filter((c) => c.url);
+    } else {
+      out.channels = iptvChannels;
+      if (source === 'xtream') {
+        out.xtreamUrl = dyn.iptv.xtreamUrl.value.trim();
+        out.xtreamUser = dyn.iptv.xtreamUser.value.trim();
+        out.xtreamPass = dyn.iptv.xtreamPass.value.trim();
+      } else if (source === 'm3u8') {
+        out.playlistUrl = dyn.iptv.m3u8Url.value.trim();
+      }
+    }
+    data = out;
+  }
   else if (type === 'community-link') {
     data = {
       url: dyn['community-link'].url.value.trim(),

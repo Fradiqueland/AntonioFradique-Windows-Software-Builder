@@ -346,6 +346,7 @@
                     <option value="article-reader" data-i18n="content.type.article">Leitor de Artigos / Notas</option>
                     <option value="community-link" data-i18n="content.type.community">Comunidade (Discord/Telegram…)</option>
                     <option value="smart-embed" data-i18n="content.type.embed">Formulário / Quiz (Embed)</option>
+                    <option value="iptv" data-i18n="content.type.iptv">Leitor IPTV</option>
                   </select>
                 </div>
 
@@ -482,6 +483,60 @@
                          data-i18n-placeholder="content.embed_url_placeholder"
                          placeholder="Google Forms, Typeform, Calendly…" />
                   <small data-i18n="content.embed_help">Carregado dentro da app via webview — formulários, quizzes, agendamentos.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-iptv" data-dyn="iptv">
+                  <label for="dyn-iptv-source" data-i18n="content.iptv.source_label">Fonte dos canais</label>
+                  <select id="dyn-iptv-source" class="select">
+                    <option value="xtream" data-i18n="content.iptv.source_xtream">Login Xtream Codes API</option>
+                    <option value="m3u8" data-i18n="content.iptv.source_m3u8">Ligação .m3u8</option>
+                    <option value="m3u" data-i18n="content.iptv.source_m3u">Ficheiro .m3u</option>
+                    <option value="manual" data-i18n="content.iptv.source_manual">Adicionar canais um a um</option>
+                  </select>
+
+                  <div class="iptv-src" data-iptv-src="xtream">
+                    <label for="dyn-iptv-xtream-url" data-i18n="content.iptv.xtream_url_label">URL do servidor</label>
+                    <input type="text" id="dyn-iptv-xtream-url"
+                           data-i18n-placeholder="content.iptv.xtream_url_ph"
+                           placeholder="http://servidor:porta" />
+                    <label for="dyn-iptv-xtream-user" data-i18n="content.iptv.xtream_user_label">Utilizador / Email</label>
+                    <input type="text" id="dyn-iptv-xtream-user" autocomplete="off"
+                           data-i18n-placeholder="content.iptv.xtream_user_ph"
+                           placeholder="O seu utilizador ou email" />
+                    <label for="dyn-iptv-xtream-pass" data-i18n="content.iptv.xtream_pass_label">Palavra-passe</label>
+                    <input type="text" id="dyn-iptv-xtream-pass" autocomplete="off"
+                           data-i18n-placeholder="content.iptv.xtream_pass_ph"
+                           placeholder="A sua palavra-passe" />
+                  </div>
+
+                  <div class="iptv-src hidden" data-iptv-src="m3u8">
+                    <label for="dyn-iptv-m3u8-url" data-i18n="content.iptv.m3u8_url_label">Ligação .m3u8</label>
+                    <input type="text" id="dyn-iptv-m3u8-url"
+                           data-i18n-placeholder="content.iptv.m3u8_url_ph"
+                           placeholder="http://.../lista.m3u8" />
+                  </div>
+
+                  <div class="iptv-src hidden" data-iptv-src="m3u">
+                    <label data-i18n="content.iptv.m3u_label">Ficheiro de lista (.m3u)</label>
+                    <div class="file-row">
+                      <button type="button" class="file-btn" id="dyn-iptv-m3u-pick"><span data-i18n="content.iptv.m3u_pick">Escolher ficheiro .m3u</span></button>
+                      <span class="file-name" id="dyn-iptv-m3u-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                    </div>
+                  </div>
+
+                  <div class="iptv-src hidden" data-iptv-src="manual">
+                    <label data-i18n="content.iptv.manual_label">Canais</label>
+                    <div class="file-row">
+                      <button type="button" class="file-btn" id="dyn-iptv-manual-add"><span data-i18n="content.iptv.manual_add">+ Adicionar canal</span></button>
+                    </div>
+                    <ul class="iptv-manual-list" id="dyn-iptv-manual-list"></ul>
+                  </div>
+
+                  <div class="file-row" id="dyn-iptv-loadrow">
+                    <button type="button" class="btn btn-ghost" id="dyn-iptv-load"><span data-i18n="content.iptv.load_btn">Carregar canais</span></button>
+                    <span class="file-current" id="dyn-iptv-status" data-i18n="content.iptv.no_channels">Nenhum canal carregado.</span>
+                  </div>
+                  <small data-i18n="content.iptv.help">Os canais são carregados aqui e guardados no curso. O aluno vê a lista e um leitor de vídeo. Funciona melhor com canais .m3u8 (HLS).</small>
                 </div>
 
                 <div class="form-group">

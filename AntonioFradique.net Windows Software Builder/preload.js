@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('icurator', {
-  version: '1.4.0',
+  version: '1.5.0',
   loadConfig: () => ipcRenderer.invoke('config:load'),
   projectsList: () => ipcRenderer.invoke('projects:list'),
   projectsCreate: (name) => ipcRenderer.invoke('projects:create', { name }),
@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('icurator', {
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   pickFile: (category) => ipcRenderer.invoke('dialog:pickFile', category),
   pickFiles: (category) => ipcRenderer.invoke('dialog:pickFiles', category),
+  iptvLoad: (payload) => ipcRenderer.invoke('iptv:load', payload),
   openViewer: () => ipcRenderer.invoke('viewer:open'),
   saveIcon: (data) => ipcRenderer.invoke('export:saveIcon', data),
   buildExe: (data) => ipcRenderer.invoke('export:buildExe', data),

@@ -13,6 +13,7 @@ const titleEl = document.getElementById('viewer-title');
 const logoEl = document.getElementById('viewer-logo');
 const menuEl = document.getElementById('viewer-menu');
 const stageEl = document.getElementById('viewer-stage');
+let currentHls = null;   // active hls.js instance for the IPTV player (destroyed on stage change)
 
 const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
@@ -120,8 +121,16 @@ function youtubeEmbedUrl(input) {
 }
 
 function clearStage() {
+  destroyHls();
   stageEl.className = 'viewer-stage';
   stageEl.innerHTML = '';
+}
+
+function destroyHls() {
+  if (currentHls) {
+    try { currentHls.destroy(); } catch (_) { /* noop */ }
+    currentHls = null;
+  }
 }
 
 /* -------- Stage renderers (1 per type) -------- */
@@ -481,6 +490,137 @@ async function handleModuleClick(mod, btn) {
   await dispatchModule(mod, btn);
 }
 
+function renderIptv(data) {
+  clearStage();
+  stageEl.classList.add('iptv-mode');
+  const channels = (data && Array.isArray(data.channels)) ? data.channels : [];
+  if (channels.length === 0) {
+    stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.iptv_empty', 'Sem canais para mostrar.') + '</p></div>';
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'iptv-wrap';
+
+  const side = document.createElement('div');
+  side.className = 'iptv-side';
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.className = 'iptv-search';
+  search.placeholder = tr('viewer.iptv_search', 'Procurar canal…');
+  const listEl = document.createElement('div');
+  listEl.className = 'iptv-list';
+  side.appendChild(search);
+  side.appendChild(listEl);
+
+  const main = document.createElement('div');
+  main.className = 'iptv-player';
+  const now = document.createElement('div');
+  now.className = 'iptv-now';
+  now.textContent = tr('viewer.iptv_pick', 'Escolha um canal para começar.');
+  const video = document.createElement('video');
+  video.className = 'iptv-video';
+  video.controls = true;
+  video.setAttribute('playsinline', '');
+  main.appendChild(now);
+  main.appendChild(video);
+
+  wrap.appendChild(side);
+  wrap.appendChild(main);
+  stageEl.appendChild(wrap);
+
+  const RENDER_CAP = 500;
+  let activeItem = null;
+
+  function looksLikeHls(url) {
+    return /\.m3u8(\?|$)/i.test(url) || /(get\.php|type=m3u|\/live\/)/i.test(url);
+  }
+
+  video.addEventListener('error', () => {
+    now.textContent = tr('viewer.iptv_play_error', 'Não foi possível reproduzir este canal.');
+  });
+
+  function play(ch, item) {
+    destroyHls();
+    if (activeItem) activeItem.classList.remove('active');
+    activeItem = item || null;
+    if (activeItem) activeItem.classList.add('active');
+    now.textContent = ch.name || '';
+    const url = ch.url;
+    if (!url) return;
+    try { video.pause(); } catch (_) { /* noop */ }
+    video.removeAttribute('src');
+    try { video.load(); } catch (_) { /* noop */ }
+    if (looksLikeHls(url) && window.Hls && window.Hls.isSupported()) {
+      const hls = new window.Hls({ maxBufferLength: 20, enableWorker: true });
+      currentHls = hls;
+      hls.on(window.Hls.Events.ERROR, (_evt, d) => {
+        if (d && d.fatal) {
+          now.textContent = tr('viewer.iptv_play_error', 'Não foi possível reproduzir este canal.');
+          destroyHls();
+        }
+      });
+      hls.on(window.Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+    } else {
+      // Reprodução nativa (ficheiros .mp4 remotos, ou HLS onde suportado).
+      video.src = url;
+      video.play().catch(() => {});
+    }
+  }
+
+  function renderList(filter) {
+    listEl.innerHTML = '';
+    const f = (filter || '').trim().toLowerCase();
+    let shown = 0;
+    for (const ch of channels) {
+      const name = ch.name || ch.url || '';
+      if (f && name.toLowerCase().indexOf(f) === -1) continue;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'iptv-item';
+      if (ch.logo) {
+        const img = document.createElement('img');
+        img.className = 'iptv-item-logo';
+        img.src = ch.logo;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+        item.appendChild(img);
+      }
+      const label = document.createElement('span');
+      label.className = 'iptv-item-name';
+      label.textContent = name;
+      item.appendChild(label);
+      item.addEventListener('click', () => play(ch, item));
+      listEl.appendChild(item);
+      shown++;
+      if (shown >= RENDER_CAP) {
+        const more = document.createElement('div');
+        more.className = 'iptv-more';
+        more.textContent = tr('viewer.iptv_more', 'A mostrar os primeiros 500 — use a pesquisa para filtrar.');
+        listEl.appendChild(more);
+        break;
+      }
+    }
+    if (shown === 0) {
+      const none = document.createElement('div');
+      none.className = 'iptv-more';
+      none.textContent = tr('viewer.iptv_no_results', 'Nenhum canal encontrado.');
+      listEl.appendChild(none);
+    }
+  }
+
+  let searchTimer = null;
+  search.addEventListener('input', () => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => renderList(search.value), 120);
+  });
+
+  renderList('');
+}
+
 async function dispatchModule(mod, btn) {
   switch (mod.type) {
     case 'youtube':  setActiveMenuBtn(btn); renderYoutube(mod.data); break;
@@ -494,6 +634,7 @@ async function dispatchModule(mod, btn) {
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
     case 'community-link': setActiveMenuBtn(btn); renderCommunity(mod.data); break;
+    case 'iptv':     setActiveMenuBtn(btn); renderIptv(mod.data); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;
     default: break;

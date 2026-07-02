@@ -129,7 +129,8 @@
       "gallery": "Галерея изображений",
       "article": "Читалка статей / заметок",
       "community": "Сообщество (Discord/Telegram…)",
-      "embed": "Форма / Тест (встраивание)"
+      "embed": "Форма / Тест (встраивание)",
+      "iptv": "IPTV-плеер"
     },
     "youtube_url_label": "URL или ID видео",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... или только ID",
@@ -188,7 +189,39 @@
     "community_help": "Открывается в браузере ученика по умолчанию (не запирается в приложении).",
     "embed_url_label": "Ссылка для встраивания",
     "embed_url_placeholder": "Google Forms, Typeform, Calendly…",
-    "embed_help": "Загружается внутри приложения через webview — формы, тесты, запись."
+    "embed_help": "Загружается внутри приложения через webview — формы, тесты, запись.",
+    "iptv": {
+      "source_label": "Источник каналов",
+      "source_xtream": "Вход Xtream Codes API",
+      "source_m3u8": "Ссылка .m3u8",
+      "source_m3u": "Файл .m3u",
+      "source_manual": "Добавлять каналы по одному",
+      "xtream_url_label": "URL сервера",
+      "xtream_url_ph": "http://сервер:порт",
+      "xtream_user_label": "Пользователь / Email",
+      "xtream_user_ph": "Ваш логин или email",
+      "xtream_pass_label": "Пароль",
+      "xtream_pass_ph": "Ваш пароль",
+      "m3u8_url_label": "Ссылка .m3u8",
+      "m3u8_url_ph": "http://.../list.m3u8",
+      "m3u_label": "Файл списка (.m3u)",
+      "m3u_pick": "Выбрать файл .m3u",
+      "manual_label": "Каналы",
+      "manual_add": "+ Добавить канал",
+      "manual_empty": "Каналы не добавлены.",
+      "manual_name_ph": "Название канала",
+      "manual_url_ph": "Ссылка канала (.m3u8)",
+      "manual_remove": "Удалить",
+      "load_btn": "Загрузить каналы",
+      "loading": "Загрузка каналов…",
+      "loaded_count": "Загружено каналов: {count}",
+      "no_channels": "Каналы не загружены.",
+      "load_error": "Не удалось загрузить каналы.",
+      "xtream_missing": "Заполните URL, логин и пароль.",
+      "m3u8_missing": "Введите ссылку .m3u8.",
+      "pick_file_first": "Сначала выберите файл .m3u.",
+      "help": "Каналы загружаются здесь и сохраняются в курс. Ученик видит список и видеоплеер. Лучше всего работает с каналами .m3u8 (HLS)."
+    }
   },
   "export": {
     "icon_label": "Значок программы",
@@ -248,7 +281,13 @@
     "download_btn_default": "Скачать файл",
     "download_done": "Файл сохранён.",
     "download_error_prefix": "Ошибка сохранения: ",
-    "community_btn_default": "Вступить в сообщество"
+    "community_btn_default": "Вступить в сообщество",
+    "iptv_empty": "Нет каналов для показа.",
+    "iptv_search": "Поиск канала…",
+    "iptv_pick": "Выберите канал, чтобы начать.",
+    "iptv_play_error": "Не удалось воспроизвести этот канал.",
+    "iptv_more": "Показаны первые 500 — используйте поиск для фильтрации.",
+    "iptv_no_results": "Каналы не найдены."
   },
   "corners": {
     "music_label": "Моя музыка",

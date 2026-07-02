@@ -497,3 +497,67 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
 .community-btn.platform-discord { background: #5865F2; color: #fff; }
 .community-btn.platform-telegram { background: #229ED9; color: #fff; }
 .community-btn.platform-whatsapp { background: #25D366; color: #fff; }
+
+/* -------- IPTV player -------- */
+.viewer-stage.iptv-mode { padding: 0; display: flex; }
+.iptv-wrap { display: flex; flex: 1 1 auto; width: 100%; min-height: 0; }
+.iptv-side {
+  width: 300px;
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  background: var(--v-sidebar);
+  color: var(--v-text-light);
+  min-height: 0;
+}
+.iptv-search {
+  margin: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--v-text-light);
+  font-size: 14px;
+  outline: none;
+}
+.iptv-search::placeholder { color: var(--v-text-muted); }
+.iptv-search:focus { border-color: var(--v-button); }
+.iptv-list { flex: 1 1 auto; overflow-y: auto; padding: 0 8px 12px; }
+.iptv-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--v-text-light);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+}
+.iptv-item:hover { background: rgba(255, 255, 255, 0.08); }
+.iptv-item.active { background: var(--v-button); color: var(--v-button-text); }
+.iptv-item-logo {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.iptv-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iptv-more { padding: 10px; font-size: 12px; color: var(--v-text-muted); text-align: center; }
+.iptv-player { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; background: #000; }
+.iptv-now {
+  padding: 12px 16px;
+  color: #fff;
+  background: #0b0f1a;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.iptv-video { flex: 1 1 auto; width: 100%; min-height: 0; background: #000; object-fit: contain; }

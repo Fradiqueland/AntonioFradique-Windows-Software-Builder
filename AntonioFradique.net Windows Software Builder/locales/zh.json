@@ -129,7 +129,8 @@
       "gallery": "图片库",
       "article": "文章 / 笔记阅读器",
       "community": "社区 (Discord/Telegram…)",
-      "embed": "表单 / 测验 (嵌入)"
+      "embed": "表单 / 测验 (嵌入)",
+      "iptv": "IPTV 播放器"
     },
     "youtube_url_label": "视频 URL 或 ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... 或仅 ID",
@@ -188,7 +189,39 @@
     "community_help": "在学员的默认浏览器中打开（不锁定在应用内）。",
     "embed_url_label": "要嵌入的链接",
     "embed_url_placeholder": "Google Forms、Typeform、Calendly…",
-    "embed_help": "通过 webview 在应用内加载——表单、测验、预约。"
+    "embed_help": "通过 webview 在应用内加载——表单、测验、预约。",
+    "iptv": {
+      "source_label": "频道来源",
+      "source_xtream": "Xtream Codes API 登录",
+      "source_m3u8": ".m3u8 链接",
+      "source_m3u": ".m3u 文件",
+      "source_manual": "逐个添加频道",
+      "xtream_url_label": "服务器网址",
+      "xtream_url_ph": "http://服务器:端口",
+      "xtream_user_label": "用户名 / 邮箱",
+      "xtream_user_ph": "您的用户名或邮箱",
+      "xtream_pass_label": "密码",
+      "xtream_pass_ph": "您的密码",
+      "m3u8_url_label": ".m3u8 链接",
+      "m3u8_url_ph": "http://.../list.m3u8",
+      "m3u_label": "播放列表文件 (.m3u)",
+      "m3u_pick": "选择 .m3u 文件",
+      "manual_label": "频道",
+      "manual_add": "+ 添加频道",
+      "manual_empty": "尚未添加频道。",
+      "manual_name_ph": "频道名称",
+      "manual_url_ph": "频道链接 (.m3u8)",
+      "manual_remove": "移除",
+      "load_btn": "加载频道",
+      "loading": "正在加载频道…",
+      "loaded_count": "已加载 {count} 个频道",
+      "no_channels": "尚未加载频道。",
+      "load_error": "无法加载频道。",
+      "xtream_missing": "请填写网址、用户名和密码。",
+      "m3u8_missing": "请输入 .m3u8 链接。",
+      "pick_file_first": "请先选择一个 .m3u 文件。",
+      "help": "频道在此加载并保存到课程中。学员会看到列表和视频播放器。使用 .m3u8 (HLS) 频道效果最佳。"
+    }
   },
   "export": {
     "icon_label": "软件图标",
@@ -248,7 +281,13 @@
     "download_btn_default": "下载文件",
     "download_done": "文件已保存。",
     "download_error_prefix": "保存出错：",
-    "community_btn_default": "加入社区"
+    "community_btn_default": "加入社区",
+    "iptv_empty": "没有可显示的频道。",
+    "iptv_search": "搜索频道…",
+    "iptv_pick": "选择一个频道开始。",
+    "iptv_play_error": "无法播放此频道。",
+    "iptv_more": "显示前 500 个 — 使用搜索进行筛选。",
+    "iptv_no_results": "未找到频道。"
   },
   "corners": {
     "music_label": "我的音乐",

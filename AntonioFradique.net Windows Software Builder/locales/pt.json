@@ -129,7 +129,8 @@
       "gallery": "Galeria de Imagens",
       "article": "Leitor de Artigos / Notas",
       "community": "Comunidade (Discord/Telegram…)",
-      "embed": "Formulário / Quiz (Embed)"
+      "embed": "Formulário / Quiz (Embed)",
+      "iptv": "Leitor IPTV"
     },
     "youtube_url_label": "URL ou ID do vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou só o ID",
@@ -188,7 +189,39 @@
     "community_help": "Abre no navegador padrão do aluno (não fica preso na app).",
     "embed_url_label": "Link para incorporar",
     "embed_url_placeholder": "Google Forms, Typeform, Calendly…",
-    "embed_help": "Carregado dentro da app via webview — formulários, quizzes, agendamentos."
+    "embed_help": "Carregado dentro da app via webview — formulários, quizzes, agendamentos.",
+    "iptv": {
+      "source_label": "Fonte dos canais",
+      "source_xtream": "Login Xtream Codes API",
+      "source_m3u8": "Ligação .m3u8",
+      "source_m3u": "Ficheiro .m3u",
+      "source_manual": "Adicionar canais um a um",
+      "xtream_url_label": "URL do servidor",
+      "xtream_url_ph": "http://servidor:porta",
+      "xtream_user_label": "Utilizador / Email",
+      "xtream_user_ph": "O seu utilizador ou email",
+      "xtream_pass_label": "Palavra-passe",
+      "xtream_pass_ph": "A sua palavra-passe",
+      "m3u8_url_label": "Ligação .m3u8",
+      "m3u8_url_ph": "http://.../lista.m3u8",
+      "m3u_label": "Ficheiro de lista (.m3u)",
+      "m3u_pick": "Escolher ficheiro .m3u",
+      "manual_label": "Canais",
+      "manual_add": "+ Adicionar canal",
+      "manual_empty": "Nenhum canal adicionado.",
+      "manual_name_ph": "Nome do canal",
+      "manual_url_ph": "Ligação do canal (.m3u8)",
+      "manual_remove": "Remover",
+      "load_btn": "Carregar canais",
+      "loading": "A carregar canais…",
+      "loaded_count": "{count} canais carregados",
+      "no_channels": "Nenhum canal carregado.",
+      "load_error": "Não foi possível carregar os canais.",
+      "xtream_missing": "Preencha URL, utilizador e palavra-passe.",
+      "m3u8_missing": "Introduza a ligação .m3u8.",
+      "pick_file_first": "Escolha primeiro um ficheiro .m3u.",
+      "help": "Os canais são carregados aqui e guardados no curso. O aluno vê a lista e um leitor de vídeo. Funciona melhor com canais .m3u8 (HLS)."
+    }
   },
   "export": {
     "icon_label": "Ícone do Software",
@@ -248,7 +281,13 @@
     "download_btn_default": "Descarregar ficheiro",
     "download_done": "Ficheiro guardado.",
     "download_error_prefix": "Erro ao guardar: ",
-    "community_btn_default": "Entrar na comunidade"
+    "community_btn_default": "Entrar na comunidade",
+    "iptv_empty": "Sem canais para mostrar.",
+    "iptv_search": "Procurar canal…",
+    "iptv_pick": "Escolha um canal para começar.",
+    "iptv_play_error": "Não foi possível reproduzir este canal.",
+    "iptv_more": "A mostrar os primeiros 500 — use a pesquisa para filtrar.",
+    "iptv_no_results": "Nenhum canal encontrado."
   },
   "corners": {
     "music_label": "Minha música",

@@ -129,7 +129,8 @@
       "gallery": "Image Gallery",
       "article": "Article / Notes Reader",
       "community": "Community (Discord/Telegram…)",
-      "embed": "Form / Quiz (Embed)"
+      "embed": "Form / Quiz (Embed)",
+      "iptv": "IPTV Player"
     },
     "youtube_url_label": "Video URL or ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... or just the ID",
@@ -188,7 +189,39 @@
     "community_help": "Opens in the student's default browser (no lock-in).",
     "embed_url_label": "Link to embed",
     "embed_url_placeholder": "Google Forms, Typeform, Calendly…",
-    "embed_help": "Loaded inside the app via webview — forms, quizzes, scheduling."
+    "embed_help": "Loaded inside the app via webview — forms, quizzes, scheduling.",
+    "iptv": {
+      "source_label": "Channel source",
+      "source_xtream": "Xtream Codes API login",
+      "source_m3u8": ".m3u8 link",
+      "source_m3u": ".m3u file",
+      "source_manual": "Add channels one by one",
+      "xtream_url_label": "Server URL",
+      "xtream_url_ph": "http://server:port",
+      "xtream_user_label": "Username / Email",
+      "xtream_user_ph": "Your username or email",
+      "xtream_pass_label": "Password",
+      "xtream_pass_ph": "Your password",
+      "m3u8_url_label": ".m3u8 link",
+      "m3u8_url_ph": "http://.../list.m3u8",
+      "m3u_label": "Playlist file (.m3u)",
+      "m3u_pick": "Choose .m3u file",
+      "manual_label": "Channels",
+      "manual_add": "+ Add channel",
+      "manual_empty": "No channels added.",
+      "manual_name_ph": "Channel name",
+      "manual_url_ph": "Channel link (.m3u8)",
+      "manual_remove": "Remove",
+      "load_btn": "Load channels",
+      "loading": "Loading channels…",
+      "loaded_count": "{count} channels loaded",
+      "no_channels": "No channels loaded.",
+      "load_error": "Could not load the channels.",
+      "xtream_missing": "Fill in URL, username and password.",
+      "m3u8_missing": "Enter the .m3u8 link.",
+      "pick_file_first": "Choose a .m3u file first.",
+      "help": "Channels are loaded here and saved into the course. Students see the list and a video player. Works best with .m3u8 (HLS) channels."
+    }
   },
   "export": {
     "icon_label": "Software Icon",
@@ -248,7 +281,13 @@
     "download_btn_default": "Download file",
     "download_done": "File saved.",
     "download_error_prefix": "Error saving: ",
-    "community_btn_default": "Join the community"
+    "community_btn_default": "Join the community",
+    "iptv_empty": "No channels to show.",
+    "iptv_search": "Search channel…",
+    "iptv_pick": "Pick a channel to start.",
+    "iptv_play_error": "This channel could not be played.",
+    "iptv_more": "Showing the first 500 — use search to filter.",
+    "iptv_no_results": "No channels found."
   },
   "corners": {
     "music_label": "My music",

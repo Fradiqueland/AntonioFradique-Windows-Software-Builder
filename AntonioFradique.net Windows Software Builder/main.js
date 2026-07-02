@@ -103,7 +103,7 @@ const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'community-link', 'smart-embed'
+  'article-reader', 'community-link', 'smart-embed', 'iptv'
 ]);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
@@ -584,6 +584,28 @@ function createViewerWindow({ standalone = false } = {}) {
     }
   );
 
+  /* IPTV / streaming: a página do Viewer corre em file:// (origem "null"), por
+   * isso os pedidos do hls.js aos segmentos .m3u8/.ts remotos seriam bloqueados
+   * por CORS (a maioria dos servidores IPTV não envia Access-Control-Allow-Origin).
+   * Injetamos o cabeçalho na resposta para permitir a reprodução. Mantém-se o
+   * webSecurity ligado. Limitamos o override APENAS a pedidos de média/stream
+   * (o hls.js usa XHR; o <video> nativo usa 'media'), para não enfraquecer o
+   * CORS dos restantes recursos (páginas incorporadas, scripts, imagens…). */
+  const IPTV_CORS_TYPES = new Set(['xhr', 'media', 'object', 'other']);
+  viewerWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    if (!IPTV_CORS_TYPES.has(details.resourceType)) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+    const headers = details.responseHeaders || {};
+    const keys = Object.keys(headers);
+    for (const k of keys) {
+      if (/^access-control-allow-origin$/i.test(k)) delete headers[k];
+    }
+    headers['Access-Control-Allow-Origin'] = ['*'];
+    callback({ responseHeaders: headers });
+  });
+
   viewerWindow.setMenuBarVisibility(false);
   viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
   viewerWindow.once('ready-to-show', () => {
@@ -869,6 +891,30 @@ ipcMain.handle('content:save', (_event, payload) => {
       mod.data = { html: typeof d.html === 'string' ? d.html : '' };
     } else if (mod.type === 'article-reader') {
       mod.data = { text: typeof d.text === 'string' ? d.text : '' };
+    } else if (mod.type === 'iptv') {
+      const source = ['xtream', 'm3u8', 'm3u', 'manual'].includes(d.source) ? d.source : 'manual';
+      const rawCh = Array.isArray(d.channels) ? d.channels : [];
+      const channels = [];
+      for (const c of rawCh) {
+        if (!c || typeof c !== 'object') continue;
+        const url = typeof c.url === 'string' ? c.url.trim() : '';
+        if (!url) continue;
+        const name = (typeof c.name === 'string' && c.name.trim()) ? c.name.trim() : url;
+        const logo = typeof c.logo === 'string' ? c.logo.trim() : '';
+        const group = typeof c.group === 'string' ? c.group.trim() : '';
+        channels.push({ name, url, logo, group });
+        if (channels.length >= 20000) break;
+      }
+      const out = { source, channels };
+      if (source === 'xtream') {
+        // Guardamos apenas o URL do servidor (útil para reeditar). As credenciais
+        // NÃO são persistidas no curso: os canais já foram resolvidos no build e
+        // o utilizador/palavra-passe não devem ser distribuídos aos alunos.
+        out.xtreamUrl = typeof d.xtreamUrl === 'string' ? d.xtreamUrl.trim() : '';
+      } else if (source === 'm3u8') {
+        out.playlistUrl = typeof d.playlistUrl === 'string' ? d.playlistUrl.trim() : '';
+      }
+      mod.data = out;
     } else {
       mod.data = {};
     }
@@ -885,6 +931,141 @@ ipcMain.handle('content:save', (_event, payload) => {
   return updated;
 });
 
+/* -------- IPTV: obtenção/parse de canais (Builder only) --------
+ * Corre no processo principal (Node), por isso NÃO há CORS: falamos diretamente
+ * com o painel Xtream Codes ou descarregamos uma lista M3U. Os canais resolvidos
+ * ({name,url,logo,group}) ficam guardados no config e o Viewer apenas os
+ * reproduz (hls.js) — não precisa de rede para os listar. */
+const IPTV_MAX_CHANNELS = 20000;
+const IPTV_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
+
+function iptvNormalizeBase(raw) {
+  let u = String(raw || '').trim();
+  if (!u) throw new Error('URL do servidor em falta.');
+  if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
+  u = u.replace(/\/+$/, '');
+  u = u.replace(/\/(player_api|get|panel_api)\.php.*$/i, '');
+  return u;
+}
+
+async function iptvFetch(url, asJson) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: { 'User-Agent': IPTV_UA, 'Accept': '*/*' }
+    });
+    if (!resp.ok) throw new Error('Servidor respondeu ' + resp.status + '.');
+    return asJson ? await resp.json() : await resp.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function iptvLoadXtream({ url, username, password } = {}) {
+  const base = iptvNormalizeBase(url);
+  const user = String(username || '').trim();
+  const pass = String(password || '').trim();
+  if (!user || !pass) throw new Error('Utilizador e palavra-passe são obrigatórios.');
+  const q = 'username=' + encodeURIComponent(user) + '&password=' + encodeURIComponent(pass);
+  const apiBase = base + '/player_api.php?' + q;
+  let info;
+  try { info = await iptvFetch(apiBase, true); }
+  catch (e) { throw new Error('Não foi possível ligar ao servidor. Verifique o URL. (' + e.message + ')'); }
+  if (!info || !info.user_info || Number(info.user_info.auth) !== 1) {
+    throw new Error('Login inválido: verifique o utilizador, a palavra-passe e o URL do servidor.');
+  }
+  const catMap = {};
+  try {
+    const cats = await iptvFetch(apiBase + '&action=get_live_categories', true);
+    if (Array.isArray(cats)) for (const c of cats) catMap[String(c.category_id)] = String(c.category_name || '');
+  } catch (_) { /* categorias são opcionais */ }
+  const streams = await iptvFetch(apiBase + '&action=get_live_streams', true);
+  if (!Array.isArray(streams)) throw new Error('Não foi possível obter a lista de canais.');
+  const channels = [];
+  for (const s of streams) {
+    if (!s || s.stream_id == null) continue;
+    const id = s.stream_id;
+    const name = String(s.name || ('Canal ' + id)).trim();
+    const logo = typeof s.stream_icon === 'string' ? s.stream_icon.trim() : '';
+    const group = catMap[String(s.category_id)] || '';
+    const streamUrl = base + '/live/' + encodeURIComponent(user) + '/' + encodeURIComponent(pass) + '/' + id + '.m3u8';
+    channels.push({ name, url: streamUrl, logo, group });
+    if (channels.length >= IPTV_MAX_CHANNELS) break;
+  }
+  return channels;
+}
+
+function iptvParseM3U(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const channels = [];
+  let pending = null;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (/^#EXTINF/i.test(line)) {
+      const comma = line.indexOf(',');
+      const name = comma >= 0 ? line.slice(comma + 1).trim() : '';
+      const logo = (line.match(/tvg-logo="([^"]*)"/i) || [])[1] || '';
+      const group = (line.match(/group-title="([^"]*)"/i) || [])[1] || '';
+      pending = { name, logo, group };
+    } else if (line.charAt(0) === '#') {
+      continue;
+    } else {
+      const meta = pending || { name: '', logo: '', group: '' };
+      channels.push({ name: meta.name || line, url: line, logo: meta.logo || '', group: meta.group || '' });
+      pending = null;
+      if (channels.length >= IPTV_MAX_CHANNELS) break;
+    }
+  }
+  return channels;
+}
+
+function iptvFinalize(text, srcUrl) {
+  const channels = iptvParseM3U(text);
+  if (channels.length === 0 && srcUrl) {
+    return [{ name: 'Canal', url: srcUrl, logo: '', group: '' }];
+  }
+  return channels;
+}
+
+async function iptvLoadM3UFromUrl(url) {
+  let u = String(url || '').trim();
+  if (!u) throw new Error('Ligação em falta.');
+  if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
+  let text;
+  try { text = await iptvFetch(u, false); }
+  catch (e) { throw new Error('Não foi possível descarregar a lista. Verifique a ligação. (' + e.message + ')'); }
+  return iptvFinalize(text, u);
+}
+
+function iptvLoadM3UFromFile(filePath) {
+  const p = String(filePath || '').trim();
+  if (!p || !fs.existsSync(p)) throw new Error('Ficheiro não encontrado.');
+  const text = fs.readFileSync(p, 'utf8');
+  return iptvFinalize(text, null);
+}
+
+ipcMain.handle('iptv:load', async (_event, payload) => {
+  assertBuilder();
+  const source = payload && payload.source;
+  try {
+    let channels = [];
+    if (source === 'xtream') channels = await iptvLoadXtream((payload && payload.xtream) || {});
+    else if (source === 'm3u8') channels = await iptvLoadM3UFromUrl(payload && payload.playlistUrl);
+    else if (source === 'm3u') channels = iptvLoadM3UFromFile(payload && payload.filePath);
+    else throw new Error('Fonte inválida.');
+    if (!Array.isArray(channels) || channels.length === 0) {
+      return { ok: false, error: 'Não foram encontrados canais.' };
+    }
+    return { ok: true, channels, count: channels.length };
+  } catch (err) {
+    return { ok: false, error: (err && err.message) ? err.message : String(err) };
+  }
+});
+
 /* -------- IPC: file picker (Builder only) --------
  * Em Electron moderno, File.path foi removido do renderer por segurança, por
  * isso <input type="file"> deixou de expor o caminho real do ficheiro. Para
@@ -896,6 +1077,7 @@ const PICK_FILTERS = {
   pdf: [{ name: 'PDF', extensions: ['pdf'] }],
   video: [{ name: 'Vídeo', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
   audio: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] }],
+  playlist: [{ name: 'Listas IPTV', extensions: ['m3u', 'm3u8'] }],
   download: [{
     name: 'Ficheiros',
     extensions: ['zip', 'rar', '7z', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',

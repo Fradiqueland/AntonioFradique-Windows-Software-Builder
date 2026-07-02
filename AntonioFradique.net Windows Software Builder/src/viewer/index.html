@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: blob: file:; font-src 'self'; frame-src https: file:; child-src https: file:;" />
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https: http: data: blob:; media-src 'self' blob: data: file: https: http:; img-src 'self' data: blob: file: https: http:; font-src 'self'; frame-src https: file:; child-src https: file: blob:;" />
     <title>Pré-visualização</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -98,6 +98,7 @@
       </div>
     </div>
 
+    <script src="vendor/hls.min.js"></script>
     <script src="renderer.js"></script>
   </body>
 </html>

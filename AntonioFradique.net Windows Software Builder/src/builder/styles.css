@@ -876,3 +876,13 @@ select.select:focus {
 .project-rename input { min-width: 180px; }
 .btn-danger { background: var(--danger, #dc2626); color: #fff; }
 .btn-danger:hover:not(:disabled) { filter: brightness(0.94); }
+
+/* -------- IPTV editor -------- */
+.iptv-src { margin-top: 6px; }
+.iptv-manual-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.iptv-manual-empty { font-size: 13px; color: var(--text-dark-muted); padding: 4px 0; }
+.iptv-manual-item { display: flex; gap: 8px; align-items: center; }
+.iptv-manual-item input { flex: 1 1 auto; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 14px; }
+.iptv-manual-item .iptv-manual-name { flex: 0 0 34%; }
+#dyn-iptv-status.has-file { color: var(--success); }
+#dyn-iptv-status.is-error { color: var(--danger); }

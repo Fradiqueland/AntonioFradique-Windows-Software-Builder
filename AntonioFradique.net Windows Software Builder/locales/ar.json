@@ -129,7 +129,8 @@
       "gallery": "معرض الصور",
       "article": "قارئ المقالات / الملاحظات",
       "community": "مجتمع (Discord/Telegram…)",
-      "embed": "نموذج / اختبار (Embed)"
+      "embed": "نموذج / اختبار (Embed)",
+      "iptv": "مشغل IPTV"
     },
     "youtube_url_label": "رابط أو معرّف الفيديو",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... أو المعرّف فقط",
@@ -188,7 +189,39 @@
     "community_help": "يفتح في المتصفح الافتراضي للطالب (دون حصره داخل التطبيق).",
     "embed_url_label": "رابط للتضمين",
     "embed_url_placeholder": "Google Forms، Typeform، Calendly…",
-    "embed_help": "يُحمّل داخل التطبيق عبر webview — نماذج، اختبارات، حجوزات."
+    "embed_help": "يُحمّل داخل التطبيق عبر webview — نماذج، اختبارات، حجوزات.",
+    "iptv": {
+      "source_label": "مصدر القنوات",
+      "source_xtream": "تسجيل الدخول Xtream Codes API",
+      "source_m3u8": "رابط .m3u8",
+      "source_m3u": "ملف .m3u",
+      "source_manual": "إضافة القنوات واحدة تلو الأخرى",
+      "xtream_url_label": "رابط الخادم",
+      "xtream_url_ph": "http://server:port",
+      "xtream_user_label": "المستخدم / البريد الإلكتروني",
+      "xtream_user_ph": "اسم المستخدم أو البريد",
+      "xtream_pass_label": "كلمة المرور",
+      "xtream_pass_ph": "كلمة المرور الخاصة بك",
+      "m3u8_url_label": "رابط .m3u8",
+      "m3u8_url_ph": "http://.../list.m3u8",
+      "m3u_label": "ملف قائمة (.m3u)",
+      "m3u_pick": "اختر ملف .m3u",
+      "manual_label": "القنوات",
+      "manual_add": "+ إضافة قناة",
+      "manual_empty": "لم تتم إضافة أي قناة.",
+      "manual_name_ph": "اسم القناة",
+      "manual_url_ph": "رابط القناة (.m3u8)",
+      "manual_remove": "إزالة",
+      "load_btn": "تحميل القنوات",
+      "loading": "جارٍ تحميل القنوات…",
+      "loaded_count": "تم تحميل {count} قناة",
+      "no_channels": "لم يتم تحميل أي قناة.",
+      "load_error": "تعذّر تحميل القنوات.",
+      "xtream_missing": "أدخل الرابط واسم المستخدم وكلمة المرور.",
+      "m3u8_missing": "أدخل رابط .m3u8.",
+      "pick_file_first": "اختر أولاً ملف .m3u.",
+      "help": "يتم تحميل القنوات هنا وحفظها في الدورة. يرى الطالب القائمة ومشغل فيديو. يعمل بشكل أفضل مع قنوات .m3u8 (HLS)."
+    }
   },
   "export": {
     "icon_label": "أيقونة البرنامج",
@@ -248,7 +281,13 @@
     "download_btn_default": "تنزيل الملف",
     "download_done": "تم حفظ الملف.",
     "download_error_prefix": "خطأ في الحفظ: ",
-    "community_btn_default": "انضم إلى المجتمع"
+    "community_btn_default": "انضم إلى المجتمع",
+    "iptv_empty": "لا توجد قنوات للعرض.",
+    "iptv_search": "البحث عن قناة…",
+    "iptv_pick": "اختر قناة للبدء.",
+    "iptv_play_error": "تعذّر تشغيل هذه القناة.",
+    "iptv_more": "عرض أول 500 — استخدم البحث للتصفية.",
+    "iptv_no_results": "لم يتم العثور على قنوات."
   },
   "corners": {
     "music_label": "موسيقاي",

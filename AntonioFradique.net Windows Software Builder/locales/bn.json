@@ -129,7 +129,8 @@
       "gallery": "ছবির গ্যালারি",
       "article": "নিবন্ধ / নোট রিডার",
       "community": "কমিউনিটি (Discord/Telegram…)",
-      "embed": "ফর্ম / কুইজ (Embed)"
+      "embed": "ফর্ম / কুইজ (Embed)",
+      "iptv": "IPTV প্লেয়ার"
     },
     "youtube_url_label": "ভিডিওর URL বা ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... বা শুধু ID",
@@ -188,7 +189,39 @@
     "community_help": "শিক্ষার্থীর ডিফল্ট ব্রাউজারে খোলে (অ্যাপে আটকে থাকে না)।",
     "embed_url_label": "এম্বেড করার লিঙ্ক",
     "embed_url_placeholder": "Google Forms, Typeform, Calendly…",
-    "embed_help": "webview এর মাধ্যমে অ্যাপের ভিতরে লোড হয় — ফর্ম, কুইজ, শিডিউলিং।"
+    "embed_help": "webview এর মাধ্যমে অ্যাপের ভিতরে লোড হয় — ফর্ম, কুইজ, শিডিউলিং।",
+    "iptv": {
+      "source_label": "চ্যানেল উৎস",
+      "source_xtream": "Xtream Codes API লগইন",
+      "source_m3u8": ".m3u8 লিংক",
+      "source_m3u": ".m3u ফাইল",
+      "source_manual": "একটি একটি করে চ্যানেল যোগ করুন",
+      "xtream_url_label": "সার্ভার URL",
+      "xtream_url_ph": "http://server:port",
+      "xtream_user_label": "ব্যবহারকারী / ইমেল",
+      "xtream_user_ph": "আপনার ব্যবহারকারী বা ইমেল",
+      "xtream_pass_label": "পাসওয়ার্ড",
+      "xtream_pass_ph": "আপনার পাসওয়ার্ড",
+      "m3u8_url_label": ".m3u8 লিংক",
+      "m3u8_url_ph": "http://.../list.m3u8",
+      "m3u_label": "প্লেলিস্ট ফাইল (.m3u)",
+      "m3u_pick": ".m3u ফাইল বেছে নিন",
+      "manual_label": "চ্যানেল",
+      "manual_add": "+ চ্যানেল যোগ করুন",
+      "manual_empty": "কোনো চ্যানেল যোগ করা হয়নি।",
+      "manual_name_ph": "চ্যানেলের নাম",
+      "manual_url_ph": "চ্যানেল লিংক (.m3u8)",
+      "manual_remove": "সরান",
+      "load_btn": "চ্যানেল লোড করুন",
+      "loading": "চ্যানেল লোড হচ্ছে…",
+      "loaded_count": "{count} টি চ্যানেল লোড হয়েছে",
+      "no_channels": "কোনো চ্যানেল লোড হয়নি।",
+      "load_error": "চ্যানেল লোড করা যায়নি।",
+      "xtream_missing": "URL, ব্যবহারকারী ও পাসওয়ার্ড পূরণ করুন।",
+      "m3u8_missing": ".m3u8 লিংক লিখুন।",
+      "pick_file_first": "প্রথমে একটি .m3u ফাইল বেছে নিন।",
+      "help": "চ্যানেলগুলি এখানে লোড হয়ে কোর্সে সংরক্ষিত হয়। শিক্ষার্থী তালিকা ও একটি ভিডিও প্লেয়ার দেখে। .m3u8 (HLS) চ্যানেলের সাথে সবচেয়ে ভালো কাজ করে।"
+    }
   },
   "export": {
     "icon_label": "সফটওয়্যার আইকন",
@@ -248,7 +281,13 @@
     "download_btn_default": "ফাইল ডাউনলোড করুন",
     "download_done": "ফাইল সংরক্ষিত হয়েছে।",
     "download_error_prefix": "সংরক্ষণে ত্রুটি: ",
-    "community_btn_default": "কমিউনিটিতে যোগ দিন"
+    "community_btn_default": "কমিউনিটিতে যোগ দিন",
+    "iptv_empty": "দেখানোর মতো কোনো চ্যানেল নেই।",
+    "iptv_search": "চ্যানেল খুঁজুন…",
+    "iptv_pick": "শুরু করতে একটি চ্যানেল বেছে নিন।",
+    "iptv_play_error": "এই চ্যানেলটি চালানো যায়নি।",
+    "iptv_more": "প্রথম ৫০০টি দেখানো হচ্ছে — ফিল্টার করতে অনুসন্ধান ব্যবহার করুন।",
+    "iptv_no_results": "কোনো চ্যানেল পাওয়া যায়নি।"
   },
   "corners": {
     "music_label": "আমার সঙ্গীত",
