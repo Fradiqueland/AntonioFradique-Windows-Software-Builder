@@ -12,7 +12,8 @@
     "banners": "Bannières",
     "content": "Contenu / Menus",
     "export": "Exporter",
-    "icon": "Icône"
+    "icon": "Icône",
+    "projetos": "Projets"
   },
   "header": {
     "brand": {
@@ -38,6 +39,10 @@
     "icon": {
       "title": "Icône du Logiciel",
       "subtitle": "Définissez l'icône du .exe final et enregistrez."
+    },
+    "projetos": {
+      "title": "Projets",
+      "subtitle": "Créez, ouvrez, renommez et supprimez vos projets. Chaque projet conserve son propre contenu, sa marque et ses réglages."
     }
   },
   "sidebar": {
@@ -254,5 +259,22 @@
   "icon": {
     "save_btn": "Enregistrer l'icône",
     "preview_empty": "Aucune icône chargée"
+  },
+  "projects": {
+    "new_label": "Nom du nouveau projet",
+    "new_placeholder": "Ex : Cours Excel",
+    "new_btn": "Créer le projet",
+    "open_btn": "Ouvrir",
+    "reopen_btn": "Modifier",
+    "open_badge": "Ouvert",
+    "rename_btn": "Renommer",
+    "delete_btn": "Supprimer",
+    "editing_label": "Édition :",
+    "close_btn": "Fermer",
+    "delete_confirm": "Supprimer le projet « {name} » ? Cette action est irréversible.",
+    "created_ok": "Projet créé.",
+    "renamed_ok": "Projet renommé.",
+    "deleted_ok": "Projet supprimé.",
+    "name_required": "Saisissez un nom pour le projet."
   }
 }

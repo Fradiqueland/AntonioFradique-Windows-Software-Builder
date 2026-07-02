@@ -12,7 +12,8 @@
     "banners": "Spanduk",
     "content": "Konten / Menu",
     "export": "Ekspor",
-    "icon": "Ikon"
+    "icon": "Ikon",
+    "projetos": "Proyek"
   },
   "header": {
     "brand": {
@@ -38,6 +39,10 @@
     "icon": {
       "title": "Ikon Perangkat Lunak",
       "subtitle": "Atur ikon .exe akhir lalu simpan."
+    },
+    "projetos": {
+      "title": "Proyek",
+      "subtitle": "Buat, buka, ganti nama, dan hapus proyek Anda. Setiap proyek menyimpan konten, merek, dan pengaturannya sendiri."
     }
   },
   "sidebar": {
@@ -254,5 +259,22 @@
   "icon": {
     "save_btn": "Simpan Ikon",
     "preview_empty": "Belum ada ikon dimuat"
+  },
+  "projects": {
+    "new_label": "Nama proyek baru",
+    "new_placeholder": "Cth: Kursus Excel",
+    "new_btn": "Buat proyek",
+    "open_btn": "Buka",
+    "reopen_btn": "Edit",
+    "open_badge": "Terbuka",
+    "rename_btn": "Ganti nama",
+    "delete_btn": "Hapus",
+    "editing_label": "Mengedit:",
+    "close_btn": "Tutup",
+    "delete_confirm": "Hapus proyek \"{name}\"? Tindakan ini tidak dapat dibatalkan.",
+    "created_ok": "Proyek dibuat.",
+    "renamed_ok": "Proyek diganti namanya.",
+    "deleted_ok": "Proyek dihapus.",
+    "name_required": "Masukkan nama proyek."
   }
 }

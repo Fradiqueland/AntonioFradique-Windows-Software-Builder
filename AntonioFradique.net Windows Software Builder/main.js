@@ -84,10 +84,19 @@ const WRITE_BASE = (() => {
   return app.getPath('userData');
 })();
 
-const DATA_DIR = path.join(WRITE_BASE, 'data');
-const ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
-const CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
-const ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
+/* Estes quatro apontam para o PROJETO ATIVO.
+ * No Viewer ficam sempre no layout "plano" (WRITE_BASE/data, WRITE_BASE/dist-assets),
+ * exatamente como o SFX injeta o curso. No Builder são recalculados por
+ * applyActiveProjectPaths() para projects/<id>/… (ver secção PROJETOS). */
+let DATA_DIR = path.join(WRITE_BASE, 'data');
+let ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
+let CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
+let ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
+
+/* Multi-projeto (apenas Builder). Cada projeto tem a sua própria pasta
+ * projects/<id>/{data,dist-assets}; o índice guarda nomes e o projeto ativo. */
+const PROJECTS_ROOT = path.join(WRITE_BASE, 'projects');
+const PROJECTS_INDEX = path.join(WRITE_BASE, 'projects.json');
 
 const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault']);
 const GALLERY_TYPES = new Set(['image-gallery']);
@@ -143,6 +152,132 @@ function ensureDirs() {
 
 function hasProject() {
   return fs.existsSync(CONFIG_PATH);
+}
+
+/* =========================================================
+ * PROJETOS (apenas Builder)
+ *
+ * Índice em WRITE_BASE/projects.json:
+ *   { activeId, projects: [ { id, name, createdAt, updatedAt } ] }
+ * Cada projeto vive em projects/<id>/{data,dist-assets}. As constantes
+ * DATA_DIR/ASSETS_DIR/CONFIG_PATH/ICON_DEST_PATH são reapontadas para o
+ * projeto ativo por applyActiveProjectPaths(). O Viewer nunca passa por aqui.
+ * ========================================================= */
+function genProjectId() {
+  return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function projectDir(id) {
+  return path.join(PROJECTS_ROOT, id);
+}
+
+function sanitizeProjectName(name) {
+  const s = String(name || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 80);
+  return s || 'Projeto sem nome';
+}
+
+function applyActiveProjectPaths(id) {
+  const dir = projectDir(id);
+  DATA_DIR = path.join(dir, 'data');
+  ASSETS_DIR = path.join(dir, 'dist-assets');
+  CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
+  ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
+}
+
+function createProjectFolder(id) {
+  fs.mkdirSync(path.join(projectDir(id), 'data'), { recursive: true });
+  fs.mkdirSync(path.join(projectDir(id), 'dist-assets'), { recursive: true });
+}
+
+function readProjectsIndex() {
+  try {
+    if (fs.existsSync(PROJECTS_INDEX)) {
+      const idx = JSON.parse(fs.readFileSync(PROJECTS_INDEX, 'utf-8'));
+      if (idx && Array.isArray(idx.projects)) return idx;
+    }
+  } catch (err) {
+    console.error('Falha a ler projects.json:', err);
+  }
+  return { activeId: null, projects: [] };
+}
+
+function writeProjectsIndex(idx) {
+  fs.mkdirSync(WRITE_BASE, { recursive: true });
+  fs.writeFileSync(PROJECTS_INDEX, JSON.stringify(idx, null, 2), 'utf-8');
+}
+
+/* Move o conteúdo de srcDir para destDir (usado só na migração inicial do
+ * layout antigo de projeto único). Tolerante a cross-device. */
+function moveDirContents(srcDir, destDir) {
+  if (!fs.existsSync(srcDir)) return;
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const name of fs.readdirSync(srcDir)) {
+    const from = path.join(srcDir, name);
+    const to = path.join(destDir, name);
+    try {
+      fs.renameSync(from, to);
+    } catch (_) {
+      try {
+        const st = fs.statSync(from);
+        if (st.isDirectory()) { copyDirRecursive(from, to); fs.rmSync(from, { recursive: true, force: true }); }
+        else { fs.copyFileSync(from, to); fs.unlinkSync(from); }
+      } catch (err2) { console.warn('Falha a migrar', from, err2); }
+    }
+  }
+  try { fs.rmdirSync(srcDir); } catch (_) { /* pode não estar vazia — ignora */ }
+}
+
+function projectsState() {
+  const idx = readProjectsIndex();
+  const projects = idx.projects
+    .map((p) => ({ id: p.id, name: p.name, updatedAt: p.updatedAt || p.createdAt || 0 }))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return { activeId: idx.activeId, projects };
+}
+
+function touchActiveProject() {
+  if (isViewer) return;
+  try {
+    const idx = readProjectsIndex();
+    const p = idx.projects.find((x) => x.id === idx.activeId);
+    if (p) { p.updatedAt = Date.now(); writeProjectsIndex(idx); }
+  } catch (err) { console.warn('Falha a atualizar updatedAt do projeto:', err); }
+}
+
+/* Arranque do Builder: garante que existe pelo menos um projeto, migra o
+ * layout antigo (data/ + dist-assets/ na raiz) para o primeiro projeto, e
+ * aponta as constantes para o projeto ativo. */
+function initProjects() {
+  let idx = readProjectsIndex();
+
+  if (idx.projects.length === 0) {
+    const id = genProjectId();
+    createProjectFolder(id);
+
+    // Migração do projeto único antigo, se existir na raiz.
+    const legacyDataDir = path.join(WRITE_BASE, 'data');
+    const legacyAssetsDir = path.join(WRITE_BASE, 'dist-assets');
+    const legacyConfig = path.join(legacyDataDir, 'project-config.json');
+    if (fs.existsSync(legacyConfig)) {
+      moveDirContents(legacyDataDir, path.join(projectDir(id), 'data'));
+      moveDirContents(legacyAssetsDir, path.join(projectDir(id), 'dist-assets'));
+    }
+
+    const now = Date.now();
+    idx = { activeId: id, projects: [{ id, name: 'Projeto 1', createdAt: now, updatedAt: now }] };
+    writeProjectsIndex(idx);
+  }
+
+  if (!idx.activeId || !idx.projects.some((p) => p.id === idx.activeId)) {
+    idx.activeId = idx.projects[0].id;
+    writeProjectsIndex(idx);
+  }
+
+  applyActiveProjectPaths(idx.activeId);
+  ensureDirs();
+  if (!fs.existsSync(CONFIG_PATH)) {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
+  }
 }
 
 function deepMerge(defaults, override) {
@@ -218,6 +353,7 @@ function writeConfig(config) {
   if (isViewer) throw new Error('Viewer não pode escrever configuração.');
   ensureDirs();
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  touchActiveProject();
 }
 
 function sanitizeFilename(name) {
@@ -270,9 +406,19 @@ function isInsideAssetsDir(abs) {
   return real.startsWith(root);
 }
 
+/* Converte um caminho relativo do config ("dist-assets/x", "data/y") no
+ * caminho absoluto do PROJETO ATIVO. No Viewer, DATA_DIR/ASSETS_DIR já são o
+ * layout plano, portanto o resultado é idêntico ao antigo path.join(WRITE_BASE,…). */
+function relToAbs(relativePath) {
+  const norm = String(relativePath || '').replace(/\\/g, '/');
+  if (norm.startsWith('dist-assets/')) return path.join(ASSETS_DIR, norm.slice('dist-assets/'.length));
+  if (norm.startsWith('data/')) return path.join(DATA_DIR, norm.slice('data/'.length));
+  return path.join(WRITE_BASE, relativePath);
+}
+
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
-  const abs = path.join(WRITE_BASE, relativePath);
+  const abs = relToAbs(relativePath);
   if (isInsideAssetsDir(abs) && fs.existsSync(abs)) {
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
   }
@@ -280,7 +426,7 @@ function deleteAssetIfInside(relativePath) {
 
 function resolveRelativeAsset(relativePath) {
   if (!relativePath) return null;
-  return path.join(WRITE_BASE, relativePath);
+  return relToAbs(relativePath);
 }
 
 function copyDirRecursive(src, dest) {
@@ -452,6 +598,86 @@ function createViewerWindow({ standalone = false } = {}) {
 
 ipcMain.handle('config:load', () => readConfig());
 ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
+
+/* -------- IPC: projetos (Builder only) -------- */
+
+ipcMain.handle('projects:list', () => {
+  assertBuilder();
+  return projectsState();
+});
+
+ipcMain.handle('projects:create', (_event, payload) => {
+  assertBuilder();
+  const name = sanitizeProjectName(payload && payload.name);
+  const id = genProjectId();
+  createProjectFolder(id);
+  applyActiveProjectPaths(id);
+  ensureDirs();
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
+  const idx = readProjectsIndex();
+  const now = Date.now();
+  idx.projects.push({ id, name, createdAt: now, updatedAt: now });
+  idx.activeId = id;
+  writeProjectsIndex(idx);
+  return { state: projectsState(), config: readConfig() };
+});
+
+ipcMain.handle('projects:open', (_event, payload) => {
+  assertBuilder();
+  const id = payload && payload.id;
+  const idx = readProjectsIndex();
+  if (!idx.projects.some((p) => p.id === id)) throw new Error('Projeto não encontrado.');
+  idx.activeId = id;
+  writeProjectsIndex(idx);
+  applyActiveProjectPaths(id);
+  ensureDirs();
+  return { state: projectsState(), config: readConfig() };
+});
+
+ipcMain.handle('projects:rename', (_event, payload) => {
+  assertBuilder();
+  const id = payload && payload.id;
+  const name = sanitizeProjectName(payload && payload.name);
+  const idx = readProjectsIndex();
+  const p = idx.projects.find((x) => x.id === id);
+  if (!p) throw new Error('Projeto não encontrado.');
+  p.name = name;
+  p.updatedAt = Date.now();
+  writeProjectsIndex(idx);
+  return projectsState();
+});
+
+ipcMain.handle('projects:delete', (_event, payload) => {
+  assertBuilder();
+  const id = payload && payload.id;
+  const idx = readProjectsIndex();
+  if (!idx.projects.some((p) => p.id === id)) throw new Error('Projeto não encontrado.');
+  try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (err) { console.warn('Falha a apagar pasta do projeto:', err); }
+  idx.projects = idx.projects.filter((p) => p.id !== id);
+
+  let switchedConfig = null;
+  if (idx.activeId === id) {
+    if (idx.projects.length === 0) {
+      const nid = genProjectId();
+      createProjectFolder(nid);
+      applyActiveProjectPaths(nid);
+      ensureDirs();
+      fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
+      const now = Date.now();
+      idx.projects.push({ id: nid, name: 'Projeto 1', createdAt: now, updatedAt: now });
+      idx.activeId = nid;
+    } else {
+      // O mais recente passa a ativo.
+      const next = idx.projects.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+      idx.activeId = next.id;
+      applyActiveProjectPaths(next.id);
+      ensureDirs();
+    }
+    switchedConfig = readConfig();
+  }
+  writeProjectsIndex(idx);
+  return { state: projectsState(), config: switchedConfig };
+});
 
 /* -------- IPC: brand (Builder only) -------- */
 
@@ -745,7 +971,7 @@ ipcMain.handle('shell:openExternal', async (_event, url) => {
 
 ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
   if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro vazio.');
-  const abs = path.join(WRITE_BASE, relativePath);
+  const abs = relToAbs(relativePath);
   if (!isInsideAssetsDir(abs)) throw new Error('Caminho não permitido: ' + relativePath);
   if (!fs.existsSync(abs)) throw new Error('Ficheiro não existe: ' + abs);
   const errMsg = await shell.openPath(abs);
@@ -936,10 +1162,12 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     const cfgForIcon = readConfig();
     const iconRel = cfgForIcon.export && cfgForIcon.export.iconPath;
     if (iconRel) {
-      const iconAbs = path.join(WRITE_BASE, iconRel);
+      const iconAbs = relToAbs(iconRel);
       if (fs.existsSync(iconAbs)) {
         send('A aplicar o ícone personalizado ao executável…');
         stubToUse = await stampSfxIcon(sfxStub, iconAbs, iconTmpDir, send);
+      } else {
+        send('Aviso: ícone personalizado não encontrado; será usado o ícone padrão.');
       }
     }
 
@@ -994,7 +1222,7 @@ app.whenReady().then(() => {
   if (isViewer) {
     createViewerWindow({ standalone: true });
   } else {
-    ensureDirs();
+    initProjects();
     readConfig();
     createBuilderWindow();
   }

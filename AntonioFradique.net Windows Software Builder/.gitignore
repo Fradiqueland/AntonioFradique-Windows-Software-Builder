@@ -10,6 +10,10 @@ data/project-config.json
 assets/dist-assets/
 assets/icon.ico
 
+# Multi-projeto em runtime (Builder em dev).
+projects/
+projects.json
+
 # Logs Electron + caches.
 .electron-cache/
 *.log

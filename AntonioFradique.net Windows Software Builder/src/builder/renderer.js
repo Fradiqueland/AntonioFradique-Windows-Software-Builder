@@ -867,10 +867,8 @@ contentForm.addEventListener('submit', async (e) => {
 /* =========================================================
  * Initial load
  * ========================================================= */
-async function loadInitialConfig() {
-  try {
-    const config = await window.icurator.loadConfig();
-
+async function applyConfig(config) {
+  {
     // --- Brand
     const brand = config.brand || {};
     titleInput.value = brand.title || '';
@@ -913,10 +911,212 @@ async function loadInitialConfig() {
     // Re-render the export summary + icon status so labels respect the new language.
     updateExportSummary(config);
     setIconCurrentText();
+  }
+}
+
+async function loadInitialConfig() {
+  try {
+    const config = await window.icurator.loadConfig();
+    await applyConfig(config);
+    await refreshProjects();
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
   }
 }
+
+/* =========================================================
+ * GESTOR DE PROJETOS
+ * Cada projeto tem config + assets isolados no processo principal.
+ * "Abrir" carrega o projeto e salta para Marca/Design; "Fechar" volta
+ * a este separador. Criar/Renomear/Apagar via IPC.
+ * ========================================================= */
+const projectsListEl = document.getElementById('projects-list');
+const projectNewForm = document.getElementById('project-new-form');
+const projectNewName = document.getElementById('project-new-name');
+const showProjectsStatus = makeStatus(document.getElementById('projects-status'));
+const activeProjectName = document.getElementById('active-project-name');
+const activeProjectCloseBtn = document.getElementById('active-project-close');
+
+let projectsCache = { activeId: null, projects: [] };
+
+function activeProjectLabel() {
+  const p = projectsCache.projects.find((x) => x.id === projectsCache.activeId);
+  return p ? p.name : '—';
+}
+
+function updateActiveProjectBar() {
+  if (activeProjectName) activeProjectName.textContent = activeProjectLabel();
+}
+
+function goToTab(target) {
+  const tab = document.querySelector('.tab[data-tab="' + target + '"]');
+  if (tab) tab.click();
+}
+
+function renderProjectsList() {
+  if (!projectsListEl) return;
+  projectsListEl.innerHTML = '';
+  projectsCache.projects.forEach((p) => {
+    const isActive = p.id === projectsCache.activeId;
+    const li = document.createElement('li');
+    li.className = 'project-item' + (isActive ? ' active' : '');
+
+    const info = document.createElement('div');
+    info.className = 'project-info';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'project-name';
+    nameEl.textContent = p.name;
+    info.appendChild(nameEl);
+    if (isActive) {
+      const badge = document.createElement('span');
+      badge.className = 'project-badge';
+      badge.textContent = t('projects.open_badge');
+      info.appendChild(badge);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'project-actions';
+
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'btn btn-sm ' + (isActive ? 'btn-ghost' : 'btn-primary');
+    openBtn.textContent = isActive ? t('projects.reopen_btn') : t('projects.open_btn');
+    openBtn.addEventListener('click', () => openProject(p.id));
+
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.className = 'btn btn-sm btn-ghost';
+    renameBtn.textContent = t('projects.rename_btn');
+    renameBtn.addEventListener('click', () => startRename(li, p));
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-sm btn-danger';
+    delBtn.textContent = t('projects.delete_btn');
+    delBtn.addEventListener('click', () => deleteProject(p));
+
+    actions.append(openBtn, renameBtn, delBtn);
+    li.append(info, actions);
+    projectsListEl.appendChild(li);
+  });
+  updateActiveProjectBar();
+}
+
+async function refreshProjects() {
+  try {
+    projectsCache = await window.icurator.projectsList();
+    renderProjectsList();
+  } catch (err) {
+    console.error('Falha a listar projetos:', err);
+  }
+}
+
+async function openProject(id) {
+  if (id === projectsCache.activeId) { goToTab('brand'); return; }
+  try {
+    const res = await window.icurator.projectsOpen(id);
+    projectsCache = res.state;
+    if (res.config) await applyConfig(res.config);
+    renderProjectsList();
+    goToTab('brand');
+  } catch (err) {
+    console.error('Falha a abrir projeto:', err);
+    showProjectsStatus(t('common.error_prefix') + err.message, 'error');
+  }
+}
+
+function startRename(li, project) {
+  if (li.querySelector('.project-rename')) return;
+  const info = li.querySelector('.project-info');
+  const nameEl = li.querySelector('.project-name');
+  const wrap = document.createElement('div');
+  wrap.className = 'project-rename';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 80;
+  input.value = project.name;
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'btn btn-sm btn-primary';
+  save.textContent = t('common.save');
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'btn btn-sm btn-ghost';
+  cancel.textContent = t('common.cancel');
+  wrap.append(input, save, cancel);
+  nameEl.replaceWith(wrap);
+  input.focus();
+  input.select();
+
+  const commit = async () => {
+    const newName = input.value.trim();
+    if (!newName || newName === project.name) { renderProjectsList(); return; }
+    try {
+      projectsCache = await window.icurator.projectsRename(project.id, newName);
+      renderProjectsList();
+      updateActiveProjectBar();
+      showProjectsStatus(t('projects.renamed_ok'), 'success');
+    } catch (err) {
+      console.error('Falha a renomear projeto:', err);
+      showProjectsStatus(t('common.error_prefix') + err.message, 'error');
+      renderProjectsList();
+    }
+  };
+  save.addEventListener('click', commit);
+  cancel.addEventListener('click', () => renderProjectsList());
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); renderProjectsList(); }
+  });
+}
+
+async function deleteProject(project) {
+  const msg = t('projects.delete_confirm').replace('{name}', project.name);
+  if (!window.confirm(msg)) return;
+  try {
+    const res = await window.icurator.projectsDelete(project.id);
+    projectsCache = res.state;
+    if (res.config) await applyConfig(res.config);
+    renderProjectsList();
+    showProjectsStatus(t('projects.deleted_ok'), 'success');
+  } catch (err) {
+    console.error('Falha a apagar projeto:', err);
+    showProjectsStatus(t('common.error_prefix') + err.message, 'error');
+  }
+}
+
+if (projectNewForm) {
+  projectNewForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (projectNewName.value || '').trim();
+    if (!name) { showProjectsStatus(t('projects.name_required'), 'error'); return; }
+    try {
+      const res = await window.icurator.projectsCreate(name);
+      projectsCache = res.state;
+      if (res.config) await applyConfig(res.config);
+      projectNewName.value = '';
+      renderProjectsList();
+      showProjectsStatus(t('projects.created_ok'), 'success');
+      goToTab('brand');
+    } catch (err) {
+      console.error('Falha a criar projeto:', err);
+      showProjectsStatus(t('common.error_prefix') + err.message, 'error');
+    }
+  });
+}
+
+if (activeProjectCloseBtn) {
+  activeProjectCloseBtn.addEventListener('click', () => goToTab('projetos'));
+}
+
+/* Esconde a barra "A editar: …" quando estamos no próprio separador Projetos. */
+function updateActiveBarVisibility(target) {
+  const bar = document.getElementById('active-project-bar');
+  if (bar) bar.style.display = target === 'projetos' ? 'none' : '';
+}
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => updateActiveBarVisibility(tab.dataset.tab));
+});
 
 /* =========================================================
  * EXPORT (Passo 6)

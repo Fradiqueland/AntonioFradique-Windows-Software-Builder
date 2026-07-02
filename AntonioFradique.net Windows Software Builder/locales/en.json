@@ -12,7 +12,8 @@
     "banners": "Banners",
     "content": "Content / Menus",
     "export": "Export",
-    "icon": "Icon"
+    "icon": "Icon",
+    "projetos": "Projects"
   },
   "header": {
     "brand": {
@@ -38,6 +39,10 @@
     "icon": {
       "title": "Software Icon",
       "subtitle": "Set the final .exe icon and save."
+    },
+    "projetos": {
+      "title": "Projects",
+      "subtitle": "Create, open, rename and delete your projects. Each project keeps its own content, branding and settings."
     }
   },
   "sidebar": {
@@ -254,5 +259,22 @@
   "icon": {
     "save_btn": "Save Icon",
     "preview_empty": "No icon loaded"
+  },
+  "projects": {
+    "new_label": "New project name",
+    "new_placeholder": "e.g. Excel Course",
+    "new_btn": "Create project",
+    "open_btn": "Open",
+    "reopen_btn": "Edit",
+    "open_badge": "Open",
+    "rename_btn": "Rename",
+    "delete_btn": "Delete",
+    "editing_label": "Editing:",
+    "close_btn": "Close",
+    "delete_confirm": "Delete the project \"{name}\"? This action cannot be undone.",
+    "created_ok": "Project created.",
+    "renamed_ok": "Project renamed.",
+    "deleted_ok": "Project deleted.",
+    "name_required": "Enter a name for the project."
   }
 }

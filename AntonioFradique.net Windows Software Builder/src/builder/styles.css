@@ -847,3 +847,32 @@ select.select:focus {
   padding: 6px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
 }
 .gallery-item-name { font-size: 13px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* -------- Gestor de Projetos (v1.4) -------- */
+.tab-projects { margin-bottom: 6px; }
+.active-project-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; font-size: 13px; color: var(--text-muted, #64748b);
+}
+.active-project-bar .active-project-name { font-weight: 700; color: var(--text-dark, #0f172a); }
+.active-project-bar .btn-sm { margin-inline-start: auto; }
+.project-new-card { display: block; }
+.project-new-row { display: flex; gap: 8px; margin-top: 8px; }
+.project-new-row input { flex: 1; min-width: 0; }
+.projects-list { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.project-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border: 1px solid var(--border, #e2e8f0); border-radius: 12px; background: #fff;
+}
+.project-item.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.project-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.project-name { font-weight: 600; color: var(--text-dark, #0f172a); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-badge {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: #fff; background: var(--primary); padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.project-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.project-rename { display: flex; gap: 8px; align-items: center; }
+.project-rename input { min-width: 180px; }
+.btn-danger { background: var(--danger, #dc2626); color: #fff; }
+.btn-danger:hover:not(:disabled) { filter: brightness(0.94); }

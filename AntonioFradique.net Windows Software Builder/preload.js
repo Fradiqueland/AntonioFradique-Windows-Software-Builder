@@ -1,8 +1,13 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('icurator', {
-  version: '1.3.0',
+  version: '1.4.0',
   loadConfig: () => ipcRenderer.invoke('config:load'),
+  projectsList: () => ipcRenderer.invoke('projects:list'),
+  projectsCreate: (name) => ipcRenderer.invoke('projects:create', { name }),
+  projectsOpen: (id) => ipcRenderer.invoke('projects:open', { id }),
+  projectsRename: (id, name) => ipcRenderer.invoke('projects:rename', { id, name }),
+  projectsDelete: (id) => ipcRenderer.invoke('projects:delete', { id }),
   saveBrandConfig: (data) => ipcRenderer.invoke('brand:save', data),
   saveLeadsConfig: (data) => ipcRenderer.invoke('marketing:saveLeads', data),
   saveBannerConfig: (data) => ipcRenderer.invoke('marketing:saveBanners', data),

@@ -12,7 +12,8 @@
     "banners": "Banners",
     "content": "Contenido / Menús",
     "export": "Exportar",
-    "icon": "Icono"
+    "icon": "Icono",
+    "projetos": "Proyectos"
   },
   "header": {
     "brand": {
@@ -38,6 +39,10 @@
     "icon": {
       "title": "Icono del Software",
       "subtitle": "Defina el icono del .exe final y guarde."
+    },
+    "projetos": {
+      "title": "Proyectos",
+      "subtitle": "Cree, abra, renombre y elimine sus proyectos. Cada proyecto guarda su propio contenido, marca y ajustes."
     }
   },
   "sidebar": {
@@ -254,5 +259,22 @@
   "icon": {
     "save_btn": "Guardar Icono",
     "preview_empty": "Ningún icono cargado"
+  },
+  "projects": {
+    "new_label": "Nombre del nuevo proyecto",
+    "new_placeholder": "Ej: Curso de Excel",
+    "new_btn": "Crear proyecto",
+    "open_btn": "Abrir",
+    "reopen_btn": "Editar",
+    "open_badge": "Abierto",
+    "rename_btn": "Renombrar",
+    "delete_btn": "Eliminar",
+    "editing_label": "Editando:",
+    "close_btn": "Cerrar",
+    "delete_confirm": "¿Eliminar el proyecto \"{name}\"? Esta acción no se puede deshacer.",
+    "created_ok": "Proyecto creado.",
+    "renamed_ok": "Proyecto renombrado.",
+    "deleted_ok": "Proyecto eliminado.",
+    "name_required": "Escriba un nombre para el proyecto."
   }
 }

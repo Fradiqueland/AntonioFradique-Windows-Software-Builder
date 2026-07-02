@@ -12,7 +12,8 @@
     "banners": "横幅",
     "content": "内容 / 菜单",
     "export": "导出",
-    "icon": "图标"
+    "icon": "图标",
+    "projetos": "项目"
   },
   "header": {
     "brand": {
@@ -38,6 +39,10 @@
     "icon": {
       "title": "软件图标",
       "subtitle": "设置最终 .exe 的图标并保存。"
+    },
+    "projetos": {
+      "title": "项目",
+      "subtitle": "创建、打开、重命名和删除您的项目。每个项目都保存自己的内容、品牌和设置。"
     }
   },
   "sidebar": {
@@ -254,5 +259,22 @@
   "icon": {
     "save_btn": "保存图标",
     "preview_empty": "未加载图标"
+  },
+  "projects": {
+    "new_label": "新项目名称",
+    "new_placeholder": "例如：Excel 课程",
+    "new_btn": "创建项目",
+    "open_btn": "打开",
+    "reopen_btn": "编辑",
+    "open_badge": "已打开",
+    "rename_btn": "重命名",
+    "delete_btn": "删除",
+    "editing_label": "正在编辑：",
+    "close_btn": "关闭",
+    "delete_confirm": "删除项目“{name}”？此操作无法撤销。",
+    "created_ok": "项目已创建。",
+    "renamed_ok": "项目已重命名。",
+    "deleted_ok": "项目已删除。",
+    "name_required": "请输入项目名称。"
   }
 }
