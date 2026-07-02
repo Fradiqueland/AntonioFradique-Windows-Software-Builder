@@ -24,3 +24,9 @@ id = "e2QawQn2CWyAlcO5Ulrch"
 uri = "file://exports/AntonioFradique-Builder-v1.5.zip"
 type = "unspecified"
 title = "AntonioFradique.net Windows Software Builder v1.5 (com IPTV)"
+
+[[outputs]]
+id = "BWXng3taJqxT_4E2yB_IX"
+uri = "file://exports/AntonioFradique-Builder-v1.5.1.zip"
+type = "unspecified"
+title = "AntonioFradique.net Windows Software Builder v1.5.1 (correções IPTV + apagar projeto)"
