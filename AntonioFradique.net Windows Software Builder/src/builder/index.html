@@ -91,7 +91,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v1.5.4</div>
+          <div class="version">v1.5.5</div>
         </div>
       </aside>
 
@@ -402,7 +402,6 @@
                     <option value="download-vault" data-i18n="content.type.download">Ficheiro para Descarregar (ZIP, DOCX…)</option>
                     <option value="image-gallery" data-i18n="content.type.gallery">Galeria de Imagens</option>
                     <option value="article-reader" data-i18n="content.type.article">Leitor de Artigos / Notas</option>
-                    <option value="community-link" data-i18n="content.type.community">Comunidade (Discord/Telegram…)</option>
                     <option value="smart-embed" data-i18n="content.type.embed">Formulário / Quiz (Embed)</option>
                     <option value="iptv" data-i18n="content.type.iptv">Leitor IPTV</option>
                   </select>
@@ -514,25 +513,6 @@
                             data-i18n-placeholder="content.article_placeholder"
                             placeholder="# Título&#10;&#10;Escreva aqui as suas notas…"></textarea>
                   <small data-i18n="content.article_help">Suporta Markdown simples: # títulos, **negrito**, *itálico*, - listas, [links](url).</small>
-                </div>
-
-                <div class="form-group hidden" id="dyn-community-link" data-dyn="community-link">
-                  <label for="dyn-community-btn" data-i18n="content.community_btn_label">Nome do Botão</label>
-                  <input type="text" id="dyn-community-btn" maxlength="60"
-                         data-i18n-placeholder="content.community_btn_placeholder"
-                         placeholder="Ex: Entrar no Grupo VIP" />
-                  <label for="dyn-community-url" data-i18n="content.community_url_label">Link de Convite</label>
-                  <input type="text" id="dyn-community-url"
-                         data-i18n-placeholder="content.community_url_placeholder"
-                         placeholder="https://discord.gg/… | t.me/… | chat.whatsapp.com/…" />
-                  <label for="dyn-community-platform" data-i18n="content.community_platform_label">Plataforma</label>
-                  <select id="dyn-community-platform" class="select">
-                    <option value="discord">Discord</option>
-                    <option value="telegram">Telegram</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="generic" data-i18n="content.community_platform_other">Outra</option>
-                  </select>
-                  <small data-i18n="content.community_help">Abre no navegador padrão do aluno (não fica preso na app).</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-smart-embed" data-dyn="smart-embed">

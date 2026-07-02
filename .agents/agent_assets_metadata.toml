@@ -42,3 +42,9 @@ id = "d2svWsLZGWPfMIpEu_wtp"
 uri = "file://exports/AntonioFradique-Builder-v1.5.3.zip"
 type = "unspecified"
 title = "AntonioFradique.net Windows Software Builder v1.5.3"
+
+[[outputs]]
+id = "XLr-bNZ-FAHiYhjM-OO1P"
+uri = "file://exports/AntonioFradique-Builder-v1.5.4.zip"
+type = "unspecified"
+title = "AntonioFradique Builder v1.5.4 (código atualizado)"

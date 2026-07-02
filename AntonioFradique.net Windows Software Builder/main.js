@@ -104,7 +104,7 @@ const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'community-link', 'smart-embed', 'iptv'
+  'article-reader', 'smart-embed', 'iptv'
 ]);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
@@ -931,12 +931,6 @@ ipcMain.handle('content:save', (_event, payload) => {
       mod.data = { url: toYoutubeEmbed(typeof d.url === 'string' ? d.url.trim() : '') };
     } else if (mod.type === 'webview' || mod.type === 'external' || mod.type === 'smart-embed') {
       mod.data = { url: typeof d.url === 'string' ? d.url.trim() : '' };
-    } else if (mod.type === 'community-link') {
-      mod.data = {
-        url: typeof d.url === 'string' ? d.url.trim() : '',
-        buttonLabel: typeof d.buttonLabel === 'string' ? d.buttonLabel.trim() : '',
-        platform: typeof d.platform === 'string' ? d.platform.trim() : 'generic'
-      };
     } else if (mod.type === 'html') {
       mod.data = { html: typeof d.html === 'string' ? d.html : '' };
     } else if (mod.type === 'article-reader') {

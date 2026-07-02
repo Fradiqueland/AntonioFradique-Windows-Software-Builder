@@ -376,31 +376,6 @@ function renderDownloadVault(data) {
   stageEl.appendChild(host);
 }
 
-function renderCommunity(data) {
-  clearStage();
-  const url = (data && data.url) || '';
-  const platform = (data && data.platform) || 'generic';
-  const host = document.createElement('div');
-  host.className = 'viewer-empty';
-  const card = document.createElement('div');
-  card.className = 'community-card platform-' + platform;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'community-btn platform-' + platform;
-  btn.textContent = (data && data.buttonLabel) || tr('viewer.community_btn_default', 'Entrar na comunidade');
-  if (!url) {
-    btn.disabled = true;
-  } else {
-    btn.addEventListener('click', async () => {
-      try { await window.viewer.openExternal(url); }
-      catch (err) { showToast(tr('viewer.external_error_prefix', 'Erro ao abrir link: ') + err.message); }
-    });
-  }
-  card.append(btn);
-  host.appendChild(card);
-  stageEl.appendChild(host);
-}
-
 /* Conversor Markdown minimalista e seguro: escapa HTML primeiro e só depois
  * aplica títulos, listas, negrito/itálico, código e links. */
 function miniMarkdown(src) {
@@ -1026,7 +1001,6 @@ async function dispatchModule(mod, btn) {
     case 'image-gallery':  setActiveMenuBtn(btn); await renderGallery(mod.data); break;
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
-    case 'community-link': setActiveMenuBtn(btn); renderCommunity(mod.data); break;
     case 'iptv':     setActiveMenuBtn(btn); renderIptv(mod.data, mod.id); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;

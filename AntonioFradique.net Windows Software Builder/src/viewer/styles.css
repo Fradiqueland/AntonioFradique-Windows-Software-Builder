@@ -506,10 +506,10 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
   font-size: .9em;
 }
 
-.dl-card, .community-card { max-width: 460px; width: 100%; text-align: center; }
+.dl-card { max-width: 460px; width: 100%; text-align: center; }
 .dl-icon { font-size: 48px; margin-bottom: 12px; }
 .dl-name { font-size: 14px; color: var(--v-text-dark); margin-bottom: 20px; word-break: break-word; }
-.dl-btn, .community-btn {
+.dl-btn {
   padding: 14px 28px;
   font-size: 16px;
   font-weight: 600;
@@ -521,11 +521,8 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
   box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
   transition: transform .15s ease, filter .15s ease;
 }
-.dl-btn:hover, .community-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
-.dl-btn:disabled, .community-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
-.community-btn.platform-discord { background: #5865F2; color: #fff; }
-.community-btn.platform-telegram { background: #229ED9; color: #fff; }
-.community-btn.platform-whatsapp { background: #25D366; color: #fff; }
+.dl-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.dl-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 
 /* -------- IPTV player -------- */
 .viewer-stage.iptv-mode { padding: 0; display: flex; }

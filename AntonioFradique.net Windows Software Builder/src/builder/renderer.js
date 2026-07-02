@@ -461,7 +461,7 @@ bannerForm.addEventListener('submit', async (e) => {
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
 const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'community-link', 'smart-embed', 'iptv'];
+  'article-reader', 'smart-embed', 'iptv'];
 function typeLabel(type) {
   const key = 'content.type.' + type;
   const v = t(key);
@@ -514,11 +514,6 @@ const dyn = {
   },
   'article-reader': {
     text: document.getElementById('dyn-article-text')
-  },
-  'community-link': {
-    btn: document.getElementById('dyn-community-btn'),
-    url: document.getElementById('dyn-community-url'),
-    platform: document.getElementById('dyn-community-platform')
   },
   'smart-embed': {
     url: document.getElementById('dyn-smart-embed-url')
@@ -580,9 +575,6 @@ function clearEditor() {
   if (dyn['download-vault'].file) dyn['download-vault'].file.value = '';
   if (dyn['download-vault'].btn) dyn['download-vault'].btn.value = '';
   if (dyn['article-reader'].text) dyn['article-reader'].text.value = '';
-  if (dyn['community-link'].btn) dyn['community-link'].btn.value = '';
-  if (dyn['community-link'].url) dyn['community-link'].url.value = '';
-  if (dyn['community-link'].platform) dyn['community-link'].platform.value = 'discord';
   if (dyn['smart-embed'].url) dyn['smart-embed'].url.value = '';
   iptvChannels = [];
   iptvManual = [];
@@ -646,11 +638,7 @@ function openEditorForEdit(id) {
   else if (mod.type === 'external') dyn.external.url.value = d.url || '';
   else if (mod.type === 'smart-embed') dyn['smart-embed'].url.value = d.url || '';
   else if (mod.type === 'article-reader') dyn['article-reader'].text.value = d.text || '';
-  else if (mod.type === 'community-link') {
-    dyn['community-link'].btn.value = d.buttonLabel || '';
-    dyn['community-link'].url.value = d.url || '';
-    dyn['community-link'].platform.value = d.platform || 'discord';
-  } else if (mod.type === 'image-gallery') {
+  else if (mod.type === 'image-gallery') {
     galleryItems = (Array.isArray(d.images) ? d.images : []).map((i) => ({
       kind: 'existing', file: i.file, fileName: i.fileName
     }));
@@ -1048,13 +1036,7 @@ contentForm.addEventListener('submit', async (e) => {
     }
     data = out;
   }
-  else if (type === 'community-link') {
-    data = {
-      url: dyn['community-link'].url.value.trim(),
-      buttonLabel: dyn['community-link'].btn.value.trim(),
-      platform: dyn['community-link'].platform.value
-    };
-  } else if (type === 'image-gallery') {
+  else if (type === 'image-gallery') {
     data = {
       items: galleryItems.map((it) => it.kind === 'new'
         ? { sourcePath: it.path, fileName: it.name }

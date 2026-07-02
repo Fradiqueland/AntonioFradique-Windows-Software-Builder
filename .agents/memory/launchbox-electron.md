@@ -276,3 +276,26 @@ reported "apagar não apaga" even though the index was already updated server-si
 `projects:delete` handler itself is correct (rmSync is best-effort/caught; index filter+write always
 runs; deleting the last project recreates an empty "Projeto 1"). **How to apply:** any list-mutating IPC
 that also repaints other tabs should refresh its own list first and isolate the secondary repaint.
+
+## window.confirm/alert/prompt are ALL no-ops in these Electron renderers — never gate an action on them
+The DEFINITIVE cause of the recurring "apagar projeto não apaga" was `deleteProject` gating on
+`window.confirm(...)` — Electron renderers here return without ever showing a dialog, so it evaluates
+falsy and the delete silently never runs (the refresh-order fix above was necessary but NOT sufficient).
+**Rule:** confirmations/prompts must be INLINE DOM (Sim/Cancelar buttons, text inputs), the same pattern
+already used by IPTV favourites (`prompt` disabled). Delete now uses `askDeleteProject` (inline Sim/Cancelar
+row) → `performDeleteProject`. **How to apply:** grep for `window.confirm`/`window.alert`/`window.prompt`
+before shipping any renderer flow; each is a silent trap.
+
+## Duplicate/clone project = copy data/ + dist-assets/ of the source project dir, then activate
+`projects:duplicate` IPC copies BOTH `projects/<srcId>/{data,dist-assets}` to a new id via
+`copyDirRecursive`, names it `<name> (cópia)`, sets it active, returns fresh state+config. Because each
+project is fully isolated on disk (see multi-project layout note), a straight recursive copy is enough —
+no path rewriting needed (stored paths are relative and `relToAbs()` re-roots to the active project).
+
+## Viewer social links = sidebar icon row, https-only, opened via openExternal
+`marketing.social` holds 10 fixed keys (site,instagram,facebook,x,tiktok,pinterest,linkedin,spotify,
+whatsapp,telegram). `marketing:saveSocial` trims + auto-prepends `https://` when scheme missing; readConfig
+deep-merge backfills existing configs. Viewer `renderSocial()` shows ONLY keys matching `^https?://` and
+opens via `window.viewer.openExternal` (main's `shell:openExternal` independently rejects non-http(s)).
+Icons are inline SVG path strings in a `SOCIAL_ICONS` map in the viewer renderer (Simple Icons paths +
+a hand-picked globe for "site"), NOT icon files — so they ship inside the viewer bundle with no assets.
