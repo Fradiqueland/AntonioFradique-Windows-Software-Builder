@@ -13,7 +13,8 @@
     "content": "Conteúdo / Menus",
     "export": "Exportar",
     "icon": "Ícone",
-    "projetos": "Projetos"
+    "projetos": "Projetos",
+    "social": "Redes Sociais"
   },
   "header": {
     "brand": {
@@ -43,6 +44,10 @@
     "projetos": {
       "title": "Projetos",
       "subtitle": "Crie, abra, renomeie e apague os seus projetos. Cada projeto guarda o seu próprio conteúdo, marca e definições."
+    },
+    "social": {
+      "title": "Redes Sociais",
+      "subtitle": "Adicione os links das suas redes sociais ao menu do produto final."
     }
   },
   "sidebar": {
@@ -325,6 +330,14 @@
     "created_ok": "Projeto criado.",
     "renamed_ok": "Projeto renomeado.",
     "deleted_ok": "Projeto apagado.",
-    "name_required": "Escreva um nome para o projeto."
+    "name_required": "Escreva um nome para o projeto.",
+    "clone_btn": "Clonar",
+    "cloned_ok": "Projeto clonado.",
+    "delete_yes": "Sim, apagar"
+  },
+  "social": {
+    "help": "Preencha apenas as redes que quiser. Os ícones aparecem no menu lateral do produto final e abrem no navegador do aluno.",
+    "save_btn": "Guardar Redes Sociais",
+    "site": "Site"
   }
 }

@@ -13,7 +13,8 @@
     "content": "Konten / Menu",
     "export": "Ekspor",
     "icon": "Ikon",
-    "projetos": "Proyek"
+    "projetos": "Proyek",
+    "social": "Media Sosial"
   },
   "header": {
     "brand": {
@@ -43,6 +44,10 @@
     "projetos": {
       "title": "Proyek",
       "subtitle": "Buat, buka, ganti nama, dan hapus proyek Anda. Setiap proyek menyimpan konten, merek, dan pengaturannya sendiri."
+    },
+    "social": {
+      "title": "Media Sosial",
+      "subtitle": "Tambahkan tautan media sosial Anda ke menu produk akhir."
     }
   },
   "sidebar": {
@@ -325,6 +330,14 @@
     "created_ok": "Proyek dibuat.",
     "renamed_ok": "Proyek diganti namanya.",
     "deleted_ok": "Proyek dihapus.",
-    "name_required": "Masukkan nama proyek."
+    "name_required": "Masukkan nama proyek.",
+    "clone_btn": "Klon",
+    "cloned_ok": "Proyek diklon.",
+    "delete_yes": "Ya, hapus"
+  },
+  "social": {
+    "help": "Isi hanya jaringan yang Anda inginkan. Ikon muncul di menu samping produk akhir dan terbuka di browser siswa.",
+    "save_btn": "Simpan Media Sosial",
+    "site": "Situs web"
   }
 }

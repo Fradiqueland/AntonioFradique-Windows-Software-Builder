@@ -73,6 +73,9 @@
           <button class="tab" data-tab="banners">
             <span class="tab-num">3</span><span class="tab-label" data-i18n="tab.banners">Banners</span>
           </button>
+          <button class="tab" data-tab="social">
+            <span class="tab-num">🔗</span><span class="tab-label" data-i18n="tab.social">Redes Sociais</span>
+          </button>
           <button class="tab" data-tab="content">
             <span class="tab-num">4</span><span class="tab-label" data-i18n="tab.content">Conteúdo / Menus</span>
           </button>
@@ -88,7 +91,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v1.4</div>
+          <div class="version">v1.5.4</div>
         </div>
       </aside>
 
@@ -174,6 +177,61 @@
             <div class="form-actions">
               <span class="save-status" id="save-status"></span>
               <button type="submit" class="btn btn-primary" id="brand-save" data-i18n="brand.save_btn">Guardar Definições</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Redes Sociais -->
+        <section class="panel hidden" data-panel="social">
+          <form id="social-form" class="form-card" autocomplete="off">
+            <div class="form-group">
+              <small data-i18n="social.help">Preencha apenas as redes que quiser. Os ícones aparecem no menu lateral do produto final e abrem no navegador do aluno.</small>
+            </div>
+            <div class="social-grid">
+              <div class="form-group">
+                <label for="social-site" data-i18n="social.site">Site</label>
+                <input type="url" id="social-site" placeholder="https://…" />
+              </div>
+              <div class="form-group">
+                <label for="social-instagram">Instagram</label>
+                <input type="url" id="social-instagram" placeholder="https://instagram.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-facebook">Facebook</label>
+                <input type="url" id="social-facebook" placeholder="https://facebook.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-x">X</label>
+                <input type="url" id="social-x" placeholder="https://x.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-tiktok">TikTok</label>
+                <input type="url" id="social-tiktok" placeholder="https://tiktok.com/@…" />
+              </div>
+              <div class="form-group">
+                <label for="social-pinterest">Pinterest</label>
+                <input type="url" id="social-pinterest" placeholder="https://pinterest.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-linkedin">LinkedIn</label>
+                <input type="url" id="social-linkedin" placeholder="https://linkedin.com/in/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-spotify">Spotify</label>
+                <input type="url" id="social-spotify" placeholder="https://open.spotify.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-whatsapp">WhatsApp</label>
+                <input type="url" id="social-whatsapp" placeholder="https://wa.me/351…" />
+              </div>
+              <div class="form-group">
+                <label for="social-telegram">Telegram</label>
+                <input type="url" id="social-telegram" placeholder="https://t.me/…" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <span class="save-status" id="social-status"></span>
+              <button type="submit" class="btn btn-primary" id="social-save" data-i18n="social.save_btn">Guardar Redes Sociais</button>
             </div>
           </form>
         </section>

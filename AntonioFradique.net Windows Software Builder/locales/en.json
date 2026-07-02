@@ -13,7 +13,8 @@
     "content": "Content / Menus",
     "export": "Export",
     "icon": "Icon",
-    "projetos": "Projects"
+    "projetos": "Projects",
+    "social": "Social Links"
   },
   "header": {
     "brand": {
@@ -43,6 +44,10 @@
     "projetos": {
       "title": "Projects",
       "subtitle": "Create, open, rename and delete your projects. Each project keeps its own content, branding and settings."
+    },
+    "social": {
+      "title": "Social Links",
+      "subtitle": "Add your social media links to the final product's menu."
     }
   },
   "sidebar": {
@@ -325,6 +330,14 @@
     "created_ok": "Project created.",
     "renamed_ok": "Project renamed.",
     "deleted_ok": "Project deleted.",
-    "name_required": "Enter a name for the project."
+    "name_required": "Enter a name for the project.",
+    "clone_btn": "Clone",
+    "cloned_ok": "Project cloned.",
+    "delete_yes": "Yes, delete"
+  },
+  "social": {
+    "help": "Fill in only the networks you want. The icons appear in the final product's side menu and open in the student's browser.",
+    "save_btn": "Save Social Links",
+    "site": "Website"
   }
 }

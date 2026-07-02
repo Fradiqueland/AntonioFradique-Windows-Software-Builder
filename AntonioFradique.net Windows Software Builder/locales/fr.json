@@ -13,7 +13,8 @@
     "content": "Contenu / Menus",
     "export": "Exporter",
     "icon": "Icône",
-    "projetos": "Projets"
+    "projetos": "Projets",
+    "social": "Réseaux Sociaux"
   },
   "header": {
     "brand": {
@@ -43,6 +44,10 @@
     "projetos": {
       "title": "Projets",
       "subtitle": "Créez, ouvrez, renommez et supprimez vos projets. Chaque projet conserve son propre contenu, sa marque et ses réglages."
+    },
+    "social": {
+      "title": "Réseaux Sociaux",
+      "subtitle": "Ajoutez les liens de vos réseaux sociaux au menu du produit final."
     }
   },
   "sidebar": {
@@ -325,6 +330,14 @@
     "created_ok": "Projet créé.",
     "renamed_ok": "Projet renommé.",
     "deleted_ok": "Projet supprimé.",
-    "name_required": "Saisissez un nom pour le projet."
+    "name_required": "Saisissez un nom pour le projet.",
+    "clone_btn": "Dupliquer",
+    "cloned_ok": "Projet dupliqué.",
+    "delete_yes": "Oui, supprimer"
+  },
+  "social": {
+    "help": "Remplissez uniquement les réseaux souhaités. Les icônes apparaissent dans le menu latéral du produit final et s'ouvrent dans le navigateur de l'élève.",
+    "save_btn": "Enregistrer les Réseaux Sociaux",
+    "site": "Site web"
   }
 }

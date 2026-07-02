@@ -1,16 +1,18 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('icurator', {
-  version: '1.5.3',
+  version: '1.5.4',
   loadConfig: () => ipcRenderer.invoke('config:load'),
   projectsList: () => ipcRenderer.invoke('projects:list'),
   projectsCreate: (name) => ipcRenderer.invoke('projects:create', { name }),
   projectsOpen: (id) => ipcRenderer.invoke('projects:open', { id }),
   projectsRename: (id, name) => ipcRenderer.invoke('projects:rename', { id, name }),
   projectsDelete: (id) => ipcRenderer.invoke('projects:delete', { id }),
+  projectsDuplicate: (id) => ipcRenderer.invoke('projects:duplicate', { id }),
   saveBrandConfig: (data) => ipcRenderer.invoke('brand:save', data),
   saveLeadsConfig: (data) => ipcRenderer.invoke('marketing:saveLeads', data),
   saveBannerConfig: (data) => ipcRenderer.invoke('marketing:saveBanners', data),
+  saveSocialConfig: (data) => ipcRenderer.invoke('marketing:saveSocial', data),
   saveContent: (data) => ipcRenderer.invoke('content:save', data),
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   pickFile: (category) => ipcRenderer.invoke('dialog:pickFile', category),

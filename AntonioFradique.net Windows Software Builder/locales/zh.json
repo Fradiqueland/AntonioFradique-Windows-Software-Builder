@@ -13,7 +13,8 @@
     "content": "内容 / 菜单",
     "export": "导出",
     "icon": "图标",
-    "projetos": "项目"
+    "projetos": "项目",
+    "social": "社交链接"
   },
   "header": {
     "brand": {
@@ -43,6 +44,10 @@
     "projetos": {
       "title": "项目",
       "subtitle": "创建、打开、重命名和删除您的项目。每个项目都保存自己的内容、品牌和设置。"
+    },
+    "social": {
+      "title": "社交链接",
+      "subtitle": "将您的社交媒体链接添加到最终产品的菜单中。"
     }
   },
   "sidebar": {
@@ -325,6 +330,14 @@
     "created_ok": "项目已创建。",
     "renamed_ok": "项目已重命名。",
     "deleted_ok": "项目已删除。",
-    "name_required": "请输入项目名称。"
+    "name_required": "请输入项目名称。",
+    "clone_btn": "克隆",
+    "cloned_ok": "项目已克隆。",
+    "delete_yes": "是的，删除"
+  },
+  "social": {
+    "help": "只需填写您想要的网络。图标会出现在最终产品的侧边菜单中，并在学员的浏览器中打开。",
+    "save_btn": "保存社交链接",
+    "site": "网站"
   }
 }

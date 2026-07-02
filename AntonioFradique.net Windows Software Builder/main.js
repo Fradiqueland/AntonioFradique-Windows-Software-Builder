@@ -135,6 +135,10 @@ const DEFAULT_CONFIG = {
     banners: {
       top: { enabled: false, image: null, url: '' },
       bottom: { enabled: false, image: null, url: '' }
+    },
+    social: {
+      site: '', instagram: '', facebook: '', x: '', tiktok: '',
+      pinterest: '', linkedin: '', spotify: '', whatsapp: '', telegram: ''
     }
   },
   content: [],
@@ -705,6 +709,32 @@ ipcMain.handle('projects:delete', (_event, payload) => {
   return { state: projectsState(), config: switchedConfig };
 });
 
+ipcMain.handle('projects:duplicate', (_event, payload) => {
+  assertBuilder();
+  const srcId = payload && payload.id;
+  const idx = readProjectsIndex();
+  const src = idx.projects.find((p) => p.id === srcId);
+  if (!src) throw new Error('Projeto não encontrado.');
+  const newId = genProjectId();
+  createProjectFolder(newId);
+  // Copia data/ (config + ícone) e dist-assets/ (logo, banners, ficheiros) do
+  // projeto de origem para a nova pasta, de forma independente.
+  const srcRoot = projectDir(srcId);
+  const dstRoot = projectDir(newId);
+  for (const sub of ['data', 'dist-assets']) {
+    const from = path.join(srcRoot, sub);
+    if (fs.existsSync(from)) copyDirRecursive(from, path.join(dstRoot, sub));
+  }
+  const now = Date.now();
+  const name = sanitizeProjectName(src.name + ' (cópia)');
+  idx.projects.push({ id: newId, name, createdAt: now, updatedAt: now });
+  idx.activeId = newId;
+  writeProjectsIndex(idx);
+  applyActiveProjectPaths(newId);
+  ensureDirs();
+  return { state: projectsState(), config: readConfig() };
+});
+
 /* -------- IPC: brand (Builder only) -------- */
 
 function assertBuilder() {
@@ -794,6 +824,22 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
     }
   };
   if (updated.marketing.banner) delete updated.marketing.banner;
+  writeConfig(updated);
+  return updated;
+});
+
+ipcMain.handle('marketing:saveSocial', (_event, payload) => {
+  assertBuilder();
+  const current = readConfig();
+  const keys = ['site', 'instagram', 'facebook', 'x', 'tiktok', 'pinterest', 'linkedin', 'spotify', 'whatsapp', 'telegram'];
+  const social = {};
+  for (const k of keys) {
+    let v = (payload && typeof payload[k] === 'string') ? payload[k].trim() : '';
+    // Ajuda o utilizador não-técnico: se faltar o esquema, assume https://
+    if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+    social[k] = v;
+  }
+  const updated = { ...current, marketing: { ...current.marketing, social } };
   writeConfig(updated);
   return updated;
 });

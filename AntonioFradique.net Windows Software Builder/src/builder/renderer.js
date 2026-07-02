@@ -271,6 +271,54 @@ brandForm.addEventListener('submit', async (e) => {
 });
 
 /* =========================================================
+ * REDES SOCIAIS
+ * ========================================================= */
+const socialForm = document.getElementById('social-form');
+const socialInputs = {
+  site: document.getElementById('social-site'),
+  instagram: document.getElementById('social-instagram'),
+  facebook: document.getElementById('social-facebook'),
+  x: document.getElementById('social-x'),
+  tiktok: document.getElementById('social-tiktok'),
+  pinterest: document.getElementById('social-pinterest'),
+  linkedin: document.getElementById('social-linkedin'),
+  spotify: document.getElementById('social-spotify'),
+  whatsapp: document.getElementById('social-whatsapp'),
+  telegram: document.getElementById('social-telegram')
+};
+const socialSaveBtn = document.getElementById('social-save');
+const showSocialStatus = makeStatus(document.getElementById('social-status'));
+
+function fillSocialInputs(social) {
+  const s = social || {};
+  Object.keys(socialInputs).forEach((k) => {
+    if (socialInputs[k]) socialInputs[k].value = s[k] || '';
+  });
+}
+
+if (socialForm) {
+  socialForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    socialSaveBtn.disabled = true;
+    showSocialStatus(t('common.saving'), '');
+    try {
+      const payload = {};
+      Object.keys(socialInputs).forEach((k) => {
+        payload[k] = socialInputs[k] ? socialInputs[k].value : '';
+      });
+      const updated = await window.icurator.saveSocialConfig(payload);
+      fillSocialInputs(updated.marketing && updated.marketing.social);
+      showSocialStatus(t('common.saved'), 'success');
+    } catch (err) {
+      console.error(err);
+      showSocialStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
+    } finally {
+      socialSaveBtn.disabled = false;
+    }
+  });
+}
+
+/* =========================================================
  * LEADS FORM (Passo 3)
  * ========================================================= */
 const leadsForm = document.getElementById('leads-form');
@@ -1091,6 +1139,9 @@ async function applyConfig(config) {
     await bannerTopSlot.load(banners.top);
     await bannerBottomSlot.load(banners.bottom);
 
+    // --- Redes sociais
+    fillSocialInputs(config.marketing && config.marketing.social);
+
     // --- Content / menus
     contentModules = Array.isArray(config.content) ? config.content : [];
     renderContentList();
@@ -1183,13 +1234,19 @@ function renderProjectsList() {
     renameBtn.textContent = t('projects.rename_btn');
     renameBtn.addEventListener('click', () => startRename(li, p));
 
+    const cloneBtn = document.createElement('button');
+    cloneBtn.type = 'button';
+    cloneBtn.className = 'btn btn-sm btn-ghost';
+    cloneBtn.textContent = t('projects.clone_btn');
+    cloneBtn.addEventListener('click', () => duplicateProject(p.id));
+
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'btn btn-sm btn-danger';
     delBtn.textContent = t('projects.delete_btn');
-    delBtn.addEventListener('click', () => deleteProject(p));
+    delBtn.addEventListener('click', () => askDeleteProject(li, p));
 
-    actions.append(openBtn, renameBtn, delBtn);
+    actions.append(openBtn, renameBtn, cloneBtn, delBtn);
     li.append(info, actions);
     projectsListEl.appendChild(li);
   });
@@ -1264,15 +1321,39 @@ function startRename(li, project) {
   });
 }
 
-async function deleteProject(project) {
-  const msg = t('projects.delete_confirm').replace('{name}', project.name);
-  if (!window.confirm(msg)) return;
+/* O Electron bloqueia window.confirm() nos renderers (fica sem efeito), por
+ * isso a confirmação de apagar é feita inline — botões "Sim" / "Cancelar"
+ * dentro da própria linha do projeto, como no resto da app. Era esta a causa
+ * de "não apagar": o confirm() nunca devolvia true. */
+function askDeleteProject(li, project) {
+  const actions = li.querySelector('.project-actions');
+  if (!actions || actions.querySelector('.project-del-confirm')) return;
+  actions.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'project-del-confirm';
+  const label = document.createElement('span');
+  label.className = 'project-del-label';
+  label.textContent = t('projects.delete_confirm').replace('{name}', project.name);
+  const yes = document.createElement('button');
+  yes.type = 'button';
+  yes.className = 'btn btn-sm btn-danger';
+  yes.textContent = t('projects.delete_yes');
+  yes.addEventListener('click', () => performDeleteProject(project));
+  const no = document.createElement('button');
+  no.type = 'button';
+  no.className = 'btn btn-sm btn-ghost';
+  no.textContent = t('common.cancel');
+  no.addEventListener('click', () => renderProjectsList());
+  wrap.append(label, yes, no);
+  actions.appendChild(wrap);
+}
+
+async function performDeleteProject(project) {
   try {
     const res = await window.icurator.projectsDelete(project.id);
     projectsCache = res.state;
     // Atualiza a lista PRIMEIRO: assim a linha do projeto apagado desaparece
-    // sempre, mesmo que o applyConfig do novo projeto ativo falhe a seguir
-    // (caso contrário parecia que "não apagava").
+    // sempre, mesmo que o applyConfig do novo projeto ativo falhe a seguir.
     renderProjectsList();
     showProjectsStatus(t('projects.deleted_ok'), 'success');
     if (res.config) {
@@ -1281,6 +1362,20 @@ async function deleteProject(project) {
     }
   } catch (err) {
     console.error('Falha a apagar projeto:', err);
+    showProjectsStatus(t('common.error_prefix') + err.message, 'error');
+  }
+}
+
+async function duplicateProject(id) {
+  try {
+    const res = await window.icurator.projectsDuplicate(id);
+    projectsCache = res.state;
+    if (res.config) await applyConfig(res.config);
+    renderProjectsList();
+    showProjectsStatus(t('projects.cloned_ok'), 'success');
+    goToTab('brand');
+  } catch (err) {
+    console.error('Falha a clonar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
   }
 }
