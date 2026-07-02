@@ -14,6 +14,7 @@ const logoEl = document.getElementById('viewer-logo');
 const menuEl = document.getElementById('viewer-menu');
 const stageEl = document.getElementById('viewer-stage');
 let currentHls = null;   // active hls.js instance for the IPTV player (destroyed on stage change)
+let iptvCleanup = null;  // tears down the IPTV favourites popover + its document listener
 
 const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
@@ -122,6 +123,7 @@ function youtubeEmbedUrl(input) {
 
 function clearStage() {
   destroyHls();
+  if (iptvCleanup) { try { iptvCleanup(); } catch (_) { /* noop */ } iptvCleanup = null; }
   stageEl.className = 'viewer-stage';
   stageEl.innerHTML = '';
 }
@@ -479,8 +481,15 @@ function setActiveMenuBtn(btn) {
 }
 
 const unlockedModules = new Set();
+let activeModuleRef = null;
 
 async function handleModuleClick(mod, btn) {
+  // Só memorizamos módulos que desenham no palco. 'external'/'launch' têm
+  // efeitos (abrir link/ficheiro) e não devem ser re-disparados ao mudar de
+  // idioma; assim mantemos a referência do último módulo visível.
+  if (mod && mod.type !== 'external' && mod.type !== 'launch') {
+    activeModuleRef = { mod, btn };
+  }
   const pwd = (mod && typeof mod.password === 'string') ? mod.password.trim() : '';
   if (pwd && !unlockedModules.has(mod.id)) {
     setActiveMenuBtn(btn);
@@ -490,7 +499,28 @@ async function handleModuleClick(mod, btn) {
   await dispatchModule(mod, btn);
 }
 
-function renderIptv(data) {
+/* Favoritos de IPTV — guardados localmente (localStorage) no computador do
+ * aluno. A chave inclui o curso + módulo para não misturar favoritos entre
+ * cursos diferentes que partilham o mesmo Viewer. */
+function iptvFavKey(moduleId) {
+  const base = (document.title || 'curso') + '::' + (moduleId || 'iptv');
+  return 'lbxIptvFav::' + base;
+}
+function loadFavs(moduleId) {
+  try {
+    const raw = localStorage.getItem(iptvFavKey(moduleId));
+    if (raw) {
+      const obj = JSON.parse(raw);
+      if (obj && Array.isArray(obj.folders)) return obj;
+    }
+  } catch (_) { /* noop */ }
+  return { folders: [] };
+}
+function saveFavs(moduleId, data) {
+  try { localStorage.setItem(iptvFavKey(moduleId), JSON.stringify(data)); } catch (_) { /* noop */ }
+}
+
+function renderIptv(data, moduleId) {
   clearStage();
   stageEl.classList.add('iptv-mode');
   const channels = (data && Array.isArray(data.channels)) ? data.channels : [];
@@ -499,17 +529,52 @@ function renderIptv(data) {
     return;
   }
 
+  const RENDER_CAP = 500;
+
+  // ---- Estado dos favoritos ----
+  const favs = loadFavs(moduleId);
+  let view = 'all'; // 'all' | 'favs'
+  let editingFolderId = null;
+  let deletingFolderId = null;
+  let creatingFolder = false;
+
+  const chanKey = (ch) => (ch && (ch.url || ch.name)) || '';
+  const byKey = new Map();
+  for (const ch of channels) {
+    const k = chanKey(ch);
+    if (k && !byKey.has(k)) byKey.set(k, ch);
+  }
+  const persist = () => saveFavs(moduleId, favs);
+  const isFav = (ch) => favs.folders.some((f) => f.keys.indexOf(chanKey(ch)) !== -1);
+  const genId = () => 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  // ---- Estrutura ----
   const wrap = document.createElement('div');
   wrap.className = 'iptv-wrap';
 
   const side = document.createElement('div');
   side.className = 'iptv-side';
+
+  const tabs = document.createElement('div');
+  tabs.className = 'iptv-tabs';
+  const tabAll = document.createElement('button');
+  tabAll.type = 'button';
+  tabAll.className = 'iptv-tab active';
+  tabAll.textContent = tr('viewer.iptv_tab_all', 'Todos');
+  const tabFav = document.createElement('button');
+  tabFav.type = 'button';
+  tabFav.className = 'iptv-tab';
+  tabFav.textContent = tr('viewer.iptv_tab_favs', 'Favoritos');
+  tabs.appendChild(tabAll);
+  tabs.appendChild(tabFav);
+
   const search = document.createElement('input');
   search.type = 'search';
   search.className = 'iptv-search';
   search.placeholder = tr('viewer.iptv_search', 'Procurar canal…');
   const listEl = document.createElement('div');
   listEl.className = 'iptv-list';
+  side.appendChild(tabs);
   side.appendChild(search);
   side.appendChild(listEl);
 
@@ -529,7 +594,6 @@ function renderIptv(data) {
   wrap.appendChild(main);
   stageEl.appendChild(wrap);
 
-  const RENDER_CAP = 500;
   let activeItem = null;
 
   function looksLikeHls(url) {
@@ -570,31 +634,139 @@ function renderIptv(data) {
     }
   }
 
-  function renderList(filter) {
+  // ---- Menu flutuante para escolher/criar pasta ao clicar na estrela ----
+  let openPicker = null;
+  function closePicker() {
+    if (openPicker) {
+      openPicker.remove();
+      openPicker = null;
+      document.removeEventListener('click', onDocClick, true);
+    }
+  }
+  function onDocClick(e) {
+    if (openPicker && !openPicker.contains(e.target)) closePicker();
+  }
+  iptvCleanup = closePicker;
+  function openFolderPicker(ch, anchorBtn) {
+    closePicker();
+    const key = chanKey(ch);
+    const pop = document.createElement('div');
+    pop.className = 'iptv-picker';
+
+    const head = document.createElement('div');
+    head.className = 'iptv-picker-head';
+    head.textContent = tr('viewer.iptv_add_to_folder', 'Adicionar a favoritos');
+    pop.appendChild(head);
+
+    favs.folders.forEach((folder) => {
+      const row = document.createElement('label');
+      row.className = 'iptv-picker-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = folder.keys.indexOf(key) !== -1;
+      cb.addEventListener('change', () => {
+        if (cb.checked) { if (folder.keys.indexOf(key) === -1) folder.keys.push(key); }
+        else { folder.keys = folder.keys.filter((k) => k !== key); }
+        persist();
+        if (anchorBtn) anchorBtn.classList.toggle('on', isFav(ch));
+      });
+      const nm = document.createElement('span');
+      nm.textContent = folder.name;
+      row.appendChild(cb);
+      row.appendChild(nm);
+      pop.appendChild(row);
+    });
+
+    const newRow = document.createElement('div');
+    newRow.className = 'iptv-picker-new';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = tr('viewer.iptv_new_folder', 'Nova pasta');
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.textContent = '+';
+    const doAdd = () => {
+      const name = (input.value || '').trim();
+      if (!name) return;
+      favs.folders.push({ id: genId(), name, keys: [key], _open: true });
+      persist();
+      if (anchorBtn) anchorBtn.classList.add('on');
+      openFolderPicker(ch, anchorBtn);
+    };
+    addBtn.addEventListener('click', doAdd);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+    newRow.appendChild(input);
+    newRow.appendChild(addBtn);
+    pop.appendChild(newRow);
+
+    document.body.appendChild(pop);
+    const r = anchorBtn.getBoundingClientRect();
+    let top = r.bottom + 4;
+    if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 4);
+    let left = r.right - pop.offsetWidth;
+    if (left < 8) left = 8;
+    pop.style.top = top + 'px';
+    pop.style.left = left + 'px';
+    openPicker = pop;
+    setTimeout(() => document.addEventListener('click', onDocClick, true), 0);
+    input.focus();
+  }
+
+  // ---- Cartão de canal (usado nas duas vistas) ----
+  function makeChannelItem(ch, opts) {
+    opts = opts || {};
+    const item = document.createElement('div');
+    item.className = 'iptv-item';
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'iptv-item-btn';
+    if (ch.logo) {
+      const img = document.createElement('img');
+      img.className = 'iptv-item-logo';
+      img.src = ch.logo;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+      playBtn.appendChild(img);
+    }
+    const label = document.createElement('span');
+    label.className = 'iptv-item-name';
+    label.textContent = ch.name || ch.url || '';
+    playBtn.appendChild(label);
+    playBtn.addEventListener('click', () => play(ch, item));
+    item.appendChild(playBtn);
+
+    if (opts.showStar) {
+      const star = document.createElement('button');
+      star.type = 'button';
+      star.className = 'iptv-star' + (isFav(ch) ? ' on' : '');
+      star.textContent = '★';
+      star.title = tr('viewer.iptv_add_to_folder', 'Adicionar a favoritos');
+      star.addEventListener('click', (e) => { e.stopPropagation(); openFolderPicker(ch, star); });
+      item.appendChild(star);
+    }
+    if (opts.showRemove) {
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'iptv-remove';
+      rm.textContent = '✕';
+      rm.title = tr('viewer.iptv_remove_from_folder', 'Remover da pasta');
+      rm.addEventListener('click', (e) => { e.stopPropagation(); opts.onRemove(); });
+      item.appendChild(rm);
+    }
+    return item;
+  }
+
+  // ---- Vista "Todos" ----
+  function renderAll(filter) {
     listEl.innerHTML = '';
     const f = (filter || '').trim().toLowerCase();
     let shown = 0;
     for (const ch of channels) {
       const name = ch.name || ch.url || '';
       if (f && name.toLowerCase().indexOf(f) === -1) continue;
-      const item = document.createElement('button');
-      item.type = 'button';
-      item.className = 'iptv-item';
-      if (ch.logo) {
-        const img = document.createElement('img');
-        img.className = 'iptv-item-logo';
-        img.src = ch.logo;
-        img.alt = '';
-        img.loading = 'lazy';
-        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
-        item.appendChild(img);
-      }
-      const label = document.createElement('span');
-      label.className = 'iptv-item-name';
-      label.textContent = name;
-      item.appendChild(label);
-      item.addEventListener('click', () => play(ch, item));
-      listEl.appendChild(item);
+      listEl.appendChild(makeChannelItem(ch, { showStar: true }));
       shown++;
       if (shown >= RENDER_CAP) {
         const more = document.createElement('div');
@@ -612,13 +784,194 @@ function renderIptv(data) {
     }
   }
 
+  function makeInlineEditor(initial, onCommit, onCancel) {
+    const row = document.createElement('div');
+    row.className = 'iptv-fav-newrow';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'iptv-fav-input';
+    input.placeholder = tr('viewer.iptv_folder_name', 'Nome da pasta');
+    input.value = initial || '';
+    const ok = document.createElement('button');
+    ok.type = 'button';
+    ok.className = 'iptv-fav-ok';
+    ok.textContent = '✓';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'iptv-fav-cancel';
+    cancel.textContent = '✕';
+    const commit = () => { onCommit((input.value || '').trim()); };
+    ok.addEventListener('click', commit);
+    cancel.addEventListener('click', onCancel);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    });
+    row.appendChild(input);
+    row.appendChild(ok);
+    row.appendChild(cancel);
+    setTimeout(() => input.focus(), 0);
+    return row;
+  }
+
+  // ---- Vista "Favoritos" ----
+  function renderFavs(filter) {
+    listEl.innerHTML = '';
+    const f = (filter || '').trim().toLowerCase();
+
+    const headRow = document.createElement('div');
+    headRow.className = 'iptv-fav-head';
+    const newBtn = document.createElement('button');
+    newBtn.type = 'button';
+    newBtn.className = 'iptv-fav-new';
+    newBtn.textContent = '+ ' + tr('viewer.iptv_new_folder', 'Nova pasta');
+    newBtn.addEventListener('click', () => { creatingFolder = true; renderFavs(search.value); });
+    headRow.appendChild(newBtn);
+    listEl.appendChild(headRow);
+
+    if (creatingFolder) {
+      listEl.appendChild(makeInlineEditor('', (name) => {
+        if (name) favs.folders.push({ id: genId(), name, keys: [], _open: true });
+        persist();
+        creatingFolder = false;
+        renderFavs(search.value);
+      }, () => { creatingFolder = false; renderFavs(search.value); }));
+    }
+
+    if (favs.folders.length === 0 && !creatingFolder) {
+      const none = document.createElement('div');
+      none.className = 'iptv-more';
+      none.textContent = tr('viewer.iptv_no_favs', 'Ainda não tem pastas de favoritos. Crie uma para guardar os seus canais.');
+      listEl.appendChild(none);
+      return;
+    }
+
+    favs.folders.forEach((folder) => {
+      const fEl = document.createElement('div');
+      fEl.className = 'iptv-folder';
+
+      if (editingFolderId === folder.id) {
+        fEl.appendChild(makeInlineEditor(folder.name, (name) => {
+          if (name) { folder.name = name; persist(); }
+          editingFolderId = null;
+          renderFavs(search.value);
+        }, () => { editingFolderId = null; renderFavs(search.value); }));
+        listEl.appendChild(fEl);
+        return;
+      }
+
+      if (deletingFolderId === folder.id) {
+        const confirmRow = document.createElement('div');
+        confirmRow.className = 'iptv-fav-confirm';
+        const msg = document.createElement('span');
+        msg.textContent = tr('viewer.iptv_delete_confirm', 'Apagar esta pasta?');
+        const yes = document.createElement('button');
+        yes.type = 'button';
+        yes.className = 'iptv-fav-yes';
+        yes.textContent = '✓';
+        yes.addEventListener('click', () => {
+          favs.folders = favs.folders.filter((x) => x.id !== folder.id);
+          persist();
+          deletingFolderId = null;
+          renderFavs(search.value);
+        });
+        const no = document.createElement('button');
+        no.type = 'button';
+        no.className = 'iptv-fav-cancel';
+        no.textContent = '✕';
+        no.addEventListener('click', () => { deletingFolderId = null; renderFavs(search.value); });
+        confirmRow.appendChild(msg);
+        confirmRow.appendChild(yes);
+        confirmRow.appendChild(no);
+        fEl.appendChild(confirmRow);
+        listEl.appendChild(fEl);
+        return;
+      }
+
+      const fhead = document.createElement('div');
+      fhead.className = 'iptv-folder-head';
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'iptv-folder-toggle';
+      toggle.textContent = (folder._open ? '▾ ' : '▸ ') + folder.name + ' (' + folder.keys.length + ')';
+      toggle.addEventListener('click', () => { folder._open = !folder._open; persist(); renderFavs(search.value); });
+      fhead.appendChild(toggle);
+
+      const ren = document.createElement('button');
+      ren.type = 'button';
+      ren.className = 'iptv-folder-act';
+      ren.textContent = '✎';
+      ren.title = tr('viewer.iptv_rename_folder', 'Renomear');
+      ren.addEventListener('click', () => { editingFolderId = folder.id; renderFavs(search.value); });
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'iptv-folder-act';
+      del.textContent = '🗑';
+      del.title = tr('viewer.iptv_delete_folder', 'Apagar pasta');
+      del.addEventListener('click', () => { deletingFolderId = folder.id; renderFavs(search.value); });
+      fhead.appendChild(ren);
+      fhead.appendChild(del);
+      fEl.appendChild(fhead);
+
+      if (folder._open) {
+        const body = document.createElement('div');
+        body.className = 'iptv-folder-body';
+        const keys = folder.keys.filter((k) => {
+          const ch = byKey.get(k);
+          if (!ch) return false;
+          const name = (ch.name || ch.url || '').toLowerCase();
+          return !f || name.indexOf(f) !== -1;
+        });
+        if (keys.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'iptv-more';
+          empty.textContent = tr('viewer.iptv_folder_empty', 'Pasta vazia.');
+          body.appendChild(empty);
+        } else {
+          keys.forEach((k) => {
+            const ch = byKey.get(k);
+            body.appendChild(makeChannelItem(ch, {
+              showRemove: true,
+              onRemove: () => {
+                folder.keys = folder.keys.filter((x) => x !== k);
+                persist();
+                renderFavs(search.value);
+              },
+            }));
+          });
+        }
+        fEl.appendChild(body);
+      }
+      listEl.appendChild(fEl);
+    });
+  }
+
+  function render() {
+    closePicker();
+    if (view === 'all') renderAll(search.value);
+    else renderFavs(search.value);
+  }
+
+  tabAll.addEventListener('click', () => {
+    view = 'all';
+    tabAll.classList.add('active');
+    tabFav.classList.remove('active');
+    render();
+  });
+  tabFav.addEventListener('click', () => {
+    view = 'favs';
+    tabFav.classList.add('active');
+    tabAll.classList.remove('active');
+    render();
+  });
+
   let searchTimer = null;
   search.addEventListener('input', () => {
     if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => renderList(search.value), 120);
+    searchTimer = setTimeout(render, 120);
   });
 
-  renderList('');
+  render();
 }
 
 async function dispatchModule(mod, btn) {
@@ -634,7 +987,7 @@ async function dispatchModule(mod, btn) {
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
     case 'community-link': setActiveMenuBtn(btn); renderCommunity(mod.data); break;
-    case 'iptv':     setActiveMenuBtn(btn); renderIptv(mod.data); break;
+    case 'iptv':     setActiveMenuBtn(btn); renderIptv(mod.data, mod.id); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;
     default: break;
@@ -851,6 +1204,11 @@ async function setLanguage(lang) {
   applyI18n();
   applyDynamicTexts();
   applyDir(ALLOWED_LANGS.includes(applied) ? applied : 'pt');
+  // Re-renderiza o módulo aberto para que o texto interno (ex.: "Escolha um
+  // canal…" e os rótulos do IPTV) acompanhe o novo idioma.
+  if (activeModuleRef && activeModuleRef.mod) {
+    await handleModuleClick(activeModuleRef.mod, activeModuleRef.btn);
+  }
 }
 
 /* =========================================================

@@ -287,7 +287,18 @@
     "iptv_pick": "Pilih saluran untuk memulai.",
     "iptv_play_error": "Saluran ini tidak dapat diputar.",
     "iptv_more": "Menampilkan 500 pertama — gunakan pencarian untuk memfilter.",
-    "iptv_no_results": "Tidak ada saluran ditemukan."
+    "iptv_no_results": "Tidak ada saluran ditemukan.",
+    "iptv_tab_all": "Semua",
+    "iptv_tab_favs": "Favorit",
+    "iptv_new_folder": "Folder baru",
+    "iptv_folder_name": "Nama folder",
+    "iptv_rename_folder": "Ganti nama",
+    "iptv_delete_folder": "Hapus folder",
+    "iptv_delete_confirm": "Hapus folder ini?",
+    "iptv_add_to_folder": "Tambahkan ke favorit",
+    "iptv_remove_from_folder": "Hapus dari folder",
+    "iptv_no_favs": "Anda belum memiliki folder favorit. Buat satu untuk menyimpan saluran Anda.",
+    "iptv_folder_empty": "Folder kosong."
   },
   "corners": {
     "music_label": "Musik saya",

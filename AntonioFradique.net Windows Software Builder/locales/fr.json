@@ -287,7 +287,18 @@
     "iptv_pick": "Choisissez une chaîne pour commencer.",
     "iptv_play_error": "Impossible de lire cette chaîne.",
     "iptv_more": "Affichage des 500 premières — utilisez la recherche pour filtrer.",
-    "iptv_no_results": "Aucune chaîne trouvée."
+    "iptv_no_results": "Aucune chaîne trouvée.",
+    "iptv_tab_all": "Tous",
+    "iptv_tab_favs": "Favoris",
+    "iptv_new_folder": "Nouveau dossier",
+    "iptv_folder_name": "Nom du dossier",
+    "iptv_rename_folder": "Renommer",
+    "iptv_delete_folder": "Supprimer le dossier",
+    "iptv_delete_confirm": "Supprimer ce dossier ?",
+    "iptv_add_to_folder": "Ajouter aux favoris",
+    "iptv_remove_from_folder": "Retirer du dossier",
+    "iptv_no_favs": "Vous n’avez pas encore de dossiers de favoris. Créez-en un pour enregistrer vos chaînes.",
+    "iptv_folder_empty": "Dossier vide."
   },
   "corners": {
     "music_label": "Ma musique",

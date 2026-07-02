@@ -287,7 +287,18 @@
     "iptv_pick": "শুরু করতে একটি চ্যানেল বেছে নিন।",
     "iptv_play_error": "এই চ্যানেলটি চালানো যায়নি।",
     "iptv_more": "প্রথম ৫০০টি দেখানো হচ্ছে — ফিল্টার করতে অনুসন্ধান ব্যবহার করুন।",
-    "iptv_no_results": "কোনো চ্যানেল পাওয়া যায়নি।"
+    "iptv_no_results": "কোনো চ্যানেল পাওয়া যায়নি।",
+    "iptv_tab_all": "সব",
+    "iptv_tab_favs": "প্রিয়",
+    "iptv_new_folder": "নতুন ফোল্ডার",
+    "iptv_folder_name": "ফোল্ডারের নাম",
+    "iptv_rename_folder": "নাম পরিবর্তন",
+    "iptv_delete_folder": "ফোল্ডার মুছুন",
+    "iptv_delete_confirm": "এই ফোল্ডারটি মুছবেন?",
+    "iptv_add_to_folder": "প্রিয়তে যোগ করুন",
+    "iptv_remove_from_folder": "ফোল্ডার থেকে সরান",
+    "iptv_no_favs": "আপনার এখনও কোনো প্রিয় ফোল্ডার নেই। আপনার চ্যানেল সংরক্ষণ করতে একটি তৈরি করুন।",
+    "iptv_folder_empty": "খালি ফোল্ডার।"
   },
   "corners": {
     "music_label": "আমার সঙ্গীত",

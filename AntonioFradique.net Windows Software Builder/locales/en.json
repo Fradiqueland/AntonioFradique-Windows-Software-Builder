@@ -287,7 +287,18 @@
     "iptv_pick": "Pick a channel to start.",
     "iptv_play_error": "This channel could not be played.",
     "iptv_more": "Showing the first 500 — use search to filter.",
-    "iptv_no_results": "No channels found."
+    "iptv_no_results": "No channels found.",
+    "iptv_tab_all": "All",
+    "iptv_tab_favs": "Favorites",
+    "iptv_new_folder": "New folder",
+    "iptv_folder_name": "Folder name",
+    "iptv_rename_folder": "Rename",
+    "iptv_delete_folder": "Delete folder",
+    "iptv_delete_confirm": "Delete this folder?",
+    "iptv_add_to_folder": "Add to favorites",
+    "iptv_remove_from_folder": "Remove from folder",
+    "iptv_no_favs": "You don’t have any favorite folders yet. Create one to save your channels.",
+    "iptv_folder_empty": "Empty folder."
   },
   "corners": {
     "music_label": "My music",

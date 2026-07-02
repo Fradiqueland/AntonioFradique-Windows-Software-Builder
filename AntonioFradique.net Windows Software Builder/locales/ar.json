@@ -287,7 +287,18 @@
     "iptv_pick": "اختر قناة للبدء.",
     "iptv_play_error": "تعذّر تشغيل هذه القناة.",
     "iptv_more": "عرض أول 500 — استخدم البحث للتصفية.",
-    "iptv_no_results": "لم يتم العثور على قنوات."
+    "iptv_no_results": "لم يتم العثور على قنوات.",
+    "iptv_tab_all": "الكل",
+    "iptv_tab_favs": "المفضلة",
+    "iptv_new_folder": "مجلد جديد",
+    "iptv_folder_name": "اسم المجلد",
+    "iptv_rename_folder": "إعادة تسمية",
+    "iptv_delete_folder": "حذف المجلد",
+    "iptv_delete_confirm": "حذف هذا المجلد؟",
+    "iptv_add_to_folder": "إضافة إلى المفضلة",
+    "iptv_remove_from_folder": "إزالة من المجلد",
+    "iptv_no_favs": "ليس لديك أي مجلدات مفضلة بعد. أنشئ واحدًا لحفظ قنواتك.",
+    "iptv_folder_empty": "مجلد فارغ."
   },
   "corners": {
     "music_label": "موسيقاي",

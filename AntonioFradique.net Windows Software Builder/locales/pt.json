@@ -287,7 +287,18 @@
     "iptv_pick": "Escolha um canal para começar.",
     "iptv_play_error": "Não foi possível reproduzir este canal.",
     "iptv_more": "A mostrar os primeiros 500 — use a pesquisa para filtrar.",
-    "iptv_no_results": "Nenhum canal encontrado."
+    "iptv_no_results": "Nenhum canal encontrado.",
+    "iptv_tab_all": "Todos",
+    "iptv_tab_favs": "Favoritos",
+    "iptv_new_folder": "Nova pasta",
+    "iptv_folder_name": "Nome da pasta",
+    "iptv_rename_folder": "Renomear",
+    "iptv_delete_folder": "Apagar pasta",
+    "iptv_delete_confirm": "Apagar esta pasta?",
+    "iptv_add_to_folder": "Adicionar a favoritos",
+    "iptv_remove_from_folder": "Remover da pasta",
+    "iptv_no_favs": "Ainda não tem pastas de favoritos. Crie uma para guardar os seus canais.",
+    "iptv_folder_empty": "Pasta vazia."
   },
   "corners": {
     "music_label": "Minha música",

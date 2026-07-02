@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "AntonioFradique.net Windows Software Builder (gera .exe único por curso via SFX 7-Zip)",
   "main": "main.js",
   "author": "AntonioFradique.net",
