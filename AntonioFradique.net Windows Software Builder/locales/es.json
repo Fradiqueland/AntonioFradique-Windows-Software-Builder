@@ -14,7 +14,9 @@
     "export": "Exportar",
     "icon": "Icono",
     "projetos": "Proyectos",
-    "social": "Redes Sociales"
+    "social": "Redes Sociales",
+    "aparencia": "Apariencia",
+    "publicar": "Publicar"
   },
   "header": {
     "brand": {
@@ -48,7 +50,16 @@
     "social": {
       "title": "Redes Sociales",
       "subtitle": "Añada los enlaces de sus redes sociales al menú del producto final."
-    }
+    },
+    "aparencia": {
+      "title": "Apariencia",
+      "subtitle": "Marca, colores, icono y extras opcionales. Todo se guarda automáticamente."
+    },
+    "publicar": {
+      "title": "Publicar",
+      "subtitle": "Compruebe lo que falta y genere el .exe para entregar a los alumnos."
+    },
+    "export_btn": "Exportar .exe"
   },
   "sidebar": {
     "preview_btn": "Previsualizar Producto",
@@ -120,21 +131,21 @@
     "editor_save": "Guardar Módulo",
     "module_title_label": "Título del Botón",
     "module_title_placeholder": "Ej: Lección 1 — Introducción",
-    "module_type_label": "Tipo de Acción",
+    "module_type_label": "Tipo de módulo",
     "type": {
-      "youtube": "Vídeo de YouTube (Iframe)",
-      "html": "HTML / Texto Enriquecido",
-      "pdf": "Archivo PDF Local",
-      "webview": "Navegador Interno (Webview)",
-      "external": "Navegador Externo (Chrome/Edge)",
-      "launch": "Lanzar Archivo (.exe / .zip / etc)",
-      "local_video": "Vídeo Local (MP4)",
-      "local_audio": "Audio Local (MP3/WAV)",
-      "download": "Archivo Descargable (ZIP, DOCX…)",
-      "gallery": "Galería de Imágenes",
-      "article": "Lector de Artículos / Notas",
-      "embed": "Formulario / Quiz (Embed)",
-      "iptv": "Reproductor IPTV"
+      "youtube": "Vídeo de YouTube",
+      "html": "Texto con formato (HTML)",
+      "pdf": "PDF",
+      "webview": "Sitio dentro de la app",
+      "external": "Enlace en el navegador",
+      "launch": "Abrir programa o archivo",
+      "local_video": "Vídeo (archivo MP4)",
+      "local_audio": "Audio (MP3/WAV)",
+      "download": "Archivo para descargar",
+      "gallery": "Galería de imágenes",
+      "article": "Artículo / notas",
+      "embed": "Formulario o quiz",
+      "iptv": "Canales IPTV"
     },
     "youtube_url_label": "URL o ID del vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... o solo el ID",
@@ -218,7 +229,31 @@
       "m3u8_missing": "Introduce el enlace .m3u8.",
       "pick_file_first": "Elige primero un archivo .m3u.",
       "help": "Los canales se cargan aquí y se guardan en el curso. El alumno ve la lista y un reproductor de vídeo. Funciona mejor con canales .m3u8 (HLS)."
-    }
+    },
+    "type_desc": {
+      "youtube": "Pegue el enlace del vídeo.",
+      "html": "Pegue su propio HTML.",
+      "pdf": "Muestra un PDF de su PC.",
+      "webview": "Una página web abierta dentro del curso.",
+      "external": "Abre un sitio en el navegador del alumno.",
+      "launch": "Lanza un .exe, .zip, etc. incluido.",
+      "local_video": "Un vídeo guardado en su PC.",
+      "local_audio": "Una pista de audio de su PC.",
+      "download": "El alumno guarda el archivo en su PC.",
+      "gallery": "Varias imágenes en cuadrícula.",
+      "article": "Texto simple con títulos y listas.",
+      "embed": "Google Forms, Typeform, quizzes…",
+      "iptv": "Lista de canales de TV online."
+    },
+    "type_group": {
+      "video": "Vídeo",
+      "read": "Leer",
+      "files": "Archivos",
+      "web": "Web",
+      "media": "Medios"
+    },
+    "type_change": "Cambiar",
+    "type_pick_hint": "Elija qué abrirá este botón:"
   },
   "export": {
     "icon_label": "Icono del Software",
@@ -251,7 +286,13 @@
       "cancelled": "Cancelado.",
       "failed_prefix": "Error: "
     },
-    "icon_must_be_image": "Por favor, elija un archivo .ico, .png o .jpg"
+    "icon_must_be_image": "Por favor, elija un archivo .ico, .png o .jpg",
+    "check": {
+      "title": "Antes de exportar:",
+      "ready": "✓ Todo listo para exportar.",
+      "no_title": "Defina el título del software (paso 2 — Apariencia).",
+      "no_modules": "Añada al menos un módulo (paso 1 — Contenido)."
+    }
   },
   "viewer": {
     "menu_empty": "Ningún módulo configurado.",
@@ -259,6 +300,9 @@
     "pdf_missing": "Archivo PDF ausente.",
     "file_missing": "Archivo ausente.",
     "video_missing": "URL de vídeo ausente.",
+    "youtube_hint": "¿El vídeo no carga?",
+    "youtube_open": "Abrir en YouTube",
+    "youtube_fail": "No se pudo cargar el reproductor de YouTube.",
     "external_error_prefix": "Error al abrir el enlace: ",
     "launch_error_prefix": "Error al lanzar el archivo: ",
     "config_error_prefix": "Error al cargar la configuración: ",
@@ -294,7 +338,13 @@
     "iptv_add_to_folder": "Añadir a favoritos",
     "iptv_remove_from_folder": "Quitar de la carpeta",
     "iptv_no_favs": "Aún no tienes carpetas de favoritos. Crea una para guardar tus canales.",
-    "iptv_folder_empty": "Carpeta vacía."
+    "iptv_folder_empty": "Carpeta vacía.",
+    "iptv_favs_save_error": "No se pudieron guardar los favoritos.",
+    "optin_sent": "Suscripción enviada. ¡Gracias!",
+    "start_btn": "Empezar",
+    "sidebar_collapse": "Contraer menú",
+    "sidebar_expand": "Expandir menú",
+    "retry": "Reintentar"
   },
   "corners": {
     "music_label": "Mi música",
@@ -330,5 +380,21 @@
     "help": "Rellene solo las redes que desee. Los iconos aparecen en el menú lateral del producto final y se abren en el navegador del alumno.",
     "save_btn": "Guardar Redes Sociales",
     "site": "Sitio web"
+  },
+  "section": {
+    "brand": "Marca y colores",
+    "brand_hint": "Título, logo y colores del producto final.",
+    "icon": "Icono del .exe",
+    "icon_hint": "El icono que el alumno ve en el archivo.",
+    "banners": "Banners",
+    "banners_hint": "Opcional — publicidad o enlaces de afiliado arriba/abajo.",
+    "social": "Redes sociales",
+    "social_hint": "Opcional — iconos con enlaces en el menú lateral.",
+    "leads": "Captura de leads",
+    "leads_hint": "Opcional — pide el email antes de mostrar el contenido.",
+    "export": "Exportar",
+    "export_hint": "Genera el .exe único para entregar a los alumnos.",
+    "show": "Mostrar",
+    "hide": "Ocultar"
   }
 }

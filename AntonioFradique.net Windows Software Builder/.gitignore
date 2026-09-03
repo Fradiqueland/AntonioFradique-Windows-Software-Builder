@@ -17,3 +17,9 @@ projects.json
 # Logs Electron + caches.
 .electron-cache/
 *.log
+
+# ffmpeg.exe (~98 MB, GPL): fora do git — GitHub recusa >100 MB e cada
+# atualização ficaria para sempre no histórico. Vive só localmente/no zip;
+# `npm run build:all` avisa se faltar. README.txt e LICENSE ficam versionados.
+vendor/ffmpeg/ffmpeg.exe
+vendor/ffmpeg/ffmpeg

@@ -14,7 +14,9 @@
     "export": "Ekspor",
     "icon": "Ikon",
     "projetos": "Proyek",
-    "social": "Media Sosial"
+    "social": "Media Sosial",
+    "aparencia": "Tampilan",
+    "publicar": "Terbitkan"
   },
   "header": {
     "brand": {
@@ -48,7 +50,16 @@
     "social": {
       "title": "Media Sosial",
       "subtitle": "Tambahkan tautan media sosial Anda ke menu produk akhir."
-    }
+    },
+    "aparencia": {
+      "title": "Tampilan",
+      "subtitle": "Merek, warna, ikon, dan tambahan opsional. Semuanya tersimpan otomatis."
+    },
+    "publicar": {
+      "title": "Terbitkan",
+      "subtitle": "Periksa yang masih kurang dan buat .exe untuk diserahkan ke siswa."
+    },
+    "export_btn": "Ekspor .exe"
   },
   "sidebar": {
     "preview_btn": "Pratinjau Produk",
@@ -120,21 +131,21 @@
     "editor_save": "Simpan Modul",
     "module_title_label": "Judul Tombol",
     "module_title_placeholder": "Mis: Pelajaran 1 — Pengantar",
-    "module_type_label": "Jenis Tindakan",
+    "module_type_label": "Jenis modul",
     "type": {
-      "youtube": "Video YouTube (Iframe)",
-      "html": "HTML / Teks Kaya",
-      "pdf": "File PDF Lokal",
-      "webview": "Browser Internal (Webview)",
-      "external": "Browser Eksternal (Chrome/Edge)",
-      "launch": "Luncurkan File (.exe / .zip / dll)",
-      "local_video": "Video Lokal (MP4)",
-      "local_audio": "Audio Lokal (MP3/WAV)",
-      "download": "Berkas yang Dapat Diunduh (ZIP, DOCX…)",
-      "gallery": "Galeri Gambar",
-      "article": "Pembaca Artikel / Catatan",
-      "embed": "Formulir / Kuis (Embed)",
-      "iptv": "Pemutar IPTV"
+      "youtube": "Video YouTube",
+      "html": "Teks berformat (HTML)",
+      "pdf": "PDF",
+      "webview": "Situs di dalam aplikasi",
+      "external": "Tautan di browser",
+      "launch": "Buka program atau berkas",
+      "local_video": "Video (berkas MP4)",
+      "local_audio": "Audio (MP3/WAV)",
+      "download": "Berkas untuk diunduh",
+      "gallery": "Galeri gambar",
+      "article": "Artikel / catatan",
+      "embed": "Formulir atau kuis",
+      "iptv": "Saluran IPTV"
     },
     "youtube_url_label": "URL atau ID video",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... atau hanya ID",
@@ -218,7 +229,31 @@
       "m3u8_missing": "Masukkan tautan .m3u8.",
       "pick_file_first": "Pilih berkas .m3u terlebih dahulu.",
       "help": "Saluran dimuat di sini dan disimpan ke dalam kursus. Siswa melihat daftar dan pemutar video. Bekerja paling baik dengan saluran .m3u8 (HLS)."
-    }
+    },
+    "type_desc": {
+      "youtube": "Tempel tautan videonya.",
+      "html": "Tempel HTML Anda sendiri.",
+      "pdf": "Menampilkan PDF dari PC Anda.",
+      "webview": "Halaman web yang dibuka di dalam kursus.",
+      "external": "Membuka situs di browser siswa.",
+      "launch": "Menjalankan .exe, .zip, dll. yang disertakan.",
+      "local_video": "Video yang tersimpan di PC Anda.",
+      "local_audio": "Trek audio dari PC Anda.",
+      "download": "Siswa menyimpan berkas ke PC-nya.",
+      "gallery": "Beberapa gambar dalam grid.",
+      "article": "Teks sederhana dengan judul dan daftar.",
+      "embed": "Google Forms, Typeform, kuis…",
+      "iptv": "Daftar saluran TV online."
+    },
+    "type_group": {
+      "video": "Video",
+      "read": "Baca",
+      "files": "Berkas",
+      "web": "Web",
+      "media": "Media"
+    },
+    "type_change": "Ubah",
+    "type_pick_hint": "Pilih apa yang akan dibuka tombol ini:"
   },
   "export": {
     "icon_label": "Ikon Perangkat Lunak",
@@ -251,7 +286,13 @@
       "cancelled": "Operasi dibatalkan.",
       "failed_prefix": "Kesalahan: "
     },
-    "icon_must_be_image": "Silakan pilih file .ico, .png, atau .jpg"
+    "icon_must_be_image": "Silakan pilih file .ico, .png, atau .jpg",
+    "check": {
+      "title": "Sebelum mengekspor:",
+      "ready": "✓ Semua siap diekspor.",
+      "no_title": "Tentukan judul perangkat lunak (langkah 2 — Tampilan).",
+      "no_modules": "Tambahkan minimal satu modul (langkah 1 — Konten)."
+    }
   },
   "viewer": {
     "menu_empty": "Tidak ada modul dikonfigurasi.",
@@ -259,6 +300,9 @@
     "pdf_missing": "File PDF tidak ada.",
     "file_missing": "File tidak ada.",
     "video_missing": "URL video tidak ada.",
+    "youtube_hint": "Video tidak dimuat?",
+    "youtube_open": "Buka di YouTube",
+    "youtube_fail": "Pemutar YouTube tidak dapat dimuat.",
     "external_error_prefix": "Kesalahan membuka tautan: ",
     "launch_error_prefix": "Kesalahan meluncurkan file: ",
     "config_error_prefix": "Kesalahan memuat konfigurasi: ",
@@ -294,7 +338,13 @@
     "iptv_add_to_folder": "Tambahkan ke favorit",
     "iptv_remove_from_folder": "Hapus dari folder",
     "iptv_no_favs": "Anda belum memiliki folder favorit. Buat satu untuk menyimpan saluran Anda.",
-    "iptv_folder_empty": "Folder kosong."
+    "iptv_folder_empty": "Folder kosong.",
+    "iptv_favs_save_error": "Favorit tidak dapat disimpan.",
+    "optin_sent": "Pendaftaran terkirim. Terima kasih!",
+    "start_btn": "Mulai",
+    "sidebar_collapse": "Ciutkan menu",
+    "sidebar_expand": "Perluas menu",
+    "retry": "Coba lagi"
   },
   "corners": {
     "music_label": "Musik saya",
@@ -330,5 +380,21 @@
     "help": "Isi hanya jaringan yang Anda inginkan. Ikon muncul di menu samping produk akhir dan terbuka di browser siswa.",
     "save_btn": "Simpan Media Sosial",
     "site": "Situs web"
+  },
+  "section": {
+    "brand": "Merek dan warna",
+    "brand_hint": "Judul, logo, dan warna produk akhir.",
+    "icon": "Ikon .exe",
+    "icon_hint": "Ikon yang dilihat siswa pada berkas.",
+    "banners": "Banner",
+    "banners_hint": "Opsional — iklan atau tautan afiliasi di atas/bawah.",
+    "social": "Media sosial",
+    "social_hint": "Opsional — ikon dengan tautan di menu samping.",
+    "leads": "Pengumpulan lead",
+    "leads_hint": "Opsional — meminta email sebelum menampilkan konten.",
+    "export": "Ekspor",
+    "export_hint": "Membuat satu berkas .exe untuk diserahkan ke siswa.",
+    "show": "Tampilkan",
+    "hide": "Sembunyikan"
   }
 }

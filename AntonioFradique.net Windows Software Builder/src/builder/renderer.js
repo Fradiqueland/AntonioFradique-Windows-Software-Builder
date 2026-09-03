@@ -48,6 +48,14 @@ async function setLanguage(lang, { persist = true } = {}) {
     I18N.dict = dict;
     I18N.ready = true;
     applyI18n();
+    // Os cartões de tipo de módulo são gerados por JS: refazê-los no novo idioma.
+    if (typeof renderTypeCards === 'function' && typeof moduleType !== 'undefined') {
+      renderTypeCards();
+      syncTypeUI(moduleType.value);
+    }
+    // A lista de módulos mostra o tipo traduzido: refazê-la no novo idioma
+    // (no arranque era desenhada antes do dicionário chegar).
+    if (typeof renderContentList === 'function' && typeof contentModules !== 'undefined') renderContentList();
     const sel = document.getElementById('lang-select');
     if (sel && sel.value !== applied) sel.value = applied;
     if (persist) {
@@ -101,19 +109,76 @@ const panels = document.querySelectorAll('.panel');
 const pageTitle = document.getElementById('page-title');
 const pageSubtitle = document.getElementById('page-subtitle');
 
+/* Navegação em 3 passos: cada passo (Conteúdo / Aparência / Publicar) mostra
+ * de uma vez todos os painéis com esse data-step, empilhados; os opcionais
+ * (banners, redes sociais, leads) ficam recolhidos até terem dados. */
 tabs.forEach((tab) => {
   tab.addEventListener('click', () => {
     const target = tab.dataset.tab;
     tabs.forEach((t2) => t2.classList.toggle('active', t2 === tab));
-    panels.forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== target));
+    panels.forEach((p) => p.classList.toggle('hidden', !(p.dataset.step === target || p.dataset.panel === target)));
     refreshTabHeader(target);
+    const main = document.querySelector('main.content');
+    if (main) main.scrollTop = 0;
   });
+});
+
+function setSectionCollapsed(panelName, collapsed) {
+  const panel = document.querySelector('.panel[data-panel="' + panelName + '"]');
+  if (!panel || !panel.classList.contains('collapsible')) return;
+  panel.classList.toggle('collapsed', collapsed);
+  const btn = panel.querySelector('.section-toggle');
+  if (btn) {
+    btn.setAttribute('data-i18n', collapsed ? 'section.show' : 'section.hide');
+    btn.textContent = t(collapsed ? 'section.show' : 'section.hide');
+  }
+}
+document.querySelectorAll('.section-toggle').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const panel = btn.closest('.panel');
+    if (panel) setSectionCollapsed(panel.dataset.panel, !panel.classList.contains('collapsed'));
+  });
+});
+document.querySelectorAll('.panel.collapsible .section-head h2').forEach((h) => {
+  h.addEventListener('click', () => {
+    const panel = h.closest('.panel');
+    if (panel) setSectionCollapsed(panel.dataset.panel, !panel.classList.contains('collapsed'));
+  });
+});
+
+/* Gravação automática: os formulários de aparência/publicação gravam ao sair
+ * de cada campo (evento change), sem botão "Guardar". O submit existente é
+ * reutilizado tal e qual, por isso as validações e mensagens mantêm-se. */
+const autosaveTimers = new WeakMap();
+function queueAutosave(form) {
+  if (!form) return;
+  clearTimeout(autosaveTimers.get(form));
+  autosaveTimers.set(form, setTimeout(() => {
+    if (typeof form.reportValidity === 'function' && !form.checkValidity()) { form.reportValidity(); return; }
+    form.requestSubmit();
+  }, 250));
+}
+document.querySelectorAll('form.autosave').forEach((form) => {
+  form.addEventListener('change', () => queueAutosave(form));
 });
 
 /* -------- Language dropdown + corner links -------- */
 document.addEventListener('DOMContentLoaded', () => {
+  const verEl = document.querySelector('.sidebar-footer .version');
+  if (verEl && window.icurator && window.icurator.version) verEl.textContent = 'v' + window.icurator.version;
+
   const sel = document.getElementById('lang-select');
   if (sel) sel.addEventListener('change', (e) => setLanguage(e.target.value));
+
+  // Atalhos sempre visíveis no cabeçalho: pré-visualizar e exportar.
+  const hp = document.getElementById('header-preview');
+  const he = document.getElementById('header-export');
+  if (hp) hp.addEventListener('click', () => { const b = document.getElementById('preview-btn'); if (b) b.click(); });
+  if (he) he.addEventListener('click', () => {
+    goToTab('publicar');
+    const btn = document.getElementById('export-build');
+    if (btn) setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  });
 
   document.querySelectorAll('.marquee-track').forEach((track) => {
     track.innerHTML += track.innerHTML;
@@ -223,6 +288,7 @@ if (logoPickLabel) logoPickLabel.addEventListener('click', async (e) => {
   brandState.pendingRemoveLogo = false;
   setFileNameForInput(logoInput, picked.name);
   setImagePreview(logoPreview, logoEmpty, picked.path);
+  queueAutosave(brandForm);
 });
 
 logoRemoveBtn.addEventListener('click', () => {
@@ -231,6 +297,7 @@ logoRemoveBtn.addEventListener('click', () => {
   logoInput.value = '';
   setFileNameForInput(logoInput, null);
   setImagePreview(logoPreview, logoEmpty, null);
+  queueAutosave(brandForm);
 });
 
 brandForm.addEventListener('submit', async (e) => {
@@ -374,6 +441,8 @@ function makeBannerSlot(slotName) {
     state.pendingRemoveImage = false;
     setFileNameForInput(imageInput, picked.name);
     setImagePreview(preview, empty, picked.path);
+    if (!enabled.checked) enabled.checked = true; // escolher uma imagem é querer o banner
+    queueAutosave(bannerForm);
   });
 
   removeBtn.addEventListener('click', () => {
@@ -382,6 +451,7 @@ function makeBannerSlot(slotName) {
     imageInput.value = '';
     setFileNameForInput(imageInput, null);
     setImagePreview(preview, empty, null);
+    queueAutosave(bannerForm);
   });
 
   return {
@@ -462,10 +532,36 @@ bannerForm.addEventListener('submit', async (e) => {
 const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv'];
+// Chaves de tradução por tipo (o id do tipo usa '-', a chave usa '_').
+const TYPE_I18N = {
+  youtube: 'youtube', html: 'html', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
+  'local-video': 'local_video', 'local-audio': 'local_audio', 'download-vault': 'download',
+  'image-gallery': 'gallery', 'article-reader': 'article', 'smart-embed': 'embed', iptv: 'iptv'
+};
+const TYPE_ICON = {
+  youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩',
+  'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
+};
+// Cartões agrupados por intenção (o que o aluno vai fazer), não por tecnologia.
+const TYPE_GROUPS = [
+  { key: 'video', types: ['youtube', 'local-video'] },
+  { key: 'read',  types: ['pdf', 'article-reader', 'html'] },
+  { key: 'files', types: ['download-vault', 'launch'] },
+  { key: 'web',   types: ['webview', 'external', 'smart-embed'] },
+  { key: 'media', types: ['image-gallery', 'local-audio', 'iptv'] }
+];
 function typeLabel(type) {
-  const key = 'content.type.' + type;
+  // BUG CORRIGIDO: 5 tipos (local-video, download-vault, …) apareciam na lista
+  // com o id em bruto porque a chave de tradução usa '_' e o id usa '-'.
+  const key = 'content.type.' + (TYPE_I18N[type] || type);
   const v = t(key);
   return v === key ? type : v;
+}
+function typeDesc(type) {
+  const key = 'content.type_desc.' + (TYPE_I18N[type] || type);
+  const v = t(key);
+  return v === key ? '' : v;
 }
 
 const contentList = document.getElementById('content-list');
@@ -547,7 +643,70 @@ let iptvM3uPath = null;      // absolute path of a picked .m3u file
 
 function showDynamicGroup(type) {
   dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
+  syncTypeUI(type);
 }
+
+/* Cartões de tipo: escolher um cartão preenche o <select> escondido e mostra
+ * só os campos desse tipo; o tipo escolhido fica num "chip" com "Mudar". */
+const typeCardsEl = document.getElementById('type-cards');
+const typeChosenEl = document.getElementById('type-chosen');
+const typeChipEl = document.getElementById('type-chip');
+const typePickHint = document.getElementById('type-pick-hint');
+const contentEditorSave = document.getElementById('content-editor-save');
+
+function renderTypeCards() {
+  if (!typeCardsEl) return;
+  typeCardsEl.innerHTML = '';
+  TYPE_GROUPS.forEach((g) => {
+    const grp = document.createElement('div');
+    grp.className = 'type-cards-group';
+    const h = document.createElement('div');
+    h.className = 'type-cards-group-title';
+    h.textContent = t('content.type_group.' + g.key);
+    grp.appendChild(h);
+    const row = document.createElement('div');
+    row.className = 'type-cards-row';
+    g.types.forEach((type) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'type-card';
+      card.dataset.type = type;
+      card.innerHTML = '<span class="type-card-icon"></span><span class="type-card-name"></span><span class="type-card-desc"></span>';
+      card.querySelector('.type-card-icon').textContent = TYPE_ICON[type] || '•';
+      card.querySelector('.type-card-name').textContent = typeLabel(type);
+      card.querySelector('.type-card-desc').textContent = typeDesc(type);
+      card.addEventListener('click', () => {
+        moduleType.value = type;
+        showDynamicGroup(type);
+        const first = document.querySelector('[data-dyn="' + type + '"] input:not([type=hidden]), [data-dyn="' + type + '"] textarea, [data-dyn="' + type + '"] select');
+        if (first) { try { first.focus(); } catch (_) { /* noop */ } }
+      });
+      row.appendChild(card);
+    });
+    grp.appendChild(row);
+    typeCardsEl.appendChild(grp);
+  });
+}
+
+function syncTypeUI(type) {
+  if (!typeCardsEl) return;
+  const chosen = !!type && TYPE_KEYS.includes(type);
+  typeCardsEl.querySelectorAll('.type-card').forEach((c) => c.classList.toggle('active', c.dataset.type === type));
+  typeCardsEl.classList.toggle('hidden', chosen);
+  if (typePickHint) typePickHint.classList.toggle('hidden', chosen);
+  if (typeChosenEl) typeChosenEl.classList.toggle('hidden', !chosen);
+  if (typeChipEl) typeChipEl.textContent = chosen ? ((TYPE_ICON[type] || '') + ' ' + typeLabel(type)) : '';
+  if (contentEditorSave) contentEditorSave.disabled = !chosen;
+}
+
+const typeChangeBtn = document.getElementById('type-change');
+if (typeChangeBtn) typeChangeBtn.addEventListener('click', () => {
+  // Volta a mostrar os cartões mantendo o tipo atual assinalado.
+  typeCardsEl.classList.remove('hidden');
+  if (typePickHint) typePickHint.classList.remove('hidden');
+  typeChosenEl.classList.add('hidden');
+});
+renderTypeCards();
 
 function setFileCurrentText(type, text, hasFile) {
   const el = dyn[type] && dyn[type].current;
@@ -562,7 +721,7 @@ function clearEditor() {
   pendingFileName = null;
   galleryItems = [];
   moduleTitle.value = '';
-  moduleType.value = 'youtube';
+  moduleType.value = '';
   if (modulePassword) modulePassword.value = '';
   dyn.youtube.url.value = '';
   dyn.html.code.value = '';
@@ -597,7 +756,7 @@ function clearEditor() {
     if (dyn[k] && dyn[k].file) setFileNameForInput(dyn[k].file, null);
   });
   renderGalleryList();
-  showDynamicGroup('youtube');
+  showDynamicGroup('');
 }
 
 function hideEditor() {
@@ -706,7 +865,7 @@ function renderContentList() {
       <span class="content-item-type"></span>
     `;
     info.querySelector('.content-item-title').textContent = mod.title;
-    info.querySelector('.content-item-type').textContent = typeLabel(mod.type);
+    info.querySelector('.content-item-type').textContent = (TYPE_ICON[mod.type] ? TYPE_ICON[mod.type] + ' ' : '') + typeLabel(mod.type);
     info.addEventListener('click', () => openEditorForEdit(mod.id));
 
     const actions = document.createElement('div');
@@ -1103,6 +1262,11 @@ async function applyConfig(config) {
       colorHexLabels[k].textContent = colorInputs[k].value.toUpperCase();
     });
     brandState.currentLogoRelative = brand.logo || null;
+    // BUG CORRIGIDO: ao mudar de projeto, um logo escolhido (mas não gravado)
+    // no projeto anterior ficava pendente e era gravado no projeto novo.
+    brandState.pendingLogoSourcePath = null;
+    brandState.pendingRemoveLogo = false;
+    setFileNameForInput(logoInput, null);
     if (brandState.currentLogoRelative) {
       const abs = await window.icurator.resolveAssetPath(brandState.currentLogoRelative);
       setImagePreview(logoPreview, logoEmpty, abs);
@@ -1124,8 +1288,18 @@ async function applyConfig(config) {
     // --- Redes sociais
     fillSocialInputs(config.marketing && config.marketing.social);
 
+    // Secções opcionais: abertas só quando já têm alguma coisa configurada.
+    const soc = (config.marketing && config.marketing.social) || {};
+    setSectionCollapsed('social', !Object.keys(soc).some((k) => soc[k]));
+    const bn = (config.marketing && config.marketing.banners) || {};
+    setSectionCollapsed('banners', !((bn.top && (bn.top.enabled || bn.top.image)) || (bn.bottom && (bn.bottom.enabled || bn.bottom.image))));
+    setSectionCollapsed('leads', !(leads.enabled || (leads.formHtml && leads.formHtml.trim())));
+
     // --- Content / menus
     contentModules = Array.isArray(config.content) ? config.content : [];
+    // Fecha o editor de módulo: um módulo a meio de edição no projeto anterior
+    // (editingId/ficheiro pendente) não pode "vazar" para o projeto aberto agora.
+    hideEditor();
     renderContentList();
 
     // --- Export (Passo 5) + Ícone (Passo 6)
@@ -1245,13 +1419,13 @@ async function refreshProjects() {
 }
 
 async function openProject(id) {
-  if (id === projectsCache.activeId) { goToTab('brand'); return; }
+  if (id === projectsCache.activeId) { goToTab('content'); return; }
   try {
     const res = await window.icurator.projectsOpen(id);
     projectsCache = res.state;
     if (res.config) await applyConfig(res.config);
     renderProjectsList();
-    goToTab('brand');
+    goToTab('content');
   } catch (err) {
     console.error('Falha a abrir projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
@@ -1355,7 +1529,7 @@ async function duplicateProject(id) {
     if (res.config) await applyConfig(res.config);
     renderProjectsList();
     showProjectsStatus(t('projects.cloned_ok'), 'success');
-    goToTab('brand');
+    goToTab('content');
   } catch (err) {
     console.error('Falha a clonar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
@@ -1374,7 +1548,7 @@ if (projectNewForm) {
       projectNewName.value = '';
       renderProjectsList();
       showProjectsStatus(t('projects.created_ok'), 'success');
-      goToTab('brand');
+      goToTab('content');
     } catch (err) {
       console.error('Falha a criar projeto:', err);
       showProjectsStatus(t('common.error_prefix') + err.message, 'error');
@@ -1413,7 +1587,16 @@ function updateExportSummary(config) {
   const hasIcon = !!(config.export && config.export.iconPath);
 
   const S = (k) => t('export.summary.' + k);
-  exportSummaryEl.innerHTML = `
+  const untitled = !title || title === '—' || title === 'O Meu Software';
+  const problems = [];
+  if (untitled) problems.push(t('export.check.no_title'));
+  if (moduleCount === 0) problems.push(t('export.check.no_modules'));
+  const checkHtml = problems.length
+    ? '<div class="export-check warn"><strong>' + t('export.check.title') + '</strong><ul>'
+      + problems.map((p) => '<li>' + p + '</li>').join('') + '</ul></div>'
+    : '<div class="export-check ok">' + t('export.check.ready') + '</div>';
+  if (exportBuildBtn) exportBuildBtn.disabled = moduleCount === 0;
+  exportSummaryEl.innerHTML = checkHtml + `
     <div class="summary-row"><span class="summary-label">${S('project')}</span><span class="summary-value"></span></div>
     <div class="summary-row"><span class="summary-label">${S('modules')}</span><span class="summary-value">${moduleCount}</span></div>
     <div class="summary-row"><span class="summary-label">${S('logo')}</span>
@@ -1496,13 +1679,16 @@ if (iconPickBtn) iconPickBtn.addEventListener('click', async () => {
   setIconName(picked.name);
   setImagePreview(iconPreviewImg, iconPreviewEmpty, picked.path);
   showIconStatus('', '');
+  if (iconSaveBtn) iconSaveBtn.click();
 });
 
 if (iconRemoveBtn) iconRemoveBtn.addEventListener('click', () => {
+  if (!iconState.currentRelative && !iconState.pendingSourcePath) return;
   iconState.pendingSourcePath = null;
   iconState.pendingRemove = true;
   setIconName(null);
   setImagePreview(iconPreviewImg, iconPreviewEmpty, null);
+  if (iconSaveBtn) iconSaveBtn.click();
 });
 
 if (iconSaveBtn) iconSaveBtn.addEventListener('click', async () => {

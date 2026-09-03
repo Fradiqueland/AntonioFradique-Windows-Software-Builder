@@ -14,7 +14,9 @@
     "export": "导出",
     "icon": "图标",
     "projetos": "项目",
-    "social": "社交链接"
+    "social": "社交链接",
+    "aparencia": "外观",
+    "publicar": "发布"
   },
   "header": {
     "brand": {
@@ -48,7 +50,16 @@
     "social": {
       "title": "社交链接",
       "subtitle": "将您的社交媒体链接添加到最终产品的菜单中。"
-    }
+    },
+    "aparencia": {
+      "title": "外观",
+      "subtitle": "品牌、颜色、图标和可选附加项。所有内容自动保存。"
+    },
+    "publicar": {
+      "title": "发布",
+      "subtitle": "检查缺少的内容，并生成交付给学员的 .exe。"
+    },
+    "export_btn": "导出 .exe"
   },
   "sidebar": {
     "preview_btn": "预览产品",
@@ -120,21 +131,21 @@
     "editor_save": "保存模块",
     "module_title_label": "按钮标题",
     "module_title_placeholder": "例如：第 1 课 — 简介",
-    "module_type_label": "操作类型",
+    "module_type_label": "模块类型",
     "type": {
-      "youtube": "YouTube 视频 (Iframe)",
-      "html": "HTML / 富文本",
-      "pdf": "本地 PDF 文件",
-      "webview": "内部浏览器 (Webview)",
-      "external": "外部浏览器 (Chrome/Edge)",
-      "launch": "启动文件 (.exe / .zip / 等)",
-      "local_video": "本地视频 (MP4)",
-      "local_audio": "本地音频 (MP3/WAV)",
-      "download": "可下载文件 (ZIP、DOCX…)",
+      "youtube": "YouTube 视频",
+      "html": "格式化文本（HTML）",
+      "pdf": "PDF",
+      "webview": "应用内网站",
+      "external": "浏览器链接",
+      "launch": "打开程序或文件",
+      "local_video": "视频（MP4 文件）",
+      "local_audio": "音频（MP3/WAV）",
+      "download": "可下载文件",
       "gallery": "图片库",
-      "article": "文章 / 笔记阅读器",
-      "embed": "表单 / 测验 (嵌入)",
-      "iptv": "IPTV 播放器"
+      "article": "文章 / 笔记",
+      "embed": "表单或测验",
+      "iptv": "IPTV 频道"
     },
     "youtube_url_label": "视频 URL 或 ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... 或仅 ID",
@@ -218,7 +229,31 @@
       "m3u8_missing": "请输入 .m3u8 链接。",
       "pick_file_first": "请先选择一个 .m3u 文件。",
       "help": "频道在此加载并保存到课程中。学员会看到列表和视频播放器。使用 .m3u8 (HLS) 频道效果最佳。"
-    }
+    },
+    "type_desc": {
+      "youtube": "粘贴视频链接。",
+      "html": "粘贴您自己的 HTML。",
+      "pdf": "显示您电脑上的 PDF。",
+      "webview": "在课程内打开的网页。",
+      "external": "在学员的浏览器中打开网站。",
+      "launch": "运行随附的 .exe、.zip 等。",
+      "local_video": "存储在您电脑上的视频。",
+      "local_audio": "您电脑上的音频。",
+      "download": "学员将文件保存到自己的电脑。",
+      "gallery": "以网格显示多张图片。",
+      "article": "带标题和列表的纯文本。",
+      "embed": "Google Forms、Typeform、测验……",
+      "iptv": "在线电视频道列表。"
+    },
+    "type_group": {
+      "video": "视频",
+      "read": "阅读",
+      "files": "文件",
+      "web": "网页",
+      "media": "媒体"
+    },
+    "type_change": "更改",
+    "type_pick_hint": "选择此按钮将打开的内容："
   },
   "export": {
     "icon_label": "软件图标",
@@ -251,7 +286,13 @@
       "cancelled": "操作已取消。",
       "failed_prefix": "错误："
     },
-    "icon_must_be_image": "请选择一个 .ico、.png 或 .jpg 文件"
+    "icon_must_be_image": "请选择一个 .ico、.png 或 .jpg 文件",
+    "check": {
+      "title": "导出之前：",
+      "ready": "✓ 一切就绪，可以导出。",
+      "no_title": "请设置软件标题（第 2 步 — 外观）。",
+      "no_modules": "请至少添加一个模块（第 1 步 — 内容）。"
+    }
   },
   "viewer": {
     "menu_empty": "未配置任何模块。",
@@ -259,6 +300,9 @@
     "pdf_missing": "缺少 PDF 文件。",
     "file_missing": "缺少文件。",
     "video_missing": "缺少视频 URL。",
+    "youtube_hint": "视频无法加载？",
+    "youtube_open": "在 YouTube 打开",
+    "youtube_fail": "无法加载 YouTube 播放器。",
     "external_error_prefix": "打开链接时出错：",
     "launch_error_prefix": "启动文件时出错：",
     "config_error_prefix": "加载配置时出错：",
@@ -294,7 +338,13 @@
     "iptv_add_to_folder": "添加到收藏",
     "iptv_remove_from_folder": "从文件夹移除",
     "iptv_no_favs": "您还没有收藏夹。创建一个来保存您的频道。",
-    "iptv_folder_empty": "空文件夹。"
+    "iptv_folder_empty": "空文件夹。",
+    "iptv_favs_save_error": "无法保存收藏。",
+    "optin_sent": "订阅已提交，谢谢！",
+    "start_btn": "开始",
+    "sidebar_collapse": "收起菜单",
+    "sidebar_expand": "展开菜单",
+    "retry": "重试"
   },
   "corners": {
     "music_label": "我的音乐",
@@ -330,5 +380,21 @@
     "help": "只需填写您想要的网络。图标会出现在最终产品的侧边菜单中，并在学员的浏览器中打开。",
     "save_btn": "保存社交链接",
     "site": "网站"
+  },
+  "section": {
+    "brand": "品牌与颜色",
+    "brand_hint": "最终产品的标题、徽标和颜色。",
+    "icon": ".exe 图标",
+    "icon_hint": "学员在文件上看到的图标。",
+    "banners": "横幅",
+    "banners_hint": "可选 — 顶部/底部的广告或推广链接。",
+    "social": "社交网络",
+    "social_hint": "可选 — 侧边菜单中的链接图标。",
+    "leads": "潜在客户收集",
+    "leads_hint": "可选 — 显示内容前先询问邮箱。",
+    "export": "导出",
+    "export_hint": "生成交付给学员的单个 .exe。",
+    "show": "显示",
+    "hide": "隐藏"
   }
 }

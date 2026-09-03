@@ -1,7 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Versão lida do package.json (fonte única) — deixa de haver 3 sítios para
+// actualizar (package.json, preload.js, index.html) que ficavam dessincronizados.
+const APP_VERSION = (() => { try { return require('./package.json').version; } catch (_) { return ''; } })();
+
 contextBridge.exposeInMainWorld('icurator', {
-  version: '1.5.5',
+  version: APP_VERSION,
   loadConfig: () => ipcRenderer.invoke('config:load'),
   projectsList: () => ipcRenderer.invoke('projects:list'),
   projectsCreate: (name) => ipcRenderer.invoke('projects:create', { name }),

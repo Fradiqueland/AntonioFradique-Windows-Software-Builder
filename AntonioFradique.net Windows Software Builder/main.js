@@ -2,8 +2,9 @@ const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeImage } = requir
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const http = require('http');
 const crypto = require('crypto');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const { promisify } = require('util');
 const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
@@ -68,6 +69,14 @@ if (isViewer) {
   app.setName('LaunchBox Builder');
 }
 
+/* O User-Agent predefinido do Electron inclui "LaunchBox Viewer/1.x" e
+ * "Electron/32". O YouTube (e outros serviços Google) servem um leitor
+ * degradado ou recusam a reprodução a agentes desconhecidos — uma das causas
+ * do vídeo do YouTube não abrir. Apresentamo-nos como o Chrome equivalente
+ * (mesma versão de motor), tanto na janela como nos <webview>. */
+app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/'
+  + process.versions.chrome + ' Safari/537.36';
+
 /* =========================================================
  * PATHS
  *
@@ -93,6 +102,96 @@ let DATA_DIR = path.join(WRITE_BASE, 'data');
 let ASSETS_DIR = path.join(WRITE_BASE, 'dist-assets');
 let CONFIG_PATH = path.join(DATA_DIR, 'project-config.json');
 let ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
+
+/* =========================================================
+ * FAVORITOS IPTV DO ALUNO (persistentes)
+ *
+ * O Viewer exportado corre a partir de uma pasta %TEMP% descartável e o seu
+ * userData (localStorage incluído) é apagado quando o aluno fecha o curso —
+ * é por isso que os favoritos guardados só em localStorage desapareciam.
+ * Os favoritos são a única coisa que tem de sobreviver, por isso ficam FORA
+ * dessa pasta, num JSON por curso+módulo:
+ *   Viewer exportado → %AppData%\LaunchBox Viewer\favorites\<slug>-<hash>.json
+ *   Builder / dev    → <userData>\viewer-favorites\<slug>-<hash>.json
+ * ========================================================= */
+const FAVS_DIR = (isViewer && app.isPackaged)
+  ? path.join(app.getPath('appData'), app.getName(), 'favorites')
+  : path.join(app.getPath('userData'), 'viewer-favorites');
+
+function favsFilePath(key) {
+  const raw = (typeof key === 'string') ? key.slice(0, 512) : '';
+  if (!raw) throw new Error('Chave de favoritos inválida.');
+  // O nome legível é só para inspeção humana; a unicidade vem do hash da
+  // chave completa (títulos com acentos/outros alfabetos não colidem).
+  const slug = raw.replace(/^lbxIptvFav::/, '').replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '').slice(0, 60) || 'favs';
+  const hash = crypto.createHash('sha1').update(raw, 'utf8').digest('hex').slice(0, 12);
+  return path.join(FAVS_DIR, slug + '-' + hash + '.json');
+}
+
+function sanitizeFavs(data) {
+  const folders = (data && Array.isArray(data.folders)) ? data.folders : [];
+  const out = [];
+  for (const f of folders.slice(0, 500)) {
+    if (!f || typeof f !== 'object') continue;
+    const id = (typeof f.id === 'string') ? f.id.slice(0, 64) : '';
+    const name = (typeof f.name === 'string') ? f.name.slice(0, 200) : '';
+    if (!id || !name) continue;
+    const keys = Array.isArray(f.keys)
+      ? Array.from(new Set(f.keys.filter((k) => typeof k === 'string' && k))).slice(0, 5000)
+      : [];
+    out.push({ id, name, keys, _open: f._open === true });
+  }
+  return { folders: out };
+}
+
+ipcMain.handle('favs:load', (_event, key) => {
+  try {
+    const file = favsFilePath(key);
+    if (!fs.existsSync(file)) return null;
+    return sanitizeFavs(JSON.parse(fs.readFileSync(file, 'utf-8')));
+  } catch (_) {
+    return null; // ficheiro corrompido/ilegível → o Viewer começa sem favoritos
+  }
+});
+
+ipcMain.handle('favs:save', (_event, payload) => {
+  const file = favsFilePath(payload && payload.key);
+  const clean = sanitizeFavs(payload && payload.data);
+  fs.mkdirSync(FAVS_DIR, { recursive: true });
+  // Escrita atómica (tmp + rename): um fecho abrupto nunca deixa o ficheiro
+  // meio-escrito, que depois falharia no JSON.parse e "perderia" tudo.
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(clean), 'utf-8');
+  fs.renameSync(tmp, file);
+  return true;
+});
+
+/* Estado leve do aluno por curso (último módulo aberto). Mesmo diretório e
+ * mesma escrita atómica dos favoritos; só se guardam campos conhecidos. */
+function sanitizeViewerState(data) {
+  const out = {};
+  if (data && typeof data.lastModuleId === 'string') out.lastModuleId = data.lastModuleId.slice(0, 64);
+  return out;
+}
+ipcMain.handle('state:load', (_event, key) => {
+  try {
+    const file = favsFilePath(key);
+    if (!fs.existsSync(file)) return null;
+    return sanitizeViewerState(JSON.parse(fs.readFileSync(file, 'utf-8')));
+  } catch (_) { return null; }
+});
+ipcMain.handle('state:save', (_event, payload) => {
+  const file = favsFilePath(payload && payload.key);
+  let current = {};
+  try { if (fs.existsSync(file)) current = sanitizeViewerState(JSON.parse(fs.readFileSync(file, 'utf-8'))); } catch (_) { current = {}; }
+  const clean = sanitizeViewerState(Object.assign({}, current, payload && payload.data));
+  fs.mkdirSync(FAVS_DIR, { recursive: true });
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(clean), 'utf-8');
+  fs.renameSync(tmp, file);
+  return true;
+});
 
 /* Multi-projeto (apenas Builder). Cada projeto tem a sua própria pasta
  * projects/<id>/{data,dist-assets}; o índice guarda nomes e o projeto ativo. */
@@ -576,18 +675,10 @@ function createViewerWindow({ standalone = false } = {}) {
     }
   });
 
-  /* YouTube Erro 153: numa página file:// o referrer é file://, que o YouTube
-   * rejeita. Forçamos um Referer/Origin válido de youtube.com nos pedidos para
-   * os domínios do YouTube — cobre tanto <webview> como <iframe>. Aplica-se à
-   * pré-visualização do Construtor e ao Viewer exportado (ambos passam aqui). */
-  viewerWindow.webContents.session.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.youtube.com/*', '*://*.ytimg.com/*', '*://*.googlevideo.com/*', '*://*.youtube-nocookie.com/*'] },
-    (details, callback) => {
-      details.requestHeaders['Referer'] = 'https://www.youtube.com/';
-      details.requestHeaders['Origin'] = 'https://www.youtube.com';
-      callback({ requestHeaders: details.requestHeaders });
-    }
-  );
+  /* YouTube: ver ensureYoutubeHost() — o leitor é embutido a partir de uma
+   * página servida em http://127.0.0.1, uma origem web real que o YouTube
+   * aceita. (O antigo gancho que forçava Referer/Origin=youtube.com continuava
+   * a dar "Erro 152-4 / vídeo não disponível" e foi removido.) */
 
   /* IPTV / streaming: a página do Viewer corre em file:// (origem "null"), por
    * isso os pedidos do hls.js aos segmentos .m3u8/.ts remotos seriam bloqueados
@@ -597,18 +688,94 @@ function createViewerWindow({ standalone = false } = {}) {
    * (o hls.js usa XHR; o <video> nativo usa 'media'), para não enfraquecer o
    * CORS dos restantes recursos (páginas incorporadas, scripts, imagens…). */
   const IPTV_CORS_TYPES = new Set(['xhr', 'media', 'object', 'other']);
+
+  /* Pedidos de stream IPTV apresentam-se como o VLC. Servidores Xtream/relays
+   * tratam de forma diferente um pedido "de browser" (User-Agent Chrome,
+   * cabeçalhos Origin/Referer): há canais que entregam o cabeçalho do fluxo e
+   * depois nada — e o mesmo URL no VLC reproduz bem. O Viewer diz ao processo
+   * principal quais são os hosts IPTV (iptv:hosts); os redirecionamentos para
+   * relays são aprendidos pelo id do pedido, que se mantém entre saltos. */
+  ipcMain.removeHandler('iptv:hosts');
+  ipcMain.handle('iptv:hosts', (_event, hosts) => {
+    for (const h of (Array.isArray(hosts) ? hosts : [])) if (typeof h === 'string' && h) iptvHosts.add(h.toLowerCase());
+    return true;
+  });
+  const hostOf = (u) => { try { return new URL(u).hostname.toLowerCase(); } catch (_) { return ''; } };
+  viewerWindow.webContents.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+    if (details.webContentsId === viewerWindow.webContents.id && IPTV_CORS_TYPES.has(details.resourceType)) {
+      const host = hostOf(details.url);
+      if (iptvReqIds.has(details.id)) { if (host) iptvHosts.add(host); }          // destino de um redirect
+      else if (host && iptvHosts.has(host)) iptvReqIds.add(details.id);
+    }
+    callback({});
+  });
+  viewerWindow.webContents.session.webRequest.onBeforeSendHeaders({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+    const h = details.requestHeaders || {};
+    if (iptvReqIds.has(details.id)) {
+      for (const k of Object.keys(h)) if (/^(user-agent|origin|referer|sec-fetch-.*)$/i.test(k)) delete h[k];
+      h['User-Agent'] = IPTV_USER_AGENT;
+    }
+    callback({ requestHeaders: h });
+  });
+  const forgetReq = (d) => { iptvReqIds.delete(d.id); };
+  viewerWindow.webContents.session.webRequest.onCompleted(forgetReq);
+  viewerWindow.webContents.session.webRequest.onErrorOccurred(forgetReq);
+
+  const CORS_UNTOUCHED = /(^|\.)(youtube\.com|youtube-nocookie\.com|googlevideo\.com|ytimg\.com|google\.com|gstatic\.com)$/i;
+  const viewerWcId = viewerWindow.webContents.id;
   viewerWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    if (!IPTV_CORS_TYPES.has(details.resourceType)) {
+    /* BUG CORRIGIDO (YouTube "fica a rodar"): este override aplicava-se a
+     * TODAS as respostas da sessão, incluindo as dos <webview>. O leitor do
+     * YouTube pede os segmentos de vídeo ao googlevideo.com com credenciais e
+     * cabeçalhos CORS próprios; trocar o Access-Control-Allow-Origin por "*"
+     * invalida essas respostas e o vídeo nunca arranca. Agora só se mexe nas
+     * respostas pedidas pela própria página do Viewer (onde corre o IPTV), e
+     * nunca nas dos domínios da Google. */
+    if (!IPTV_CORS_TYPES.has(details.resourceType) || details.webContentsId !== viewerWcId) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+    let host = '';
+    try { host = new URL(details.url).hostname; } catch (_) { host = ''; }
+    if (CORS_UNTOUCHED.test(host)) {
       callback({ responseHeaders: details.responseHeaders });
       return;
     }
     const headers = details.responseHeaders || {};
-    const keys = Object.keys(headers);
-    for (const k of keys) {
-      if (/^access-control-allow-origin$/i.test(k)) delete headers[k];
+    for (const k of Object.keys(headers)) {
+      // "*" é incompatível com Allow-Credentials: true — retira-se também.
+      if (/^access-control-allow-(origin|credentials)$/i.test(k)) delete headers[k];
     }
     headers['Access-Control-Allow-Origin'] = ['*'];
     callback({ responseHeaders: headers });
+  });
+
+  /* A janela do Viewer nunca deve sair da sua própria página: um <a href>
+   * ou <form> dentro de um módulo HTML/artigo/opt-in navegava a app inteira
+   * para fora (sem "voltar"), e window.open / target="_blank" abria janelas
+   * Electron "nuas". Links http(s)/mailto vão para o browser do sistema; o
+   * resto é bloqueado. Os <webview> são webContents próprios e não passam
+   * por aqui, por isso YouTube/sites incorporados continuam a navegar livremente. */
+  const openOutside = (url) => {
+    if (/^(https?:\/\/|mailto:)/i.test(url)) shell.openExternal(url).catch(() => {});
+  };
+  viewerWindow.webContents.on('will-navigate', (e, url) => {
+    if (/^file:/i.test(url)) return;
+    e.preventDefault();
+    openOutside(url);
+  });
+  viewerWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openOutside(url);
+    return { action: 'deny' };
+  });
+  // Dentro do <webview> do YouTube, "Ver no YouTube"/popups abriam uma janela
+  // Electron nua; vão para o browser do sistema. Outros sites incorporados
+  // mantêm o comportamento (popups de login, etc.).
+  viewerWindow.webContents.on('did-attach-webview', (_e, guest) => {
+    guest.setWindowOpenHandler(({ url }) => {
+      if (/youtube\.com|youtu\.be|^http:\/\/127\.0\.0\.1:/i.test(guest.getURL())) { openOutside(url); return { action: 'deny' }; }
+      return { action: 'allow' };
+    });
   });
 
   viewerWindow.setMenuBarVisibility(false);
@@ -621,12 +788,177 @@ function createViewerWindow({ standalone = false } = {}) {
   return viewerWindow;
 }
 
+/* =========================================================
+ * YOUTUBE — página anfitriã local
+ *
+ * O YouTube só reproduz o leitor embutido quando este está dentro de um
+ * <iframe> de uma página com origem web válida, identificada pelo cabeçalho
+ * Referer. Uma página file:// (o Viewer) não tem origem, e carregar o
+ * /embed/ID diretamente como documento de topo dá "Erro 152-4 / 153".
+ * Solução comprovada em apps Electron: servir uma página mínima em
+ * http://127.0.0.1:<porta> (só loopback, porta aleatória) com o <iframe> do
+ * YouTube. O browser envia então um Referer real e o leitor arranca.
+ * ========================================================= */
+const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+let ytServer = null;
+let ytPort = 0;
+
+function youtubeHostHtml(id) {
+  const src = 'https://www.youtube.com/embed/' + id + '?rel=0&playsinline=1';
+  return '<!doctype html><html><head><meta charset="utf-8">'
+    + '<meta name="referrer" content="strict-origin-when-cross-origin">'
+    + '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}'
+    + 'iframe{display:block;width:100%;height:100%;border:0}</style></head><body>'
+    + '<iframe src="' + src + '" referrerpolicy="strict-origin-when-cross-origin" '
+    + 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" '
+    + 'allowfullscreen></iframe></body></html>';
+}
+
+function ensureYoutubeHost() {
+  if (ytServer) return Promise.resolve(ytPort);
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer((req, res) => {
+      let u;
+      try { u = new URL(req.url, 'http://127.0.0.1'); } catch (_) { res.writeHead(400); res.end(); return; }
+      if (u.pathname.startsWith('/iptv/')) { serveIptvProxy(u.pathname.slice(6), req, res); return; }
+      const id = u.searchParams.get('v') || '';
+      if (u.pathname !== '/yt' || !YT_ID_RE.test(id)) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Referrer-Policy': 'strict-origin-when-cross-origin'
+      });
+      res.end(youtubeHostHtml(id));
+    });
+    srv.on('error', (err) => { ytServer = null; reject(err); });
+    srv.listen(0, '127.0.0.1', () => {
+      ytServer = srv;
+      ytPort = srv.address().port;
+      resolve(ytPort);
+    });
+  });
+}
+
+ipcMain.handle('youtube:hostUrl', async (_event, id) => {
+  const vid = String(id || '');
+  if (!YT_ID_RE.test(vid)) throw new Error('ID de vídeo do YouTube inválido.');
+  const port = await ensureYoutubeHost();
+  return 'http://127.0.0.1:' + port + '/yt?v=' + vid;
+});
+
+/* =========================================================
+ * IPTV — retransmissão local via ffmpeg
+ *
+ * Há canais que o Chromium não consegue reproduzir através do MediaSource
+ * (ex.: vídeo entrelaçado 1080i, muito comum em canais desportivos europeus):
+ * o hls.js/mpegts.js entregam os dados e o Chromium descarta-os em silêncio.
+ * O VLC reproduz porque descodifica ele próprio. Aqui o processo principal
+ * lança o ffmpeg a ler o stream (como o VLC faria), remultiplexa para MP4
+ * fragmentado sem recodificar o vídeo (áudio → AAC, para cobrir AC-3/MP2 que
+ * o Chromium não descodifica) e serve o resultado em http://127.0.0.1 a um
+ * <video> normal, que usa o descodificador nativo em vez do MSE.
+ *
+ * O ffmpeg.exe não vem no repositório: fica em vendor/ffmpeg/ (em dev) e é
+ * copiado para resources/ffmpeg/ pelo electron-builder. Sem ele, este motor
+ * simplesmente não existe e o Viewer usa os outros.
+ * ========================================================= */
+const iptvProxyTargets = new Map();   // token → { url, createdAt }
+const iptvProxyRuns = new Map();      // token → { child, log:[], exitCode }
+function ffmpegPath() {
+  const names = process.platform === 'win32' ? ['ffmpeg.exe'] : ['ffmpeg'];
+  const dirs = [path.join(process.resourcesPath || '', 'ffmpeg'), path.join(PROJECT_ROOT, 'vendor', 'ffmpeg')];
+  for (const d of dirs) for (const n of names) { const p = path.join(d, n); if (fs.existsSync(p)) return p; }
+  return null;
+}
+function stopIptvProxy(token) {
+  const run = iptvProxyRuns.get(token);
+  if (run && run.child) { try { run.child.kill('SIGKILL'); } catch (_) { /* noop */ } }
+}
+function serveIptvProxy(token, req, res) {
+  const target = iptvProxyTargets.get(token);
+  const ff = ffmpegPath();
+  if (!target || !ff) { res.writeHead(404); res.end(); return; }
+  stopIptvProxy(token); // um pedido novo do <video> substitui o anterior (o Chromium por vezes repete o GET)
+  const args = [
+    '-hide_banner', '-loglevel', 'warning', '-nostdin',
+    '-user_agent', IPTV_USER_AGENT,
+    '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
+    '-fflags', '+genpts+discardcorrupt', '-analyzeduration', '3000000', '-probesize', '3000000',
+    '-i', target.url,
+    '-map', '0:v:0?', '-map', '0:a:0?',
+    '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-ac', '2', '-af', 'aresample=async=1',
+    '-f', 'mp4', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-frag_duration', '1000000',
+    'pipe:1'
+  ];
+  const child = spawn(ff, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const run = { child, log: [], exitCode: null, startedAt: Date.now() };
+  iptvProxyRuns.set(token, run);
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => {
+    for (const line of String(chunk).split(/\r?\n/)) { if (line.trim()) { run.log.push(line.trim()); if (run.log.length > 40) run.log.shift(); } }
+  });
+  res.writeHead(200, { 'Content-Type': 'video/mp4', 'Cache-Control': 'no-store', 'Connection': 'keep-alive' });
+  /* BUG CORRIGIDO ("write after end" ao trocar de canal): o pipe stdout→res
+   * termina a resposta sozinho quando o stdout acaba; chamar res.end() à mão
+   * no 'exit' deixava chunks ainda por escrever a bater numa resposta já
+   * fechada, e o erro (sem listener) rebentava o processo principal. Agora:
+   * sem end() manual, unpipe antes de matar o ffmpeg, e erros absorvidos. */
+  res.on('error', () => { /* cliente fechou a meio: irrelevante */ });
+  child.stdout.on('error', () => { /* noop */ });
+  const detach = () => { try { child.stdout.unpipe(res); } catch (_) { /* noop */ } };
+  child.stdout.pipe(res);
+  child.on('exit', (code) => { run.exitCode = code; run.child = null; });
+  child.on('error', (err) => {
+    run.log.push('spawn: ' + err.message); run.exitCode = -1; run.child = null;
+    detach();
+    if (!res.writableEnded) { try { res.end(); } catch (_) { /* noop */ } }
+  });
+  res.on('close', () => { detach(); try { child.kill('SIGKILL'); } catch (_) { /* noop */ } });
+}
+ipcMain.handle('iptv:proxyUrl', async (_event, url) => {
+  const u = String(url || '');
+  if (!/^https?:\/\//i.test(u)) throw new Error('URL de stream inválido.');
+  if (!ffmpegPath()) return null;
+  // Limpeza de alvos antigos (tokens com > 1 h)
+  const now = Date.now();
+  for (const [t, v] of iptvProxyTargets) if (now - v.createdAt > 3600000) { iptvProxyTargets.delete(t); stopIptvProxy(t); iptvProxyRuns.delete(t); }
+  const token = crypto.randomBytes(12).toString('hex');
+  iptvProxyTargets.set(token, { url: u, createdAt: now });
+  const port = await ensureYoutubeHost();
+  return { url: 'http://127.0.0.1:' + port + '/iptv/' + token, token };
+});
+ipcMain.handle('iptv:proxyStatus', (_event, token) => {
+  const run = iptvProxyRuns.get(String(token || ''));
+  return run ? { running: !!run.child, exitCode: run.exitCode, log: run.log.slice(-12) } : null;
+});
+ipcMain.handle('iptv:proxyStop', (_event, token) => { stopIptvProxy(String(token || '')); return true; });
+ipcMain.handle('iptv:hasFfmpeg', () => !!ffmpegPath());
+
+app.on('will-quit', () => {
+  try { if (ytServer) ytServer.close(); } catch (_) { /* noop */ }
+  for (const t of iptvProxyRuns.keys()) stopIptvProxy(t);
+});
+
+/* Rede de segurança: uma exceção num stream/socket não pode abrir a janela
+ * "A JavaScript error occurred in the main process" ao aluno. Fica em log. */
+process.on('uncaughtException', (err) => {
+  console.error('[main] exceção não tratada:', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[main] promessa rejeitada sem tratamento:', reason && reason.stack ? reason.stack : reason);
+});
+
+/* Estado partilhado do "disfarce VLC" dos pedidos IPTV (ver createViewerWindow). */
+const IPTV_USER_AGENT = 'VLC/3.0.20 LibVLC/3.0.20';
+const iptvHosts = new Set();
+const iptvReqIds = new Set();
+
 /* -------- IPC: shared -------- */
 
 // Decifra os url de IPTV em memória antes de entregar a config à janela. A
 // config do Builder está em texto simples (sem marcador) → passa intacta; só a
 // config embutida num curso gerado vem cifrada e é aqui decifrada.
-ipcMain.handle('config:load', () => iptvCipher.decryptConfigIptv(readConfig()));
+ipcMain.handle('config:load', () => Object.assign(iptvCipher.decryptConfigIptv(readConfig()), { viewerVersion: app.getVersion() }));
 ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
 
 /* -------- IPC: projetos (Builder only) -------- */
@@ -1044,7 +1376,14 @@ async function iptvLoadXtream({ url, username, password } = {}) {
   return channels;
 }
 
-function iptvParseM3U(text) {
+/* Resolve entradas relativas de uma lista (ex.: "canais/1.m3u8") contra o
+ * URL de onde a lista foi descarregada; URLs absolutos ficam como estão. */
+function iptvResolveUrl(entry, baseUrl) {
+  if (!baseUrl || /^[a-z][a-z0-9+.-]*:/i.test(entry)) return entry;
+  try { return new URL(entry, baseUrl).href; } catch (_) { return entry; }
+}
+
+function iptvParseM3U(text, baseUrl) {
   const lines = String(text || '').split(/\r?\n/);
   const channels = [];
   let pending = null;
@@ -1052,8 +1391,12 @@ function iptvParseM3U(text) {
     const line = raw.trim();
     if (!line) continue;
     if (/^#EXTINF/i.test(line)) {
-      const comma = line.indexOf(',');
-      const name = comma >= 0 ? line.slice(comma + 1).trim() : '';
+      // BUG CORRIGIDO: os atributos key="value" podem conter vírgulas
+      // (group-title="Notícias, Desporto") e a 1.ª vírgula cortava o nome a
+      // meio. Retiram-se os atributos antes de procurar a vírgula separadora.
+      const stripped = line.replace(/\s+[\w.:-]+="[^"]*"/g, '');
+      const comma = stripped.indexOf(',');
+      const name = comma >= 0 ? stripped.slice(comma + 1).trim() : '';
       const logo = (line.match(/tvg-logo="([^"]*)"/i) || [])[1] || '';
       const group = (line.match(/group-title="([^"]*)"/i) || [])[1] || '';
       pending = { name, logo, group };
@@ -1061,7 +1404,8 @@ function iptvParseM3U(text) {
       continue;
     } else {
       const meta = pending || { name: '', logo: '', group: '' };
-      channels.push({ name: meta.name || line, url: line, logo: meta.logo || '', group: meta.group || '' });
+      const url = iptvResolveUrl(line, baseUrl);
+      channels.push({ name: meta.name || url, url, logo: meta.logo || '', group: meta.group || '' });
       pending = null;
       if (channels.length >= IPTV_MAX_CHANNELS) break;
     }
@@ -1069,8 +1413,18 @@ function iptvParseM3U(text) {
   return channels;
 }
 
+/* Um manifesto HLS (o stream em si, com tags #EXT-X-*) não é uma lista de
+ * canais: os "canais" seriam os segmentos/variantes, com URLs relativos que
+ * nunca reproduziriam. Nesse caso o próprio URL é o único canal. */
+function iptvLooksLikeHlsManifest(text) {
+  return /^#EXT-X-(STREAM-INF|TARGETDURATION|MEDIA-SEQUENCE|PLAYLIST-TYPE|ENDLIST|KEY|MAP)\b/im.test(String(text || ''));
+}
+
 function iptvFinalize(text, srcUrl) {
-  const channels = iptvParseM3U(text);
+  if (srcUrl && iptvLooksLikeHlsManifest(text)) {
+    return [{ name: 'Canal', url: srcUrl, logo: '', group: '' }];
+  }
+  const channels = iptvParseM3U(text, srcUrl);
   if (channels.length === 0 && srcUrl) {
     return [{ name: 'Canal', url: srcUrl, logo: '', group: '' }];
   }

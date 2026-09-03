@@ -17,7 +17,8 @@
     "!dist/**"
   ],
   "extraResources": [
-    { "from": "build-configs/viewer-mode/app-mode.json", "to": "app-mode.json" }
+    { "from": "build-configs/viewer-mode/app-mode.json", "to": "app-mode.json" },
+    { "from": "vendor/ffmpeg", "to": "ffmpeg", "filter": ["ffmpeg.exe", "ffmpeg", "LICENSE*", "*.txt"] }
   ],
   "win": {
     "target": "dir"

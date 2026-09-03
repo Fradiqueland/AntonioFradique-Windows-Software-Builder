@@ -14,7 +14,9 @@
     "export": "Exportar",
     "icon": "Ícone",
     "projetos": "Projetos",
-    "social": "Redes Sociais"
+    "social": "Redes Sociais",
+    "aparencia": "Aparência",
+    "publicar": "Publicar"
   },
   "header": {
     "brand": {
@@ -48,7 +50,16 @@
     "social": {
       "title": "Redes Sociais",
       "subtitle": "Adicione os links das suas redes sociais ao menu do produto final."
-    }
+    },
+    "aparencia": {
+      "title": "Aparência",
+      "subtitle": "Marca, cores, ícone e extras opcionais. Tudo grava automaticamente."
+    },
+    "publicar": {
+      "title": "Publicar",
+      "subtitle": "Confirme o que falta e gere o .exe para entregar aos alunos."
+    },
+    "export_btn": "Exportar .exe"
   },
   "sidebar": {
     "preview_btn": "Pré-visualizar Produto",
@@ -120,21 +131,21 @@
     "editor_save": "Guardar Módulo",
     "module_title_label": "Título do Botão",
     "module_title_placeholder": "Ex: Aula 1 — Introdução",
-    "module_type_label": "Tipo de Ação",
+    "module_type_label": "Tipo de módulo",
     "type": {
-      "youtube": "Vídeo YouTube (Iframe)",
-      "html": "HTML / Texto Rico",
-      "pdf": "Ficheiro PDF Local",
-      "webview": "Browser Interno (Webview)",
-      "external": "Browser Externo (Chrome/Edge)",
-      "launch": "Lançar Ficheiro (.exe / .zip / etc)",
-      "local_video": "Vídeo Local (MP4)",
-      "local_audio": "Áudio Local (MP3/WAV)",
-      "download": "Ficheiro para Descarregar (ZIP, DOCX…)",
-      "gallery": "Galeria de Imagens",
-      "article": "Leitor de Artigos / Notas",
-      "embed": "Formulário / Quiz (Embed)",
-      "iptv": "Leitor IPTV"
+      "youtube": "Vídeo do YouTube",
+      "html": "Texto formatado (HTML)",
+      "pdf": "PDF",
+      "webview": "Site dentro da app",
+      "external": "Link no browser",
+      "launch": "Abrir programa ou ficheiro",
+      "local_video": "Vídeo (ficheiro MP4)",
+      "local_audio": "Áudio (MP3/WAV)",
+      "download": "Ficheiro para descarregar",
+      "gallery": "Galeria de imagens",
+      "article": "Artigo / notas",
+      "embed": "Formulário ou quiz",
+      "iptv": "Canais IPTV"
     },
     "youtube_url_label": "URL ou ID do vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou só o ID",
@@ -218,7 +229,31 @@
       "m3u8_missing": "Introduza a ligação .m3u8.",
       "pick_file_first": "Escolha primeiro um ficheiro .m3u.",
       "help": "Os canais são carregados aqui e guardados no curso. O aluno vê a lista e um leitor de vídeo. Funciona melhor com canais .m3u8 (HLS)."
-    }
+    },
+    "type_desc": {
+      "youtube": "Cole o link do vídeo.",
+      "html": "Cole o seu próprio HTML.",
+      "pdf": "Mostra um PDF do seu PC.",
+      "webview": "Uma página web aberta dentro do curso.",
+      "external": "Abre um site no browser do aluno.",
+      "launch": "Lança um .exe, .zip, etc. incluído.",
+      "local_video": "Um vídeo guardado no seu PC.",
+      "local_audio": "Uma faixa de áudio do seu PC.",
+      "download": "O aluno guarda o ficheiro no PC dele.",
+      "gallery": "Várias imagens em grelha.",
+      "article": "Texto simples com títulos e listas.",
+      "embed": "Google Forms, Typeform, quizzes…",
+      "iptv": "Lista de canais de TV online."
+    },
+    "type_group": {
+      "video": "Vídeo",
+      "read": "Ler",
+      "files": "Ficheiros",
+      "web": "Web",
+      "media": "Média"
+    },
+    "type_change": "Mudar",
+    "type_pick_hint": "Escolha o que este botão vai abrir:"
   },
   "export": {
     "icon_label": "Ícone do Software",
@@ -251,7 +286,13 @@
       "cancelled": "Operação cancelada.",
       "failed_prefix": "Erro: "
     },
-    "icon_must_be_image": "Por favor, escolha um ficheiro .ico, .png ou .jpg"
+    "icon_must_be_image": "Por favor, escolha um ficheiro .ico, .png ou .jpg",
+    "check": {
+      "title": "Antes de exportar:",
+      "ready": "✓ Tudo pronto para exportar.",
+      "no_title": "Defina o título do software (passo 2 — Aparência).",
+      "no_modules": "Adicione pelo menos um módulo (passo 1 — Conteúdo)."
+    }
   },
   "viewer": {
     "menu_empty": "Nenhum módulo configurado.",
@@ -259,6 +300,9 @@
     "pdf_missing": "Ficheiro PDF em falta.",
     "file_missing": "Ficheiro em falta.",
     "video_missing": "URL de vídeo em falta.",
+    "youtube_hint": "O vídeo não carrega?",
+    "youtube_open": "Abrir no YouTube",
+    "youtube_fail": "Não foi possível carregar o leitor do YouTube.",
     "external_error_prefix": "Erro ao abrir link: ",
     "launch_error_prefix": "Erro ao lançar ficheiro: ",
     "config_error_prefix": "Erro ao carregar configuração: ",
@@ -294,7 +338,13 @@
     "iptv_add_to_folder": "Adicionar a favoritos",
     "iptv_remove_from_folder": "Remover da pasta",
     "iptv_no_favs": "Ainda não tem pastas de favoritos. Crie uma para guardar os seus canais.",
-    "iptv_folder_empty": "Pasta vazia."
+    "iptv_folder_empty": "Pasta vazia.",
+    "iptv_favs_save_error": "Não foi possível guardar os favoritos.",
+    "optin_sent": "Inscrição enviada. Obrigado!",
+    "start_btn": "Começar",
+    "sidebar_collapse": "Recolher menu",
+    "sidebar_expand": "Expandir menu",
+    "retry": "Tentar novamente"
   },
   "corners": {
     "music_label": "Minha música",
@@ -330,5 +380,21 @@
     "help": "Preencha apenas as redes que quiser. Os ícones aparecem no menu lateral do produto final e abrem no navegador do aluno.",
     "save_btn": "Guardar Redes Sociais",
     "site": "Site"
+  },
+  "section": {
+    "brand": "Marca e cores",
+    "brand_hint": "Título, logo e cores do produto final.",
+    "icon": "Ícone do .exe",
+    "icon_hint": "O ícone que o aluno vê no ficheiro.",
+    "banners": "Banners",
+    "banners_hint": "Opcional — publicidade ou links de afiliado no topo/rodapé.",
+    "social": "Redes sociais",
+    "social_hint": "Opcional — ícones com links no menu lateral.",
+    "leads": "Captura de leads",
+    "leads_hint": "Opcional — pede o email antes de mostrar o conteúdo.",
+    "export": "Exportar",
+    "export_hint": "Gera o .exe único para entregar aos alunos.",
+    "show": "Mostrar",
+    "hide": "Ocultar"
   }
 }

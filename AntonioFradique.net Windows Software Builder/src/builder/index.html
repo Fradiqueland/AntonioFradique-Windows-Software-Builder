@@ -64,26 +64,14 @@
           <button class="tab tab-projects" data-tab="projetos">
             <span class="tab-num">🗂</span><span class="tab-label" data-i18n="tab.projetos">Projetos</span>
           </button>
-          <button class="tab active" data-tab="brand">
-            <span class="tab-num">1</span><span class="tab-label" data-i18n="tab.brand">Marca / Design</span>
+          <button class="tab active" data-tab="content">
+            <span class="tab-num">1</span><span class="tab-label" data-i18n="tab.content">Conteúdo</span>
           </button>
-          <button class="tab" data-tab="leads">
-            <span class="tab-num">2</span><span class="tab-label" data-i18n="tab.leads">Captura de Leads</span>
+          <button class="tab" data-tab="aparencia">
+            <span class="tab-num">2</span><span class="tab-label" data-i18n="tab.aparencia">Aparência</span>
           </button>
-          <button class="tab" data-tab="banners">
-            <span class="tab-num">3</span><span class="tab-label" data-i18n="tab.banners">Banners</span>
-          </button>
-          <button class="tab" data-tab="social">
-            <span class="tab-num">🔗</span><span class="tab-label" data-i18n="tab.social">Redes Sociais</span>
-          </button>
-          <button class="tab" data-tab="content">
-            <span class="tab-num">4</span><span class="tab-label" data-i18n="tab.content">Conteúdo / Menus</span>
-          </button>
-          <button class="tab" data-tab="icon">
-            <span class="tab-num">5</span><span class="tab-label" data-i18n="tab.icon">Ícone</span>
-          </button>
-          <button class="tab" data-tab="export">
-            <span class="tab-num">6</span><span class="tab-label" data-i18n="tab.export">Exportar</span>
+          <button class="tab" data-tab="publicar">
+            <span class="tab-num">3</span><span class="tab-label" data-i18n="tab.publicar">Publicar</span>
           </button>
         </nav>
 
@@ -91,23 +79,31 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v1.5.5</div>
+          <div class="version">v1.5.20</div>
         </div>
       </aside>
 
       <main class="content">
         <header class="content-header">
-          <div class="active-project-bar" id="active-project-bar">
-            <span class="active-project-tag" data-i18n="projects.editing_label">A editar:</span>
-            <span class="active-project-name" id="active-project-name">—</span>
-            <button type="button" class="btn btn-ghost btn-sm" id="active-project-close" data-i18n="projects.close_btn">Fechar</button>
+          <div class="content-header-row">
+            <div>
+              <div class="active-project-bar" id="active-project-bar">
+                <span class="active-project-tag" data-i18n="projects.editing_label">A editar:</span>
+                <span class="active-project-name" id="active-project-name">—</span>
+                <button type="button" class="btn btn-ghost btn-sm" id="active-project-close" data-i18n="projects.close_btn">Fechar</button>
+              </div>
+              <h1 id="page-title" data-i18n="header.content.title">Conteúdo</h1>
+              <p id="page-subtitle" data-i18n="header.content.subtitle">Construa o menu de navegação do produto final.</p>
+            </div>
+            <div class="header-actions" id="header-actions">
+              <button type="button" class="btn btn-ghost" id="header-preview" data-i18n="sidebar.preview_btn">Pré-visualizar Produto</button>
+              <button type="button" class="btn btn-primary" id="header-export" data-i18n="header.export_btn">Exportar .exe</button>
+            </div>
           </div>
-          <h1 id="page-title" data-i18n="header.brand.title">Marca / Design</h1>
-          <p id="page-subtitle" data-i18n="header.brand.subtitle">Personalize a aparência do produto final.</p>
         </header>
 
         <!-- Gestor de Projetos -->
-        <section class="panel hidden" data-panel="projetos">
+        <section class="panel hidden" data-panel="projetos" data-step="projetos">
           <form id="project-new-form" class="form-card project-new-card" autocomplete="off">
             <label for="project-new-name" data-i18n="projects.new_label">Nome do novo projeto</label>
             <div class="project-new-row">
@@ -121,240 +117,7 @@
           <ul class="projects-list" id="projects-list"></ul>
         </section>
 
-        <!-- PASSO 2 — Marca / Design -->
-        <section class="panel" data-panel="brand">
-          <form id="brand-form" class="form-card" autocomplete="off">
-            <div class="form-group">
-              <label for="brand-title" data-i18n="brand.title_label">Título do Software</label>
-              <input type="text" id="brand-title" name="title"
-                     data-i18n-placeholder="brand.title_placeholder"
-                     placeholder="Ex: O Meu Curso Digital" maxlength="80" required />
-              <small data-i18n="brand.title_help">Aparece na barra da janela e no cabeçalho do menu do produto final.</small>
-            </div>
-
-            <div class="form-group">
-              <label data-i18n="brand.logo_label">Logo / Imagem de Cabeçalho</label>
-              <div class="file-row">
-                <label class="file-btn" for="brand-logo"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                <input type="file" id="brand-logo" accept="image/*" class="file-input-hidden" />
-                <span class="file-name" id="brand-logo-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
-                <button type="button" class="btn btn-ghost" id="brand-logo-remove" data-i18n="common.remove">Remover</button>
-              </div>
-              <div class="logo-preview-wrap">
-                <img id="brand-logo-preview" alt="Pré-visualização do logo" />
-                <span id="brand-logo-empty" class="logo-empty" data-i18n="brand.logo_empty">Sem logo carregado</span>
-              </div>
-              <small data-i18n="brand.logo_help">O ficheiro será copiado para a pasta interna dist-assets/.</small>
-            </div>
-
-            <div class="form-group">
-              <label data-i18n="brand.colors_label">Cores Customizadas</label>
-              <div class="color-grid">
-                <div class="color-field">
-                  <input type="color" id="color-sidebar" value="#111827" />
-                  <div class="color-meta">
-                    <span class="color-label" data-i18n="brand.color_sidebar">Cor do Menu Lateral</span>
-                    <span class="color-hex" id="color-sidebar-hex">#111827</span>
-                  </div>
-                </div>
-                <div class="color-field">
-                  <input type="color" id="color-background" value="#f8fafc" />
-                  <div class="color-meta">
-                    <span class="color-label" data-i18n="brand.color_background">Cor de Fundo Principal</span>
-                    <span class="color-hex" id="color-background-hex">#f8fafc</span>
-                  </div>
-                </div>
-                <div class="color-field">
-                  <input type="color" id="color-buttons" value="#2563eb" />
-                  <div class="color-meta">
-                    <span class="color-label" data-i18n="brand.color_buttons">Cor dos Botões</span>
-                    <span class="color-hex" id="color-buttons-hex">#2563eb</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <span class="save-status" id="save-status"></span>
-              <button type="submit" class="btn btn-primary" id="brand-save" data-i18n="brand.save_btn">Guardar Definições</button>
-            </div>
-          </form>
-        </section>
-
-        <!-- Redes Sociais -->
-        <section class="panel hidden" data-panel="social">
-          <form id="social-form" class="form-card" autocomplete="off">
-            <div class="form-group">
-              <small data-i18n="social.help">Preencha apenas as redes que quiser. Os ícones aparecem no menu lateral do produto final e abrem no navegador do aluno.</small>
-            </div>
-            <div class="social-grid">
-              <div class="form-group">
-                <label for="social-site" data-i18n="social.site">Site</label>
-                <input type="url" id="social-site" placeholder="https://…" />
-              </div>
-              <div class="form-group">
-                <label for="social-instagram">Instagram</label>
-                <input type="url" id="social-instagram" placeholder="https://instagram.com/…" />
-              </div>
-              <div class="form-group">
-                <label for="social-facebook">Facebook</label>
-                <input type="url" id="social-facebook" placeholder="https://facebook.com/…" />
-              </div>
-              <div class="form-group">
-                <label for="social-x">X</label>
-                <input type="url" id="social-x" placeholder="https://x.com/…" />
-              </div>
-              <div class="form-group">
-                <label for="social-tiktok">TikTok</label>
-                <input type="url" id="social-tiktok" placeholder="https://tiktok.com/@…" />
-              </div>
-              <div class="form-group">
-                <label for="social-pinterest">Pinterest</label>
-                <input type="url" id="social-pinterest" placeholder="https://pinterest.com/…" />
-              </div>
-              <div class="form-group">
-                <label for="social-linkedin">LinkedIn</label>
-                <input type="url" id="social-linkedin" placeholder="https://linkedin.com/in/…" />
-              </div>
-              <div class="form-group">
-                <label for="social-spotify">Spotify</label>
-                <input type="url" id="social-spotify" placeholder="https://open.spotify.com/…" />
-              </div>
-              <div class="form-group">
-                <label for="social-whatsapp">WhatsApp</label>
-                <input type="url" id="social-whatsapp" placeholder="https://wa.me/351…" />
-              </div>
-              <div class="form-group">
-                <label for="social-telegram">Telegram</label>
-                <input type="url" id="social-telegram" placeholder="https://t.me/…" />
-              </div>
-            </div>
-            <div class="form-actions">
-              <span class="save-status" id="social-status"></span>
-              <button type="submit" class="btn btn-primary" id="social-save" data-i18n="social.save_btn">Guardar Redes Sociais</button>
-            </div>
-          </form>
-        </section>
-
-        <!-- PASSO 3 — Captura de Leads -->
-        <section class="panel hidden" data-panel="leads">
-          <form id="leads-form" class="form-card" autocomplete="off">
-            <div class="form-group">
-              <label class="toggle-row">
-                <input type="checkbox" id="leads-enabled" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                <span class="toggle-text">
-                  <span class="toggle-title" data-i18n="leads.toggle_title">Ativar Bloqueio de Conteúdo (Opt-in Gate)</span>
-                  <span class="toggle-sub" data-i18n="leads.toggle_sub">
-                    Se ativado, o cliente final só verá o conteúdo depois de submeter o formulário abaixo.
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label for="leads-heading" data-i18n="leads.heading_label">Título do Bloqueio</label>
-              <input type="text" id="leads-heading"
-                     data-i18n-placeholder="leads.heading_placeholder"
-                     placeholder="Ex: Insira o seu email para aceder ao curso" maxlength="160" />
-              <small data-i18n="leads.heading_help">Mensagem grande mostrada por cima do formulário no Visualizador.</small>
-            </div>
-
-            <div class="form-group">
-              <label for="leads-html" data-i18n="leads.html_label">Código HTML do Formulário</label>
-              <textarea id="leads-html" class="code-area" rows="14"
-                        data-i18n-placeholder="leads.html_placeholder"
-                        placeholder="Cole aqui o código do formulário (Mailchimp, AWeber, ActiveCampaign, etc.)"></textarea>
-              <small data-i18n="leads.html_help">O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.</small>
-            </div>
-
-            <div class="form-actions">
-              <span class="save-status" id="leads-status"></span>
-              <button type="submit" class="btn btn-primary" id="leads-save" data-i18n="leads.save_btn">Guardar Definições de Leads</button>
-            </div>
-          </form>
-        </section>
-
-        <!-- PASSO 3 — Banners -->
-        <section class="panel hidden" data-panel="banners">
-          <form id="banner-form" class="form-card" autocomplete="off">
-            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Dimensões recomendadas: 728×90px (ou formato horizontal equivalente).</p>
-
-            <!-- BANNER DE TOPO -->
-            <fieldset class="banner-slot">
-              <legend data-i18n="banner.top_legend">Banner de Topo</legend>
-              <div class="form-group">
-                <label class="toggle-row">
-                  <input type="checkbox" id="banner-top-enabled" />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span class="toggle-text">
-                    <span class="toggle-title" data-i18n="banner.top_toggle_title">Ativar Banner de Topo</span>
-                  </span>
-                </label>
-              </div>
-              <div class="form-group">
-                <label data-i18n="banner.image_label">Imagem do Banner</label>
-                <div class="file-row">
-                  <label class="file-btn" for="banner-top-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                  <input type="file" id="banner-top-image" accept="image/*" class="file-input-hidden" />
-                  <span class="file-name" id="banner-top-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
-                  <button type="button" class="btn btn-ghost" id="banner-top-image-remove" data-i18n="common.remove">Remover</button>
-                </div>
-                <div class="logo-preview-wrap banner-preview-wrap">
-                  <img id="banner-top-image-preview" alt="Pré-visualização do banner de topo" />
-                  <span id="banner-top-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="banner-top-url" data-i18n="banner.url_label">Link de Destino</label>
-                <input type="text" id="banner-top-url"
-                       data-i18n-placeholder="banner.url_placeholder"
-                       placeholder="https://exemplo.com/o-meu-link-afiliado" />
-              </div>
-            </fieldset>
-
-            <!-- BANNER DE RODAPÉ -->
-            <fieldset class="banner-slot">
-              <legend data-i18n="banner.bottom_legend">Banner de Rodapé</legend>
-              <div class="form-group">
-                <label class="toggle-row">
-                  <input type="checkbox" id="banner-bottom-enabled" />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span class="toggle-text">
-                    <span class="toggle-title" data-i18n="banner.bottom_toggle_title">Ativar Banner de Rodapé</span>
-                  </span>
-                </label>
-              </div>
-              <div class="form-group">
-                <label data-i18n="banner.image_label">Imagem do Banner</label>
-                <div class="file-row">
-                  <label class="file-btn" for="banner-bottom-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                  <input type="file" id="banner-bottom-image" accept="image/*" class="file-input-hidden" />
-                  <span class="file-name" id="banner-bottom-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
-                  <button type="button" class="btn btn-ghost" id="banner-bottom-image-remove" data-i18n="common.remove">Remover</button>
-                </div>
-                <div class="logo-preview-wrap banner-preview-wrap">
-                  <img id="banner-bottom-image-preview" alt="Pré-visualização do banner de rodapé" />
-                  <span id="banner-bottom-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="banner-bottom-url" data-i18n="banner.url_label">Link de Destino</label>
-                <input type="text" id="banner-bottom-url"
-                       data-i18n-placeholder="banner.url_placeholder"
-                       placeholder="https://exemplo.com/o-meu-link-afiliado" />
-              </div>
-            </fieldset>
-
-            <div class="form-actions">
-              <span class="save-status" id="banner-status"></span>
-              <button type="submit" class="btn btn-primary" id="banner-save" data-i18n="banner.save_btn">Guardar Definições de Banners</button>
-            </div>
-          </form>
-        </section>
-
-        <!-- PASSO 4 — Conteúdo / Menus -->
-        <section class="panel hidden" data-panel="content">
+        <section class="panel" data-panel="content" data-step="content">
           <div class="content-layout">
             <div class="content-list-wrap">
               <div class="content-list-header">
@@ -388,22 +151,22 @@
                          placeholder="Ex: Aula 1 — Introdução" />
                 </div>
 
-                <div class="form-group">
-                  <label for="module-type" data-i18n="content.module_type_label">Tipo de Ação</label>
-                  <select id="module-type" class="select">
-                    <option value="youtube" data-i18n="content.type.youtube">Vídeo YouTube (Iframe)</option>
-                    <option value="html" data-i18n="content.type.html">HTML / Texto Rico</option>
-                    <option value="pdf" data-i18n="content.type.pdf">Ficheiro PDF Local</option>
-                    <option value="webview" data-i18n="content.type.webview">Browser Interno (Webview)</option>
-                    <option value="external" data-i18n="content.type.external">Browser Externo (Chrome/Edge)</option>
-                    <option value="launch" data-i18n="content.type.launch">Lançar Ficheiro (.exe / .zip / etc)</option>
-                    <option value="local-video" data-i18n="content.type.local_video">Vídeo Local (MP4)</option>
-                    <option value="local-audio" data-i18n="content.type.local_audio">Áudio Local (MP3/WAV)</option>
-                    <option value="download-vault" data-i18n="content.type.download">Ficheiro para Descarregar (ZIP, DOCX…)</option>
-                    <option value="image-gallery" data-i18n="content.type.gallery">Galeria de Imagens</option>
-                    <option value="article-reader" data-i18n="content.type.article">Leitor de Artigos / Notas</option>
-                    <option value="smart-embed" data-i18n="content.type.embed">Formulário / Quiz (Embed)</option>
-                    <option value="iptv" data-i18n="content.type.iptv">Leitor IPTV</option>
+                <div class="form-group" id="type-group">
+                  <label data-i18n="content.module_type_label">Tipo de módulo</label>
+                  <div class="type-chosen hidden" id="type-chosen">
+                    <span class="type-chip" id="type-chip"></span>
+                    <button type="button" class="btn btn-ghost btn-sm" id="type-change" data-i18n="content.type_change">Mudar</button>
+                  </div>
+                  <p class="type-pick-hint" id="type-pick-hint" data-i18n="content.type_pick_hint">Escolha o que este botão vai abrir:</p>
+                  <div class="type-cards" id="type-cards"></div>
+                  <!-- Fonte de verdade do tipo (preenchido pelos cartões acima) -->
+                  <select id="module-type" class="hidden" tabindex="-1" aria-hidden="true">
+                    <option value=""></option>
+                    <option value="youtube"></option><option value="html"></option><option value="pdf"></option>
+                    <option value="webview"></option><option value="external"></option><option value="launch"></option>
+                    <option value="local-video"></option><option value="local-audio"></option><option value="download-vault"></option>
+                    <option value="image-gallery"></option><option value="article-reader"></option><option value="smart-embed"></option>
+                    <option value="iptv"></option>
                   </select>
                 </div>
 
@@ -594,8 +357,298 @@
           </div>
         </section>
 
-        <!-- PASSO 6 — Exportar -->
-        <section class="panel hidden" data-panel="export">
+        <section class="panel hidden" data-panel="brand" data-step="aparencia">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="section.brand">Marca e cores</h2>
+              <p data-i18n="section.brand_hint">Título, logo e cores do produto final.</p>
+            </div>
+          </div>
+          <form id="brand-form" class="form-card autosave" autocomplete="off">
+            <div class="form-group">
+              <label for="brand-title" data-i18n="brand.title_label">Título do Software</label>
+              <input type="text" id="brand-title" name="title"
+                     data-i18n-placeholder="brand.title_placeholder"
+                     placeholder="Ex: O Meu Curso Digital" maxlength="80" required />
+              <small data-i18n="brand.title_help">Aparece na barra da janela e no cabeçalho do menu do produto final.</small>
+            </div>
+
+            <div class="form-group">
+              <label data-i18n="brand.logo_label">Logo / Imagem de Cabeçalho</label>
+              <div class="file-row">
+                <label class="file-btn" for="brand-logo"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                <input type="file" id="brand-logo" accept="image/*" class="file-input-hidden" />
+                <span class="file-name" id="brand-logo-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                <button type="button" class="btn btn-ghost" id="brand-logo-remove" data-i18n="common.remove">Remover</button>
+              </div>
+              <div class="logo-preview-wrap">
+                <img id="brand-logo-preview" alt="Pré-visualização do logo" />
+                <span id="brand-logo-empty" class="logo-empty" data-i18n="brand.logo_empty">Sem logo carregado</span>
+              </div>
+              <small data-i18n="brand.logo_help">O ficheiro será copiado para a pasta interna dist-assets/.</small>
+            </div>
+
+            <div class="form-group">
+              <label data-i18n="brand.colors_label">Cores Customizadas</label>
+              <div class="color-grid">
+                <div class="color-field">
+                  <input type="color" id="color-sidebar" value="#111827" />
+                  <div class="color-meta">
+                    <span class="color-label" data-i18n="brand.color_sidebar">Cor do Menu Lateral</span>
+                    <span class="color-hex" id="color-sidebar-hex">#111827</span>
+                  </div>
+                </div>
+                <div class="color-field">
+                  <input type="color" id="color-background" value="#f8fafc" />
+                  <div class="color-meta">
+                    <span class="color-label" data-i18n="brand.color_background">Cor de Fundo Principal</span>
+                    <span class="color-hex" id="color-background-hex">#f8fafc</span>
+                  </div>
+                </div>
+                <div class="color-field">
+                  <input type="color" id="color-buttons" value="#2563eb" />
+                  <div class="color-meta">
+                    <span class="color-label" data-i18n="brand.color_buttons">Cor dos Botões</span>
+                    <span class="color-hex" id="color-buttons-hex">#2563eb</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="save-status"></span>
+              <button type="submit" class="btn btn-primary" id="brand-save" data-i18n="brand.save_btn">Guardar Definições</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel hidden" data-panel="icon" data-step="aparencia">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="section.icon">Ícone do .exe</h2>
+              <p data-i18n="section.icon_hint">O ícone que o aluno vê no ficheiro.</p>
+            </div>
+          </div>
+          <div class="form-card">
+            <div class="form-group">
+              <label data-i18n="export.icon_label">Ícone do Software</label>
+              <div class="file-row">
+                <button type="button" class="file-btn" id="icon-pick"><span data-i18n="common.choose_file">Escolher ficheiro</span></button>
+                <span class="file-name" id="icon-pick-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                <button type="button" class="btn btn-ghost" id="icon-remove" data-i18n="common.remove">Remover</button>
+              </div>
+              <div class="logo-preview-wrap icon-preview-wrap">
+                <img id="icon-preview" alt="Pré-visualização do ícone" />
+                <span id="icon-preview-empty" class="logo-empty" data-i18n="icon.preview_empty">Sem ícone carregado</span>
+              </div>
+              <div class="file-current" id="icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
+              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final.</small>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="icon-status"></span>
+              <button type="button" class="btn btn-primary" id="icon-save" data-i18n="icon.save_btn">Guardar Ícone</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel hidden collapsible collapsed" data-panel="banners" data-step="aparencia">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="section.banners">Banners</h2>
+              <p data-i18n="section.banners_hint">Opcional — publicidade ou links de afiliado no topo/rodapé.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm section-toggle" data-i18n="section.show">Mostrar</button>
+          </div>
+          <form id="banner-form" class="form-card autosave" autocomplete="off">
+            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Dimensões recomendadas: 728×90px (ou formato horizontal equivalente).</p>
+
+            <!-- BANNER DE TOPO -->
+            <fieldset class="banner-slot">
+              <legend data-i18n="banner.top_legend">Banner de Topo</legend>
+              <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-top-enabled" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.top_toggle_title">Ativar Banner de Topo</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
+                <label data-i18n="banner.image_label">Imagem do Banner</label>
+                <div class="file-row">
+                  <label class="file-btn" for="banner-top-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                  <input type="file" id="banner-top-image" accept="image/*" class="file-input-hidden" />
+                  <span class="file-name" id="banner-top-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                  <button type="button" class="btn btn-ghost" id="banner-top-image-remove" data-i18n="common.remove">Remover</button>
+                </div>
+                <div class="logo-preview-wrap banner-preview-wrap">
+                  <img id="banner-top-image-preview" alt="Pré-visualização do banner de topo" />
+                  <span id="banner-top-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="banner-top-url" data-i18n="banner.url_label">Link de Destino</label>
+                <input type="text" id="banner-top-url"
+                       data-i18n-placeholder="banner.url_placeholder"
+                       placeholder="https://exemplo.com/o-meu-link-afiliado" />
+              </div>
+            </fieldset>
+
+            <!-- BANNER DE RODAPÉ -->
+            <fieldset class="banner-slot">
+              <legend data-i18n="banner.bottom_legend">Banner de Rodapé</legend>
+              <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-bottom-enabled" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.bottom_toggle_title">Ativar Banner de Rodapé</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
+                <label data-i18n="banner.image_label">Imagem do Banner</label>
+                <div class="file-row">
+                  <label class="file-btn" for="banner-bottom-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
+                  <input type="file" id="banner-bottom-image" accept="image/*" class="file-input-hidden" />
+                  <span class="file-name" id="banner-bottom-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                  <button type="button" class="btn btn-ghost" id="banner-bottom-image-remove" data-i18n="common.remove">Remover</button>
+                </div>
+                <div class="logo-preview-wrap banner-preview-wrap">
+                  <img id="banner-bottom-image-preview" alt="Pré-visualização do banner de rodapé" />
+                  <span id="banner-bottom-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="banner-bottom-url" data-i18n="banner.url_label">Link de Destino</label>
+                <input type="text" id="banner-bottom-url"
+                       data-i18n-placeholder="banner.url_placeholder"
+                       placeholder="https://exemplo.com/o-meu-link-afiliado" />
+              </div>
+            </fieldset>
+
+            <div class="form-actions">
+              <span class="save-status" id="banner-status"></span>
+              <button type="submit" class="btn btn-primary" id="banner-save" data-i18n="banner.save_btn">Guardar Definições de Banners</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel hidden collapsible collapsed" data-panel="social" data-step="aparencia">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="section.social">Redes sociais</h2>
+              <p data-i18n="section.social_hint">Opcional — ícones com links no menu lateral.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm section-toggle" data-i18n="section.show">Mostrar</button>
+          </div>
+          <form id="social-form" class="form-card autosave" autocomplete="off">
+            <div class="form-group">
+              <small data-i18n="social.help">Preencha apenas as redes que quiser. Os ícones aparecem no menu lateral do produto final e abrem no navegador do aluno.</small>
+            </div>
+            <div class="social-grid">
+              <div class="form-group">
+                <label for="social-site" data-i18n="social.site">Site</label>
+                <input type="url" id="social-site" placeholder="https://…" />
+              </div>
+              <div class="form-group">
+                <label for="social-instagram">Instagram</label>
+                <input type="url" id="social-instagram" placeholder="https://instagram.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-facebook">Facebook</label>
+                <input type="url" id="social-facebook" placeholder="https://facebook.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-x">X</label>
+                <input type="url" id="social-x" placeholder="https://x.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-tiktok">TikTok</label>
+                <input type="url" id="social-tiktok" placeholder="https://tiktok.com/@…" />
+              </div>
+              <div class="form-group">
+                <label for="social-pinterest">Pinterest</label>
+                <input type="url" id="social-pinterest" placeholder="https://pinterest.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-linkedin">LinkedIn</label>
+                <input type="url" id="social-linkedin" placeholder="https://linkedin.com/in/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-spotify">Spotify</label>
+                <input type="url" id="social-spotify" placeholder="https://open.spotify.com/…" />
+              </div>
+              <div class="form-group">
+                <label for="social-whatsapp">WhatsApp</label>
+                <input type="url" id="social-whatsapp" placeholder="https://wa.me/351…" />
+              </div>
+              <div class="form-group">
+                <label for="social-telegram">Telegram</label>
+                <input type="url" id="social-telegram" placeholder="https://t.me/…" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <span class="save-status" id="social-status"></span>
+              <button type="submit" class="btn btn-primary" id="social-save" data-i18n="social.save_btn">Guardar Redes Sociais</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel hidden collapsible collapsed" data-panel="leads" data-step="publicar">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="section.leads">Captura de leads</h2>
+              <p data-i18n="section.leads_hint">Opcional — pede o email antes de mostrar o conteúdo.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm section-toggle" data-i18n="section.show">Mostrar</button>
+          </div>
+          <form id="leads-form" class="form-card autosave" autocomplete="off">
+            <div class="form-group">
+              <label class="toggle-row">
+                <input type="checkbox" id="leads-enabled" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-text">
+                  <span class="toggle-title" data-i18n="leads.toggle_title">Ativar Bloqueio de Conteúdo (Opt-in Gate)</span>
+                  <span class="toggle-sub" data-i18n="leads.toggle_sub">
+                    Se ativado, o cliente final só verá o conteúdo depois de submeter o formulário abaixo.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="leads-heading" data-i18n="leads.heading_label">Título do Bloqueio</label>
+              <input type="text" id="leads-heading"
+                     data-i18n-placeholder="leads.heading_placeholder"
+                     placeholder="Ex: Insira o seu email para aceder ao curso" maxlength="160" />
+              <small data-i18n="leads.heading_help">Mensagem grande mostrada por cima do formulário no Visualizador.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="leads-html" data-i18n="leads.html_label">Código HTML do Formulário</label>
+              <textarea id="leads-html" class="code-area" rows="14"
+                        data-i18n-placeholder="leads.html_placeholder"
+                        placeholder="Cole aqui o código do formulário (Mailchimp, AWeber, ActiveCampaign, etc.)"></textarea>
+              <small data-i18n="leads.html_help">O HTML é injetado tal e qual no Visualizador. Confirme sempre que vem do seu fornecedor de confiança.</small>
+            </div>
+
+            <div class="form-actions">
+              <span class="save-status" id="leads-status"></span>
+              <button type="submit" class="btn btn-primary" id="leads-save" data-i18n="leads.save_btn">Guardar Definições de Leads</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel hidden" data-panel="export" data-step="publicar">
+          <div class="section-head">
+            <div>
+              <h2 data-i18n="section.export">Exportar</h2>
+              <p data-i18n="section.export_hint">Gera o .exe único para entregar aos alunos.</p>
+            </div>
+          </div>
           <div class="form-card">
             <div class="form-group">
               <label data-i18n="export.summary_label">Resumo do Projeto</label>
@@ -621,31 +674,6 @@
                   Mostrar ficheiro na pasta
                 </button>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- PASSO 5 — Ícone -->
-        <section class="panel hidden" data-panel="icon">
-          <div class="form-card">
-            <div class="form-group">
-              <label data-i18n="export.icon_label">Ícone do Software</label>
-              <div class="file-row">
-                <button type="button" class="file-btn" id="icon-pick"><span data-i18n="common.choose_file">Escolher ficheiro</span></button>
-                <span class="file-name" id="icon-pick-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
-                <button type="button" class="btn btn-ghost" id="icon-remove" data-i18n="common.remove">Remover</button>
-              </div>
-              <div class="logo-preview-wrap icon-preview-wrap">
-                <img id="icon-preview" alt="Pré-visualização do ícone" />
-                <span id="icon-preview-empty" class="logo-empty" data-i18n="icon.preview_empty">Sem ícone carregado</span>
-              </div>
-              <div class="file-current" id="icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
-              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final.</small>
-            </div>
-
-            <div class="form-actions">
-              <span class="save-status" id="icon-status"></span>
-              <button type="button" class="btn btn-primary" id="icon-save" data-i18n="icon.save_btn">Guardar Ícone</button>
             </div>
           </div>
         </section>

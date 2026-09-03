@@ -14,7 +14,9 @@
     "export": "Export",
     "icon": "Icon",
     "projetos": "Projects",
-    "social": "Social Links"
+    "social": "Social Links",
+    "aparencia": "Appearance",
+    "publicar": "Publish"
   },
   "header": {
     "brand": {
@@ -48,7 +50,16 @@
     "social": {
       "title": "Social Links",
       "subtitle": "Add your social media links to the final product's menu."
-    }
+    },
+    "aparencia": {
+      "title": "Appearance",
+      "subtitle": "Brand, colours, icon and optional extras. Everything saves automatically."
+    },
+    "publicar": {
+      "title": "Publish",
+      "subtitle": "Check what's missing and build the .exe to hand to your students."
+    },
+    "export_btn": "Export .exe"
   },
   "sidebar": {
     "preview_btn": "Preview Product",
@@ -120,21 +131,21 @@
     "editor_save": "Save Module",
     "module_title_label": "Button Title",
     "module_title_placeholder": "E.g. Lesson 1 — Introduction",
-    "module_type_label": "Action Type",
+    "module_type_label": "Module type",
     "type": {
-      "youtube": "YouTube Video (Iframe)",
-      "html": "HTML / Rich Text",
-      "pdf": "Local PDF File",
-      "webview": "Internal Browser (Webview)",
-      "external": "External Browser (Chrome/Edge)",
-      "launch": "Launch File (.exe / .zip / etc)",
-      "local_video": "Local Video (MP4)",
-      "local_audio": "Local Audio (MP3/WAV)",
-      "download": "Downloadable File (ZIP, DOCX…)",
-      "gallery": "Image Gallery",
-      "article": "Article / Notes Reader",
-      "embed": "Form / Quiz (Embed)",
-      "iptv": "IPTV Player"
+      "youtube": "YouTube video",
+      "html": "Formatted text (HTML)",
+      "pdf": "PDF",
+      "webview": "Website inside the app",
+      "external": "Link in browser",
+      "launch": "Open program or file",
+      "local_video": "Video (MP4 file)",
+      "local_audio": "Audio (MP3/WAV)",
+      "download": "File to download",
+      "gallery": "Image gallery",
+      "article": "Article / notes",
+      "embed": "Form or quiz",
+      "iptv": "IPTV channels"
     },
     "youtube_url_label": "Video URL or ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... or just the ID",
@@ -218,7 +229,31 @@
       "m3u8_missing": "Enter the .m3u8 link.",
       "pick_file_first": "Choose a .m3u file first.",
       "help": "Channels are loaded here and saved into the course. Students see the list and a video player. Works best with .m3u8 (HLS) channels."
-    }
+    },
+    "type_desc": {
+      "youtube": "Paste the video link.",
+      "html": "Paste your own HTML.",
+      "pdf": "Shows a PDF from your PC.",
+      "webview": "A web page opened inside the course.",
+      "external": "Opens a site in the student's browser.",
+      "launch": "Launches a bundled .exe, .zip, etc.",
+      "local_video": "A video stored on your PC.",
+      "local_audio": "An audio track from your PC.",
+      "download": "The student saves the file to their PC.",
+      "gallery": "Several images in a grid.",
+      "article": "Plain text with headings and lists.",
+      "embed": "Google Forms, Typeform, quizzes…",
+      "iptv": "List of online TV channels."
+    },
+    "type_group": {
+      "video": "Video",
+      "read": "Read",
+      "files": "Files",
+      "web": "Web",
+      "media": "Media"
+    },
+    "type_change": "Change",
+    "type_pick_hint": "Choose what this button will open:"
   },
   "export": {
     "icon_label": "Software Icon",
@@ -251,7 +286,13 @@
       "cancelled": "Cancelled.",
       "failed_prefix": "Error: "
     },
-    "icon_must_be_image": "Please choose a .ico, .png or .jpg file"
+    "icon_must_be_image": "Please choose a .ico, .png or .jpg file",
+    "check": {
+      "title": "Before exporting:",
+      "ready": "✓ Everything is ready to export.",
+      "no_title": "Set the software title (step 2 — Appearance).",
+      "no_modules": "Add at least one module (step 1 — Content)."
+    }
   },
   "viewer": {
     "menu_empty": "No modules configured.",
@@ -259,6 +300,9 @@
     "pdf_missing": "PDF file missing.",
     "file_missing": "File missing.",
     "video_missing": "Video URL missing.",
+    "youtube_hint": "Video not loading?",
+    "youtube_open": "Open on YouTube",
+    "youtube_fail": "The YouTube player could not be loaded.",
     "external_error_prefix": "Error opening link: ",
     "launch_error_prefix": "Error launching file: ",
     "config_error_prefix": "Error loading configuration: ",
@@ -294,7 +338,13 @@
     "iptv_add_to_folder": "Add to favorites",
     "iptv_remove_from_folder": "Remove from folder",
     "iptv_no_favs": "You don’t have any favorite folders yet. Create one to save your channels.",
-    "iptv_folder_empty": "Empty folder."
+    "iptv_folder_empty": "Empty folder.",
+    "iptv_favs_save_error": "Could not save your favourites.",
+    "optin_sent": "Subscription sent. Thank you!",
+    "start_btn": "Start",
+    "sidebar_collapse": "Collapse menu",
+    "sidebar_expand": "Expand menu",
+    "retry": "Try again"
   },
   "corners": {
     "music_label": "My music",
@@ -330,5 +380,21 @@
     "help": "Fill in only the networks you want. The icons appear in the final product's side menu and open in the student's browser.",
     "save_btn": "Save Social Links",
     "site": "Website"
+  },
+  "section": {
+    "brand": "Brand and colours",
+    "brand_hint": "Title, logo and colours of the final product.",
+    "icon": ".exe icon",
+    "icon_hint": "The icon students see on the file.",
+    "banners": "Banners",
+    "banners_hint": "Optional — ads or affiliate links at the top/bottom.",
+    "social": "Social networks",
+    "social_hint": "Optional — icons with links in the side menu.",
+    "leads": "Lead capture",
+    "leads_hint": "Optional — asks for an email before showing the content.",
+    "export": "Export",
+    "export_hint": "Builds the single .exe to deliver to students.",
+    "show": "Show",
+    "hide": "Hide"
   }
 }

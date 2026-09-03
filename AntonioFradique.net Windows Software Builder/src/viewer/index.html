@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https: http: data: blob:; media-src 'self' blob: data: file: https: http:; img-src 'self' data: blob: file: https: http:; font-src 'self'; frame-src https: file:; child-src https: file: blob:;" />
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https: http: data: blob:; media-src 'self' blob: data: file: https: http:; img-src 'self' data: blob: file: https: http:; font-src 'self'; frame-src https: file: http://127.0.0.1:*; child-src https: file: blob: http://127.0.0.1:*;" />
     <title>Pré-visualização</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -47,12 +47,16 @@
     <div class="viewer-app">
       <aside class="viewer-sidebar" id="viewer-sidebar">
         <div class="viewer-brand">
+          <button type="button" class="viewer-sidebar-toggle" id="viewer-sidebar-toggle" title="Recolher menu" data-i18n-title="viewer.sidebar_collapse" aria-label="Recolher menu">«</button>
           <img id="viewer-logo" alt="Logo" class="hidden" />
           <h1 id="viewer-title">O Meu Software</h1>
         </div>
-        <div class="viewer-lang-row">
-          <label for="viewer-lang" data-i18n="lang.label">Idioma</label>
-          <select id="viewer-lang" class="viewer-lang-select">
+        <nav class="viewer-menu" id="viewer-menu"></nav>
+        <div class="viewer-sidebar-footer">
+          <div class="viewer-social hidden" id="viewer-social"></div>
+          <div class="viewer-lang-row">
+            <label for="viewer-lang" title="Idioma" data-i18n-title="lang.label">🌐</label>
+            <select id="viewer-lang" class="viewer-lang-select">
             <option value="pt">Português</option>
             <option value="en">English</option>
             <option value="es">Español</option>
@@ -64,16 +68,16 @@
             <option value="ru">Русский</option>
             <option value="id">Bahasa Indonesia</option>
           </select>
+          </div>
         </div>
-        <nav class="viewer-menu" id="viewer-menu"></nav>
-        <div class="viewer-social hidden" id="viewer-social"></div>
       </aside>
 
       <main class="viewer-main">
         <div id="viewer-stage" class="viewer-stage">
-          <div class="viewer-empty">
+          <div class="viewer-empty viewer-welcome">
             <h2>Bem-vindo</h2>
             <p>Selecione uma opção no menu para começar.</p>
+            <button type="button" class="dl-btn viewer-start-btn hidden" id="viewer-start" data-i18n="viewer.start_btn">Começar</button>
           </div>
         </div>
       </main>
@@ -100,6 +104,7 @@
     </div>
 
     <script src="vendor/hls.min.js"></script>
+    <script src="vendor/mpegts.min.js"></script>
     <script src="renderer.js"></script>
   </body>
 </html>

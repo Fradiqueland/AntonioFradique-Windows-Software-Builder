@@ -15,7 +15,9 @@ const menuEl = document.getElementById('viewer-menu');
 const socialEl = document.getElementById('viewer-social');
 const stageEl = document.getElementById('viewer-stage');
 let currentHls = null;   // active hls.js instance for the IPTV player (destroyed on stage change)
+let currentTs = null;    // active mpegts.js instance (raw MPEG-TS streams)
 let iptvCleanup = null;  // tears down the IPTV favourites popover + its document listener
+let stageGeneration = 0; // incremented by clearStage(); lets async renderers detect they went stale
 
 const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
@@ -61,6 +63,10 @@ function applyI18n(root = document) {
     const v = tr(el.getAttribute('data-i18n-html'), null);
     if (typeof v === 'string') el.innerHTML = v;
   });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const v = tr(el.getAttribute('data-i18n-title'), null);
+    if (typeof v === 'string') { el.setAttribute('title', v); el.setAttribute('aria-label', v); }
+  });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     const v = tr(el.getAttribute('data-i18n-placeholder'), null);
     if (typeof v === 'string') el.setAttribute('placeholder', v);
@@ -79,7 +85,11 @@ function applyTheme(brand) {
 
 function toFileUrl(absPath) {
   if (!absPath) return null;
-  let p = absPath.replace(/\\/g, '/');
+  // Codifica cada segmento (mantendo a letra da unidade): um '#', '%' ou '?'
+  // no caminho (ex.: nome de utilizador do Windows) partia o URL file://.
+  const segs = absPath.replace(/\\/g, '/').split('/')
+    .map((s, i) => (i === 0 && /^[A-Za-z]:$/.test(s)) ? s : encodeURIComponent(s));
+  let p = segs.join('/');
   if (!p.startsWith('/')) p = '/' + p;
   return 'file://' + p;
 }
@@ -123,6 +133,7 @@ function youtubeEmbedUrl(input) {
 }
 
 function clearStage() {
+  stageGeneration++;
   destroyHls();
   if (iptvCleanup) { try { iptvCleanup(); } catch (_) { /* noop */ } iptvCleanup = null; }
   stageEl.className = 'viewer-stage';
@@ -130,15 +141,41 @@ function clearStage() {
 }
 
 function destroyHls() {
+  if (window.__iptvProxyToken && window.viewer && typeof window.viewer.iptvProxyStop === 'function') {
+    window.viewer.iptvProxyStop(window.__iptvProxyToken).catch(() => {});
+    window.__iptvProxyToken = null;
+  }
   if (currentHls) {
     try { currentHls.destroy(); } catch (_) { /* noop */ }
     currentHls = null;
   }
+  if (currentTs) {
+    try { currentTs.pause(); currentTs.unload(); currentTs.detachMediaElement(); currentTs.destroy(); } catch (_) { /* noop */ }
+    currentTs = null;
+  }
 }
+
+/* Links dentro do conteúdo (módulo HTML, artigo, formulário de opt-in):
+ * sem isto, um <a href="https://…"> navegava a própria janela do Viewer para
+ * fora da app (sem botão "voltar"), e um target="_blank" abria uma janela
+ * Electron "nua". Todos os links externos passam a abrir no browser do sistema. */
+document.addEventListener('click', (e) => {
+  const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+  if (!a || a.classList.contains('corner-link')) return;
+  const href = (a.getAttribute('href') || '').trim();
+  if (!/^https?:\/\//i.test(href)) {
+    if (/^(#|javascript:)/i.test(href) || href === '') e.preventDefault();
+    return;
+  }
+  e.preventDefault();
+  window.viewer.openExternal(href).catch((err) => {
+    showToast(tr('viewer.external_error_prefix', 'Erro ao abrir link: ') + (err && err.message ? err.message : err));
+  });
+});
 
 /* -------- Stage renderers (1 per type) -------- */
 
-function renderYoutube(data) {
+async function renderYoutube(data) {
   clearStage();
   stageEl.classList.add('fill');
   const url = youtubeEmbedUrl(data && data.url);
@@ -146,14 +183,53 @@ function renderYoutube(data) {
     stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.video_missing', 'URL de vídeo em falta.') + '</p></div>';
     return;
   }
-  /* Usa <webview> em vez de <iframe>: dentro de uma página file:// o iframe
-   * envia um referrer file:// que o YouTube rejeita (Erro 153). O webview
-   * navega como documento de topo em youtube.com, sem esse referrer. */
+  /* O YouTube exige que o leitor esteja num <iframe> de uma página com origem
+   * web real (Referer). Carregar o /embed/ID diretamente num webview a partir
+   * de file:// dava "Erro 152-4 / 153". O processo principal serve uma página
+   * anfitriã em http://127.0.0.1 (ver main.js) e o webview abre essa página. */
+  const id = extractYoutubeId(url);
+  const watchUrl = id ? 'https://www.youtube.com/watch?v=' + id : url;
+  let src = url; // links não reconhecidos (ex.: playlist) abrem tal e qual
+  if (id) {
+    const gen = stageGeneration;
+    try { src = await window.viewer.youtubeHostUrl(id); }
+    catch (err) { console.error('Página anfitriã do YouTube indisponível:', err); }
+    if (gen !== stageGeneration) return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'yt-wrap';
+
   const wv = document.createElement('webview');
-  wv.setAttribute('src', url);
+  wv.setAttribute('src', src);
   wv.setAttribute('allowpopups', 'true');
   wv.setAttribute('allowfullscreen', '');
-  stageEl.appendChild(wv);
+
+  // Rede de segurança: se o leitor embutido falhar (vídeo com incorporação
+  // desativada, bloqueio do YouTube, sem rede…), o aluno abre-o no browser.
+  const bar = document.createElement('div');
+  bar.className = 'yt-fallback';
+  const msg = document.createElement('span');
+  msg.className = 'yt-fallback-msg';
+  msg.textContent = tr('viewer.youtube_hint', 'O vídeo não carrega?');
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'yt-open-btn';
+  open.textContent = tr('viewer.youtube_open', 'Abrir no YouTube');
+  open.addEventListener('click', () => {
+    window.viewer.openExternal(watchUrl).catch((err) => {
+      showToast(tr('viewer.external_error_prefix', 'Erro ao abrir link: ') + (err && err.message ? err.message : err));
+    });
+  });
+  bar.append(msg, open);
+  wv.addEventListener('did-fail-load', (e) => {
+    if (e && e.errorCode === -3) return; // ERR_ABORTED: navegação interna do leitor, não é erro
+    msg.textContent = tr('viewer.youtube_fail', 'Não foi possível carregar o leitor do YouTube.');
+    bar.classList.add('error');
+  });
+
+  wrap.append(wv, bar);
+  stageEl.appendChild(wrap);
 }
 
 function renderHtml(data) {
@@ -172,7 +248,9 @@ async function renderPdf(data) {
     stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.pdf_missing', 'Ficheiro PDF em falta.') + '</p></div>';
     return;
   }
+  const gen = stageGeneration;
   const fileUrl = await relToFileUrl(data.file);
+  if (gen !== stageGeneration) return; // o aluno já mudou de módulo entretanto
   const wv = document.createElement('webview');
   wv.setAttribute('src', fileUrl);
   wv.setAttribute('allowpopups', 'true');
@@ -215,7 +293,9 @@ async function handleLaunch(data) {
 async function renderLocalVideo(data) {
   clearStage();
   stageEl.classList.add('media-mode');
+  const gen = stageGeneration;
   const url = await relToFileUrl(data && data.file);
+  if (gen !== stageGeneration) return;
   if (!url) {
     stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.local_video_missing', 'Ficheiro de vídeo em falta.') + '</p></div>';
     return;
@@ -230,7 +310,9 @@ async function renderLocalVideo(data) {
 async function renderLocalAudio(data) {
   clearStage();
   stageEl.classList.add('media-mode');
+  const gen = stageGeneration;
   const url = await relToFileUrl(data && data.file);
+  if (gen !== stageGeneration) return;
   if (!url) {
     stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.local_audio_missing', 'Ficheiro de áudio em falta.') + '</p></div>';
     return;
@@ -255,9 +337,11 @@ async function renderGallery(data) {
   }
   const grid = document.createElement('div');
   grid.className = 'gallery-grid';
+  const gen = stageGeneration;
   for (const img of images) {
     const relFile = img && img.file;
     const url = await relToFileUrl(relFile);
+    if (gen !== stageGeneration) return;
     if (!url) continue;
     const fileName = (img && img.fileName) || '';
     const cell = document.createElement('div');
@@ -422,6 +506,40 @@ function miniMarkdown(src) {
 
 /* -------- Menu + dispatch -------- */
 
+const MODULE_ICON = {
+  youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩',
+  'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
+};
+
+/* Barra lateral recolhível: fica só com os ícones (largura de 64px). Recolhe
+ * sozinha em janelas estreitas; a escolha manual do aluno prevalece. */
+let sidebarUserChoice = null; // true = recolhida, false = aberta, null = automático
+function setSidebarCollapsed(collapsed) {
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  const btn = document.getElementById('viewer-sidebar-toggle');
+  if (btn) {
+    btn.textContent = collapsed ? '»' : '«';
+    const key = collapsed ? 'viewer.sidebar_expand' : 'viewer.sidebar_collapse';
+    btn.setAttribute('data-i18n-title', key);
+    const label = tr(key, collapsed ? 'Expandir menu' : 'Recolher menu');
+    btn.title = label; btn.setAttribute('aria-label', label);
+  }
+}
+function autoSidebar() {
+  if (sidebarUserChoice !== null) return;
+  setSidebarCollapsed(window.innerWidth < 900);
+}
+(function wireSidebarToggle() {
+  const btn = document.getElementById('viewer-sidebar-toggle');
+  if (btn) btn.addEventListener('click', () => {
+    sidebarUserChoice = !document.body.classList.contains('sidebar-collapsed');
+    setSidebarCollapsed(sidebarUserChoice);
+  });
+  window.addEventListener('resize', autoSidebar);
+  autoSidebar();
+})();
+
 function buildMenu(modules) {
   menuEl.innerHTML = '';
   if (!modules || modules.length === 0) {
@@ -435,7 +553,14 @@ function buildMenu(modules) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'viewer-menu-btn';
-    btn.textContent = mod.title;
+    btn.title = mod.title;
+    const ico = document.createElement('span');
+    ico.className = 'viewer-menu-ico';
+    ico.textContent = MODULE_ICON[mod.type] || '•';
+    const lbl = document.createElement('span');
+    lbl.className = 'viewer-menu-label';
+    lbl.textContent = mod.title;
+    btn.append(ico, lbl);
     const hasPwd = mod && typeof mod.password === 'string' && mod.password.trim() !== '';
     if (hasPwd) {
       btn.classList.add('locked');
@@ -504,6 +629,7 @@ async function handleModuleClick(mod, btn) {
   // idioma; assim mantemos a referência do último módulo visível.
   if (mod && mod.type !== 'external' && mod.type !== 'launch') {
     activeModuleRef = { mod, btn };
+    saveViewerState({ lastModuleId: mod.id });
   }
   const pwd = (mod && typeof mod.password === 'string') ? mod.password.trim() : '';
   if (pwd && !unlockedModules.has(mod.id)) {
@@ -514,28 +640,59 @@ async function handleModuleClick(mod, btn) {
   await dispatchModule(mod, btn);
 }
 
-/* Favoritos de IPTV — guardados localmente (localStorage) no computador do
- * aluno. A chave inclui o curso + módulo para não misturar favoritos entre
+/* Favoritos de IPTV — guardados no computador do aluno através do processo
+ * principal (favs:load / favs:save), FORA da pasta temporária do SFX. O
+ * localStorage do Viewer exportado vive nessa pasta temporária e é apagado ao
+ * fechar o curso, por isso fica apenas como cache/fallback (dev, ou API em
+ * falta). A chave inclui o curso + módulo para não misturar favoritos entre
  * cursos diferentes que partilham o mesmo Viewer. */
 function iptvFavKey(moduleId) {
   const base = (document.title || 'curso') + '::' + (moduleId || 'iptv');
   return 'lbxIptvFav::' + base;
 }
-function loadFavs(moduleId) {
-  try {
-    const raw = localStorage.getItem(iptvFavKey(moduleId));
-    if (raw) {
-      const obj = JSON.parse(raw);
-      if (obj && Array.isArray(obj.folders)) return obj;
-    }
-  } catch (_) { /* noop */ }
-  return { folders: [] };
+function normalizeFavs(obj) {
+  return (obj && Array.isArray(obj.folders)) ? obj : null;
+}
+function loadFavsLocal(key) {
+  try { return normalizeFavs(JSON.parse(localStorage.getItem(key) || 'null')); } catch (_) { return null; }
+}
+/* Estado do aluno neste curso (ex.: último módulo aberto) — mesmo mecanismo
+ * persistente dos favoritos, chave própria. */
+function viewerStateKey() { return 'lbxState::' + (document.title || 'curso'); }
+async function loadViewerState() {
+  if (!(window.viewer && typeof window.viewer.loadState === 'function')) return {};
+  try { return (await window.viewer.loadState(viewerStateKey())) || {}; } catch (_) { return {}; }
+}
+function saveViewerState(patch) {
+  if (!(window.viewer && typeof window.viewer.saveState === 'function')) return;
+  window.viewer.saveState(viewerStateKey(), patch).catch(() => { /* não é crítico */ });
+}
+async function loadFavs(moduleId) {
+  const key = iptvFavKey(moduleId);
+  let stored = null;
+  if (window.viewer && typeof window.viewer.loadFavs === 'function') {
+    try { stored = normalizeFavs(await window.viewer.loadFavs(key)); } catch (_) { stored = null; }
+  }
+  if (!stored) {
+    // Ainda sem ficheiro (primeira utilização, ou favoritos antigos só em
+    // localStorage): usa o localStorage e migra-o para o armazenamento persistente.
+    stored = loadFavsLocal(key);
+    if (stored && stored.folders.length) saveFavs(moduleId, stored);
+  }
+  return stored || { folders: [] };
 }
 function saveFavs(moduleId, data) {
-  try { localStorage.setItem(iptvFavKey(moduleId), JSON.stringify(data)); } catch (_) { /* noop */ }
+  const key = iptvFavKey(moduleId);
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (_) { /* noop */ }
+  if (window.viewer && typeof window.viewer.saveFavs === 'function') {
+    window.viewer.saveFavs(key, data).catch((err) => {
+      console.error('Falha ao guardar favoritos:', err);
+      showToast(tr('viewer.iptv_favs_save_error', 'Não foi possível guardar os favoritos.'));
+    });
+  }
 }
 
-function renderIptv(data, moduleId) {
+async function renderIptv(data, moduleId) {
   clearStage();
   stageEl.classList.add('iptv-mode');
   const channels = (data && Array.isArray(data.channels)) ? data.channels : [];
@@ -546,8 +703,29 @@ function renderIptv(data, moduleId) {
 
   const RENDER_CAP = 500;
 
-  // ---- Estado dos favoritos ----
-  const favs = loadFavs(moduleId);
+  // Diz ao processo principal quais são os hosts dos streams (para os pedidos
+  // se apresentarem como VLC — ver main.js). Hosts de segmentos HLS e de
+  // redirecionamentos são acrescentados à medida que aparecem.
+  const knownHosts = new Set();
+  function announceHosts(urls) {
+    const fresh = [];
+    for (const u of urls) {
+      let h = '';
+      try { h = new URL(u).hostname.toLowerCase(); } catch (_) { h = ''; }
+      if (h && !knownHosts.has(h)) { knownHosts.add(h); fresh.push(h); }
+    }
+    if (fresh.length && window.viewer && typeof window.viewer.iptvHosts === 'function') {
+      return window.viewer.iptvHosts(fresh).catch(() => {});
+    }
+    return Promise.resolve();
+  }
+  const hostsReady = announceHosts(channels.map((c) => c && c.url).filter(Boolean));
+
+  // ---- Estado dos favoritos (lidos do disco; ver loadFavs) ----
+  const myGen = stageGeneration;
+  const favs = await loadFavs(moduleId);
+  // Se entretanto o aluno abriu outro módulo, não desenhar por cima dele.
+  if (myGen !== stageGeneration) return;
   let view = 'all'; // 'all' | 'favs'
   let editingFolderId = null;
   let deletingFolderId = null;
@@ -602,8 +780,119 @@ function renderIptv(data, moduleId) {
   video.className = 'iptv-video';
   video.controls = true;
   video.setAttribute('playsinline', '');
+
+  /* Diagnóstico: regista tudo o que o leitor faz (motor, URL, eventos do
+   * <video>, erros do hls.js/mpegts.js) num painel que o aluno/autor pode
+   * abrir com o botão ⓘ e copiar — é a única forma de perceber, à distância,
+   * porque é que um canal não abre. */
+  const diagLines = [];
+  const diagBtn = document.createElement('button');
+  diagBtn.type = 'button';
+  diagBtn.className = 'iptv-diag-btn';
+  diagBtn.title = 'Diagnóstico';
+  diagBtn.textContent = 'ⓘ';
+  const diagBox = document.createElement('div');
+  diagBox.className = 'iptv-diag hidden';
+  const diagPre = document.createElement('pre');
+  const diagCopy = document.createElement('button');
+  diagCopy.type = 'button';
+  diagCopy.className = 'iptv-retry';
+  diagCopy.textContent = 'Copiar';
+  diagCopy.addEventListener('click', () => {
+    const text = diagPre.textContent;
+    const done = () => { diagCopy.textContent = 'Copiado ✓'; setTimeout(() => { diagCopy.textContent = 'Copiar'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => {});
+    else { const r = document.createRange(); r.selectNodeContents(diagPre); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); try { document.execCommand('copy'); done(); } catch (_) { /* noop */ } }
+  });
+  diagBox.append(diagCopy, diagPre);
+  diagBtn.addEventListener('click', () => diagBox.classList.toggle('hidden'));
+  function logDiag(msg) {
+    const t = new Date();
+    const hh = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
+    diagLines.push(hh + ' ' + msg);
+    if (diagLines.length > 300) diagLines.shift();
+    diagPre.textContent = diagLines.join('\n');
+    diagPre.scrollTop = diagPre.scrollHeight;
+    console.log('[IPTV]', msg);
+  }
+  logDiag('Viewer v' + (window.__viewerVersion || '?') + ' · hls.js ' + (window.Hls ? (window.Hls.version || 'ok') : 'AUSENTE')
+    + ' · mpegts.js ' + (window.mpegts ? (window.mpegts.version || 'ok') : 'AUSENTE') + ' · MSE ' + (window.MediaSource ? 'ok' : 'AUSENTE'));
+  try {
+    const MS = window.MediaSource;
+    const sup = (m) => (MS && MS.isTypeSupported(m)) ? 'sim' : 'NÃO';
+    logDiag('codecs: H.264 ' + sup('video/mp4; codecs="avc1.64001f"') + ' · HEVC ' + sup('video/mp4; codecs="hvc1.1.6.L93.B0"')
+      + ' · AAC ' + sup('audio/mp4; codecs="mp4a.40.2"') + ' · MP3 ' + sup('audio/mpeg') + ' · AC-3 ' + sup('audio/mp4; codecs="ac-3"') + ' · E-AC-3 ' + sup('audio/mp4; codecs="ec-3"'));
+  } catch (_) { /* noop */ }
+  /* Inspeciona um segmento fMP4 (moof+mdat) tal como vai para o MediaSource:
+   * quantas amostras, quantas marcadas como keyframe (sync), primeiro DTS.
+   * Se nenhuma amostra for "sync", o Chromium descarta tudo em silêncio até
+   * aparecer uma — é exatamente o sintoma "anexa mas o buffer fica vazio". */
+  function inspectFmp4(u8) {
+    try {
+      const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+      const str = (o) => String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]);
+      let out = null;
+      const walk = (start, end, depth) => {
+        let o = start;
+        while (o + 8 <= end) {
+          let size = dv.getUint32(o); const type = str(o + 4); let hdr = 8;
+          if (size === 1) { size = Number(dv.getBigUint64(o + 8)); hdr = 16; }
+          if (size === 0) size = end - o;
+          if (size < hdr) return;
+          if (type === 'moof' || type === 'traf') walk(o + hdr, o + size, depth + 1);
+          else if (type === 'tfhd') {
+            const flags = dv.getUint32(o + hdr) & 0xffffff; let p = o + hdr + 8;
+            if (flags & 1) p += 8; if (flags & 2) p += 4; if (flags & 8) p += 4; if (flags & 0x10) p += 4;
+            out = out || {}; out.defFlags = (flags & 0x20) ? dv.getUint32(p) : null;
+          } else if (type === 'tfdt') {
+            const ver = u8[o + hdr];
+            out = out || {}; out.dts = ver === 1 ? Number(dv.getBigUint64(o + hdr + 4)) : dv.getUint32(o + hdr + 4);
+          } else if (type === 'trun') {
+            const flags = dv.getUint32(o + hdr) & 0xffffff; const n = dv.getUint32(o + hdr + 4); let p = o + hdr + 8;
+            if (flags & 1) p += 4; let first = null; if (flags & 4) { first = dv.getUint32(p); p += 4; }
+            let sync = 0, dur = 0;
+            for (let i = 0; i < n; i++) {
+              let d = 0, f = null;
+              if (flags & 0x100) { d = dv.getUint32(p); p += 4; }
+              if (flags & 0x200) p += 4;
+              if (flags & 0x400) { f = dv.getUint32(p); p += 4; }
+              if (flags & 0x800) p += 4;
+              if (i === 0 && first !== null) f = first;
+              if (f === null) f = (out && out.defFlags != null) ? out.defFlags : 0x10000;
+              if (!(f & 0x10000)) sync++;
+              dur += d;
+            }
+            out = out || {}; out.n = (out.n || 0) + n; out.sync = (out.sync || 0) + sync; out.dur = (out.dur || 0) + dur;
+          }
+          o += size;
+        }
+      };
+      walk(0, u8.byteLength, 0);
+      if (!out || !out.n) return 'sem amostras';
+      return out.n + ' amostras, ' + out.sync + ' keyframe(s), DTS inicial ' + (out.dts != null ? (out.dts / 90000).toFixed(1) + 's' : '?') + ', duração ' + (out.dur / 90000).toFixed(1) + 's';
+    } catch (err) { return 'inspeção falhou: ' + err.message; }
+  }
+  const bufInfo = () => {
+    try {
+      const b = video.buffered; const parts = [];
+      for (let i = 0; i < b.length; i++) parts.push(b.start(i).toFixed(1) + '–' + b.end(i).toFixed(1));
+      return 't=' + video.currentTime.toFixed(1) + ' buffer=[' + parts.join(', ') + '] readyState=' + video.readyState;
+    } catch (_) { return ''; }
+  };
+  ['loadstart', 'loadedmetadata', 'loadeddata', 'canplay', 'playing', 'waiting', 'stalled', 'suspend', 'abort', 'emptied', 'ended', 'pause'].forEach((ev) => {
+    video.addEventListener(ev, () => {
+      logDiag('video: ' + ev + (ev === 'loadedmetadata' || ev === 'playing' ? ' (' + video.videoWidth + 'x' + video.videoHeight + ', readyState ' + video.readyState + ')' : '')
+        + (ev === 'waiting' || ev === 'stalled' || ev === 'playing' ? ' ' + bufInfo() : ''));
+    });
+  });
+  video.addEventListener('error', () => {
+    const e = video.error;
+    logDiag('video: error code=' + (e && e.code) + ' ' + (e && e.message ? e.message : ''));
+  });
+  now.appendChild(diagBtn);
   main.appendChild(now);
   main.appendChild(video);
+  main.appendChild(diagBox);
 
   wrap.appendChild(side);
   wrap.appendChild(main);
@@ -615,37 +904,247 @@ function renderIptv(data, moduleId) {
     return /\.m3u8(\?|$)/i.test(url) || /(get\.php|type=m3u|\/live\/)/i.test(url);
   }
 
-  video.addEventListener('error', () => {
-    now.textContent = tr('viewer.iptv_play_error', 'Não foi possível reproduzir este canal.');
-  });
+  let lastPlayed = null;
+  function showPlayError() {
+    now.textContent = tr('viewer.iptv_play_error', 'Não foi possível reproduzir este canal.') + ' ';
+    if (lastFailReason) {
+      const why = document.createElement('span');
+      why.className = 'iptv-why';
+      why.textContent = '(' + lastFailReason + ') ';
+      now.appendChild(why);
+    }
+    if (!lastPlayed) return;
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'iptv-retry';
+    retry.textContent = tr('viewer.retry', 'Tentar novamente');
+    retry.addEventListener('click', () => play(lastPlayed.ch, lastPlayed.item));
+    now.appendChild(retry);
+    now.appendChild(diagBtn);
+  }
 
+  /* Reprodução com cadeia de motores. Cada canal pode vir em formatos
+   * diferentes e nem sempre o primeiro funciona:
+   *   - HLS (.m3u8)            → hls.js
+   *   - MPEG-TS bruto (.ts, ou URL sem extensão, típico de listas "output=ts")
+   *                            → mpegts.js (o Chromium não lê MPEG-TS sozinho)
+   *   - ficheiros (.mp4, .mp3…) → <video> nativo
+   * Para URLs Xtream (/live/user/pass/ID.ext) tentam-se as duas variantes,
+   * porque há canais que o servidor só serve num dos formatos. Um "watchdog"
+   * dá 20 s a cada tentativa: um canal que fica em preto sem erro passa ao
+   * motor seguinte em vez de ficar eternamente a rodar. */
+  const XTREAM_LIVE = /^(.*\/live\/[^/]+\/[^/]+\/\d+)\.(ts|m3u8)(\?.*)?$/i;
+  const FILE_EXT = /\.(mp4|m4v|webm|mkv|mov|mp3|m4a|aac|ogg|wav|flac)(\?|$)/i;
+  let hasFfmpeg = false;
+  if (window.viewer && typeof window.viewer.iptvHasFfmpeg === 'function') {
+    window.viewer.iptvHasFfmpeg().then((v) => { hasFfmpeg = !!v; logDiag('ffmpeg local: ' + (hasFfmpeg ? 'disponível' : 'AUSENTE (vendor/ffmpeg/ffmpeg.exe)')); }).catch(() => {});
+  }
+  function buildAttempts(url) {
+    const x = XTREAM_LIVE.exec(url);
+    let list;
+    if (x) {
+      const q = x[3] || '';
+      // HLS primeiro (reproduz bem a maioria); depois o ffmpeg local (canais que
+      // o Chromium não aceita via MSE); MPEG-TS bruto em último recurso.
+      list = [{ engine: 'hls', url: x[1] + '.m3u8' + q }, { engine: 'proxy', url: x[1] + '.ts' + q }, { engine: 'ts', url: x[1] + '.ts' + q }];
+    } else if (looksLikeHls(url)) list = [{ engine: 'hls', url }, { engine: 'proxy', url }];
+    else if (FILE_EXT.test(url)) list = [{ engine: 'native', url }, { engine: 'proxy', url }];
+    else if (/\.ts(\?|$)/i.test(url)) list = [{ engine: 'proxy', url }, { engine: 'ts', url }, { engine: 'native', url }];
+    else list = [{ engine: 'proxy', url }, { engine: 'ts', url }, { engine: 'hls', url }, { engine: 'native', url }];
+    return hasFfmpeg ? list : list.filter((a) => a.engine !== 'proxy');
+  }
+  let proxyToken = null;
+
+  let playSeq = 0;
+  let lastFailReason = '';
   function play(ch, item) {
     destroyHls();
     if (activeItem) activeItem.classList.remove('active');
     activeItem = item || null;
     if (activeItem) activeItem.classList.add('active');
+    lastPlayed = { ch, item };
     now.textContent = ch.name || '';
-    const url = ch.url;
-    if (!url) return;
+    now.appendChild(diagBtn);
+    logDiag('── canal: ' + (ch.name || '') + ' → ' + ch.url);
+    if (!ch.url) return;
+    const seq = ++playSeq;
+    const attempts = buildAttempts(ch.url);
+    lastFailReason = '';
+    hostsReady.then(() => runAttempt(attempts, 0, seq));
+  }
+
+  function runAttempt(attempts, idx, seq) {
+    if (seq !== playSeq) return;               // o aluno já escolheu outro canal
+    if (idx >= attempts.length) { destroyHls(); logDiag('✗ todos os motores falharam'); showPlayError(); return; }
+    const { engine, url } = attempts[idx];
+    destroyHls();
     try { video.pause(); } catch (_) { /* noop */ }
     video.removeAttribute('src');
     try { video.load(); } catch (_) { /* noop */ }
-    if (looksLikeHls(url) && window.Hls && window.Hls.isSupported()) {
-      const hls = new window.Hls({ maxBufferLength: 20, enableWorker: true });
-      currentHls = hls;
-      hls.on(window.Hls.Events.ERROR, (_evt, d) => {
-        if (d && d.fatal) {
-          now.textContent = tr('viewer.iptv_play_error', 'Não foi possível reproduzir este canal.');
-          destroyHls();
-        }
-      });
-      hls.on(window.Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
-      hls.loadSource(url);
-      hls.attachMedia(video);
-    } else {
-      // Reprodução nativa (ficheiros .mp4 remotos, ou HLS onde suportado).
+    logDiag('tentativa ' + (idx + 1) + '/' + attempts.length + ' [' + engine + '] ' + url);
+
+    let done = false;
+    let watchdog = null;
+    const frames = () => {
+      try { return video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality().totalVideoFrames : -1; } catch (_) { return -1; }
+    };
+    const next = (reason) => {
+      if (done || seq !== playSeq) return;
+      done = true;
+      clearTimeout(watchdog);
+      lastFailReason = engine + ': ' + reason;
+      logDiag('✗ [' + engine + '] ' + reason);
+      runAttempt(attempts, idx + 1, seq);
+    };
+    const ok = (how) => {
+      if (done || seq !== playSeq) return;
+      done = true;
+      clearTimeout(watchdog);
+      logDiag('✓ [' + engine + '] a reproduzir (' + how + ', ' + video.videoWidth + 'x' + video.videoHeight + ')');
+    };
+    // Sucesso = frames de vídeo a serem realmente apresentados, não apenas o
+    // evento "playing" (que dispara mesmo com o vídeo em preto).
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      const onFrame = () => { if (!done && seq === playSeq && video.videoWidth > 0) ok('frame apresentado'); };
+      try { video.requestVideoFrameCallback(onFrame); } catch (_) { /* noop */ }
+    }
+    // Watchdog: ao fim de 15 s decide com base no que o <video> realmente fez.
+    watchdog = setTimeout(() => {
+      if (done || seq !== playSeq) return;
+      if (engine === 'proxy' && proxyToken) {
+        window.viewer.iptvProxyStatus(proxyToken).then((st) => { if (st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | ')); }).catch(() => {});
+      }
+      const f = frames();
+      const advancing = video.currentTime > 0.5 && !video.paused;
+      if (advancing && f > 0) { ok('watchdog: ' + f + ' frames'); return; }
+      if (advancing && video.videoWidth === 0) { ok('watchdog: só áudio'); return; }
+      if (advancing) { next('a tocar mas sem frames de vídeo (' + video.videoWidth + 'x' + video.videoHeight + ', ' + f + ' frames) — codec não suportado?'); return; }
+      next('sem reprodução ao fim de 15 s (' + bufInfo() + ', frames ' + f + ')');
+    }, engine === 'proxy' ? 25000 : 15000);
+
+    try {
+      if (engine === 'hls') {
+        if (!(window.Hls && window.Hls.isSupported())) { next('hls.js indisponível'); return; }
+        const hls = new window.Hls({ maxBufferLength: 20, enableWorker: true, manifestLoadingMaxRetry: 1, levelLoadingMaxRetry: 1, fragLoadingMaxRetry: 2 });
+        currentHls = hls;
+        let recoveries = 0;
+        hls.on(window.Hls.Events.ERROR, (_evt, d) => {
+          if (!d || currentHls !== hls) return;
+          const code = d.response && d.response.code ? ' HTTP ' + d.response.code : '';
+          logDiag('hls ' + (d.fatal ? 'FATAL ' : '') + (d.details || d.type) + code + (d.reason ? ' — ' + d.reason : ''));
+          if (!d.fatal) return;
+          if (recoveries < 2 && d.type === window.Hls.ErrorTypes.MEDIA_ERROR) { recoveries++; hls.recoverMediaError(); return; }
+          next((d.details || d.type) + code);
+        });
+        hls.on(window.Hls.Events.BUFFER_CODECS, (_e, d) => {
+          const v = d && d.video ? (d.video.codec || '?') + ' (' + (d.video.container || '') + ')' : 'sem vídeo';
+          const a = d && d.audio ? (d.audio.codec || '?') + ' (' + (d.audio.container || '') + ')' : 'sem áudio';
+          logDiag('hls codecs: vídeo ' + v + ' · áudio ' + a);
+        });
+        let firstFrag = true, firstAppend = true;
+        hls.on(window.Hls.Events.LEVEL_LOADED, (_e, d) => {
+          const det = d && d.details;
+          if (det) {
+            logDiag('hls playlist: ' + det.fragments.length + ' segmento(s), ' + (det.live ? 'live' : 'VOD') + ', duração alvo ' + det.targetduration + 's');
+            announceHosts(det.fragments.map((f) => f.url));
+          }
+        });
+        let fragLogs = 0, appendLogs = 0;
+        hls.on(window.Hls.Events.FRAG_LOADED, (_e, d) => {
+          if (fragLogs++ >= 8) return;
+          const f = d && d.frag;
+          const kb = f && f.stats ? Math.round((f.stats.loaded || f.stats.total || 0) / 1024) : '?';
+          logDiag('hls segmento #' + (f ? f.sn : '?') + ' carregado: ' + kb + ' KB' + (fragLogs === 1 && f ? ' ← ' + f.url : ''));
+        });
+        hls.on(window.Hls.Events.BUFFER_APPENDING, (_e, d) => {
+          if (appendLogs++ >= 8) return;
+          const kb = d && d.data ? Math.round(d.data.byteLength / 1024) : 0;
+          logDiag('hls a anexar ' + (d && d.type) + ' ' + kb + ' KB' + (d && d.frag ? ' (seg #' + d.frag.sn + ')' : '')
+            + (d && d.type === 'video' && kb > 8 ? ' → ' + inspectFmp4(d.data) : ''));
+        });
+        let mediaAppends = 0;
+        hls.on(window.Hls.Events.FRAG_BUFFERED, (_e, d) => {
+          if (firstAppend) { firstAppend = false; logDiag('hls 1.º segmento no buffer: ' + bufInfo()); }
+          mediaAppends++;
+          // Falha rápida: segmentos entregues ao MediaSource e o buffer continua
+          // vazio → o Chromium está a descartá-los (vídeo entrelaçado, etc.).
+          // Não vale a pena esperar pelo watchdog: passar ao motor seguinte.
+          if (mediaAppends >= 2 && video.buffered.length === 0) next('o Chromium descarta as amostras (MSE) — vídeo entrelaçado/incompatível');
+        });
+        hls.on(window.Hls.Events.FRAG_PARSED, (_e, d) => {
+          if (firstFrag) { firstFrag = false; logDiag('hls 1.º segmento descodificado: ' + bufInfo()); }
+        });
+        hls.on(window.Hls.Events.MANIFEST_PARSED, (_e, d) => {
+          const lv = (d && d.levels) || [];
+          logDiag('hls manifesto ok: ' + lv.length + ' nível(is) ' + lv.map((l) => (l.width || '?') + 'x' + (l.height || '?') + (l.videoCodec ? ' ' + l.videoCodec : '') + (l.audioCodec ? '/' + l.audioCodec : '')).join(', '));
+          Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
+        });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        return;
+      }
+
+      if (engine === 'ts') {
+        const M = window.mpegts;
+        if (!(M && M.getFeatureList && M.getFeatureList().mseLivePlayback)) { next('mpegts.js indisponível'); return; }
+        const player = M.createPlayer(
+          { type: 'mpegts', isLive: true, url },
+          // REGRESSÃO CORRIGIDA: sem stash buffer e com "latency chasing" o
+          // leitor parava de 2 em 2 s (saltava para a frente sempre que o
+          // buffer crescia). Buffer normal, sem perseguição de latência.
+          { enableWorker: false, enableStashBuffer: true, stashInitialSize: 384 * 1024, liveBufferLatencyChasing: false,
+            autoCleanupSourceBuffer: true, autoCleanupMaxBackwardDuration: 30, autoCleanupMinBackwardDuration: 10, lazyLoad: false }
+        );
+        currentTs = player;
+        player.on(M.Events.ERROR, (type, detail, info) => {
+          logDiag('mpegts ERRO ' + type + ' / ' + detail + (info && info.msg ? ' — ' + info.msg : '') + (info && info.code ? ' (HTTP ' + info.code + ')' : ''));
+          if (currentTs === player) next(String(detail || type) + (info && info.code ? ' HTTP ' + info.code : ''));
+        });
+        let lastStat = 0;
+        player.on(M.Events.STATISTICS_INFO, (st) => {
+          const t = Date.now();
+          if (t - lastStat < 5000) return;
+          lastStat = t;
+          logDiag('mpegts fluxo de dados: ' + Math.round(st.speed || 0) + ' KB/s · frames descodificados ' + (st.decodedFrames || 0) + ' · ' + bufInfo());
+        });
+        player.on(M.Events.LOADING_COMPLETE, () => logDiag('mpegts: o servidor FECHOU a ligação (fim de fluxo)'));
+        player.on(M.Events.RECOVERED_EARLY_EOF, () => logDiag('mpegts: ligação caiu e foi recuperada'));
+        player.on(M.Events.MEDIA_INFO, (mi) => {
+          logDiag('mpegts fluxo: ' + (mi.videoCodec || 'sem vídeo') + ' ' + (mi.width || '?') + 'x' + (mi.height || '?') + ' / ' + (mi.audioCodec || 'sem áudio'));
+        });
+        player.attachMediaElement(video);
+        player.load();
+        Promise.resolve(player.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
+        return;
+      }
+
+      if (engine === 'proxy') {
+        window.viewer.iptvProxyUrl(url).then((res) => {
+          if (done || seq !== playSeq) return;
+          if (!res || !res.url) { next('ffmpeg indisponível'); return; }
+          proxyToken = res.token;
+          window.__iptvProxyToken = res.token;
+          logDiag('ffmpeg a retransmitir via ' + res.url);
+          const explain = (why) => {
+            window.viewer.iptvProxyStatus(res.token).then((st) => {
+              if (st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | '));
+              if (st && st.exitCode !== null && st.exitCode !== undefined) logDiag('ffmpeg terminou com código ' + st.exitCode);
+              next(why);
+            }).catch(() => next(why));
+          };
+          video.addEventListener('error', () => explain('o <video> rejeitou o MP4 do ffmpeg' + (video.error ? ' (código ' + video.error.code + ')' : '')), { once: true });
+          video.src = res.url;
+          Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
+        }).catch((err) => next('proxy: ' + (err && err.message ? err.message : err)));
+        return;
+      }
+
+      // native
+      video.addEventListener('error', () => next('o navegador não conseguiu reproduzir este formato'), { once: true });
       video.src = url;
-      video.play().catch(() => {});
+      Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
+    } catch (err) {
+      next('exceção: ' + (err && err.message ? err.message : err));
     }
   }
 
@@ -991,7 +1490,7 @@ function renderIptv(data, moduleId) {
 
 async function dispatchModule(mod, btn) {
   switch (mod.type) {
-    case 'youtube':  setActiveMenuBtn(btn); renderYoutube(mod.data); break;
+    case 'youtube':  setActiveMenuBtn(btn); await renderYoutube(mod.data); break;
     case 'html':     setActiveMenuBtn(btn); renderHtml(mod.data); break;
     case 'pdf':      setActiveMenuBtn(btn); await renderPdf(mod.data); break;
     case 'webview':  setActiveMenuBtn(btn); renderWebview(mod.data); break;
@@ -1001,7 +1500,7 @@ async function dispatchModule(mod, btn) {
     case 'image-gallery':  setActiveMenuBtn(btn); await renderGallery(mod.data); break;
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
-    case 'iptv':     setActiveMenuBtn(btn); renderIptv(mod.data, mod.id); break;
+    case 'iptv':     setActiveMenuBtn(btn); await renderIptv(mod.data, mod.id); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;
     default: break;
@@ -1126,15 +1625,50 @@ function hideOptinGate() {
   document.body.style.overflow = '';
 }
 
-/* Desbloqueio do conteúdo. Existem dois caminhos, ambos exigem que o aluno
- * tenha interagido com o formulário do fornecedor:
- *  1) Interceção (best-effort) do submit de qualquer <form> colado no HTML.
- *     Muitos fornecedores fazem POST cross-origin ou abrem nova janela, pelo
- *     que isto nem sempre dispara — daí o botão explícito abaixo.
+/* Desbloqueio do conteúdo. Existem dois caminhos:
+ *  1) Submit do <form> do fornecedor colado no HTML. BUG CORRIGIDO: o
+ *     preventDefault() anterior cancelava a submissão e o email do aluno
+ *     NUNCA chegava ao fornecedor (Mailchimp, E-goi, …). Deixar o submit
+ *     seguir também não serve — navegava a janela do Viewer para a página de
+ *     "obrigado" do fornecedor. Solução: enviar o formulário em segundo plano
+ *     (fetch no-cors com a mesma codificação que o browser usaria) e só depois
+ *     fechar o portão. A resposta é opaca (cross-origin), mas a inscrição
+ *     fica registada no servidor do fornecedor.
  *  2) Botão "Já me inscrevi — Aceder ao conteúdo". */
+async function submitOptinForm(form) {
+  const action = (form.getAttribute('action') || '').trim();
+  if (!/^https?:\/\//i.test(action)) return false;
+  const method = (form.getAttribute('method') || 'get').toUpperCase() === 'POST' ? 'POST' : 'GET';
+  const enctype = (form.getAttribute('enctype') || '').toLowerCase();
+  const fd = new FormData(form);
+  // Inclui o botão de submit com name (alguns fornecedores exigem-no).
+  const submitter = form.querySelector('button[type=submit][name], input[type=submit][name]');
+  if (submitter && submitter.name && !fd.has(submitter.name)) fd.append(submitter.name, submitter.value || '');
+  const opts = { mode: 'no-cors', credentials: 'omit', redirect: 'follow' };
+  let url = action;
+  if (method === 'GET') {
+    const qs = new URLSearchParams();
+    fd.forEach((v, k) => { if (typeof v === 'string') qs.append(k, v); });
+    url = action + (action.includes('?') ? '&' : '?') + qs.toString();
+  } else if (enctype === 'multipart/form-data') {
+    opts.method = 'POST'; opts.body = fd;
+  } else {
+    const body = new URLSearchParams();
+    fd.forEach((v, k) => { if (typeof v === 'string') body.append(k, v); });
+    opts.method = 'POST'; opts.body = body; // application/x-www-form-urlencoded (predefinição do browser)
+  }
+  await fetch(url, opts);
+  return true;
+}
+
 optinFormHtml.addEventListener('submit', (e) => {
   e.preventDefault();
-  hideOptinGate();
+  const form = e.target;
+  const sending = (form && form.tagName === 'FORM') ? submitOptinForm(form) : Promise.resolve(false);
+  sending
+    .then((sent) => { if (sent) showToast(tr('viewer.optin_sent', 'Inscrição enviada. Obrigado!')); })
+    .catch((err) => { console.error('Falha a enviar o formulário de inscrição:', err); })
+    .finally(hideOptinGate);
 });
 
 if (optinAccess) {
@@ -1180,9 +1714,32 @@ async function boot() {
 
   applyDynamicTexts();
 
-  buildMenu(Array.isArray(config.content) ? config.content : []);
+  window.__viewerVersion = config.viewerVersion || '';
+  const modules = Array.isArray(config.content) ? config.content : [];
+  buildMenu(modules);
   renderSocial(config.marketing && config.marketing.social);
   await renderBanner(config.marketing && config.marketing.banners);
+
+  // Ecrã de boas-vindas com ação: "Começar" abre o primeiro módulo.
+  const startBtn = document.getElementById('viewer-start');
+  const firstOpenable = modules.find((m) => m && m.type !== 'external' && m.type !== 'launch') || modules[0];
+  if (startBtn) {
+    startBtn.classList.toggle('hidden', !firstOpenable);
+    startBtn.addEventListener('click', () => {
+      const b = firstOpenable && menuEl.querySelector('.viewer-menu-btn[data-id="' + firstOpenable.id + '"]');
+      if (b) b.click();
+    });
+  }
+
+  // Retomar onde o aluno ficou da última vez (só módulos abertos dentro da app).
+  try {
+    const st = await loadViewerState();
+    const last = st && st.lastModuleId && modules.find((m) => m && m.id === st.lastModuleId);
+    if (last && last.type !== 'external' && last.type !== 'launch') {
+      const b = menuEl.querySelector('.viewer-menu-btn[data-id="' + last.id + '"]');
+      if (b) await handleModuleClick(last, b);
+    }
+  } catch (_) { /* fica na página de boas-vindas */ }
 
   // Seletor de idioma em direto: re-traduz texto estático + dinâmico sem
   // reiniciar o Viewer. Não persiste (o Viewer é um leitor só-de-leitura).

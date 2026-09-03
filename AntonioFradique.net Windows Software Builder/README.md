@@ -47,3 +47,16 @@ locales/  assets/    # recursos
 - **Construtor** — configuras marca, banners, captura de leads e os menus/conteúdos do curso.
 - **Visualizador** — a aplicação que o aluno abre.
 - **Exportar** — cada curso fica num `.exe` único auto-extraível, pronto a distribuir.
+
+## ffmpeg (opcional, recomendado para IPTV)
+
+Alguns canais IPTV (vídeo entrelaçado 1080i, áudio AC-3/MP2) não são reproduzíveis
+pelo Chromium através do MediaSource. Com um `ffmpeg.exe` em `vendor/ffmpeg/`,
+o Viewer ganha um motor extra: o processo principal lê o stream com o ffmpeg,
+remultiplexa para MP4 fragmentado (vídeo sem recodificar, áudio → AAC) e
+serve-o localmente ao leitor. O electron-builder copia a pasta para
+`resources/ffmpeg/` no Construtor e no template do Viewer, e por isso o
+ffmpeg vai dentro de cada curso exportado (+~90 MB por .exe).
+
+Ver `vendor/ffmpeg/README.txt` para onde obter o binário. Sem ele, tudo o
+resto funciona como antes.
