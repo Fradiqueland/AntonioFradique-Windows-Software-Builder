@@ -1,6 +1,6 @@
 # Importar páginas HTML e PHP
 
-O módulo **Ficheiro HTML / PHP** da versão 2.0.0 importa `.html`, `.htm` e `.php`
+O módulo **Ficheiro HTML / PHP** da versão 2.0.1 importa `.html`, `.htm` e `.php`
 para o projeto. A opção HTML anterior continua a servir para colar conteúdo.
 
 1. Abra **Conteúdos**, adicione um módulo e escolha **Ficheiro HTML / PHP**.
@@ -60,3 +60,11 @@ Antes de distribuir, teste em Windows e Mac: importar HTML com CSS/JS/imagens, i
 PHP com formulário e includes, editar/reordenar/substituir, fechar o Viewer,
 reconstruir os modelos e os instaladores, abrir o EXE/ZIP Windows e o ZIP Mac em
 máquinas limpas. Consulte [o guia v2](BUILD-V2.md) para compilação e instalação.
+
+## Links em páginas importadas (v2.0.1)
+
+Links HTTP/HTTPS externos, incluindo botões `window.open` e `target="_blank"`,
+abrem no browser predefinido após um clique ou ativação por teclado. A aplicação
+mantém a página importada aberta. Links para outras páginas da mesma origem
+local continuam dentro do módulo. Popups automáticos e esquemas como `file:`
+e `javascript:` não são encaminhados para o sistema.

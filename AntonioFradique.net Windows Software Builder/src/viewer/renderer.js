@@ -343,6 +343,9 @@ async function renderLocalWeb(mod) {
     // no preload or Node bridge; the main process independently enforces this.
     wv.setAttribute('partition', 'local-web-' + opened.token);
     wv.setAttribute('webpreferences', 'contextIsolation=yes,nodeIntegration=no,sandbox=yes');
+    // Let new-window requests reach main's deny-and-open-in-browser handler.
+    // This does not grant Node/preload privileges or permit Electron popups.
+    wv.setAttribute('allowpopups', 'true');
     wv.setAttribute('src', opened.url);
     wv.addEventListener('did-fail-load', (event) => {
       if (event.errorCode === -3 || event.isMainFrame === false) return;

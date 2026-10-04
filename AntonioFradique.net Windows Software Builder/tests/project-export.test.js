@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const vm = require('node:vm');
+const { createRequire } = require('node:module');
 const { pipeline } = require('stream/promises');
 const yazl = require('yazl');
 const yauzl = require('yauzl');
@@ -14,7 +16,8 @@ const APP = 'LaunchBox Viewer.app';
 const WINDOWS = [
   { name: 'LaunchBox Viewer.exe', data: 'WINDOWS EXE', mode: 0o100755 },
   { name: 'resources/app.asar', data: 'VIEWER SOURCE' },
-  { name: 'resources/app-mode.json', data: '{"mode":"viewer"}' }
+  { name: 'resources/app-mode.json', data: '{"mode":"viewer"}' },
+  { name: 'resources/', mode: 0o040755 }
 ];
 const MAC = [
   { name: `${APP}/Contents/Info.plist`, data: 'SIGNED PLIST' },
@@ -23,7 +26,11 @@ const MAC = [
   { name: `${APP}/Contents/_CodeSignature/CodeResources`, data: 'SEALED HASHES' },
   { name: `${APP}/Contents/Frameworks/Test.framework/Versions/A/Test`, data: 'SIGNED FRAMEWORK', mode: 0o100755 },
   { name: `${APP}/Contents/Frameworks/Test.framework/Versions/Current`, data: 'A', mode: 0o120777 },
-  { name: `${APP}/Contents/Frameworks/Test.framework/Test`, data: 'Versions/Current/Test', mode: 0o120777 }
+  { name: `${APP}/Contents/Frameworks/Test.framework/Test`, data: 'Versions/Current/Test', mode: 0o120777 },
+  { name: `${APP}/`, mode: 0o040755 },
+  { name: `${APP}/Contents/`, mode: 0o040755 },
+  { name: `${APP}/Contents/Resources/`, mode: 0o040755 },
+  { name: `${APP}/Contents/Resources/empty-directory/`, mode: 0o040750 }
 ];
 
 function fixture(t) {
@@ -42,7 +49,7 @@ async function writeTemplate(filename, entries) {
   const completion = pipeline(zip.outputStream, fs.createWriteStream(filename));
   for (const item of entries) {
     const options = { mode: item.mode || 0o100644, compress: false, mtime: new Date('2026-01-02T12:00:00Z') };
-    if (item.name.endsWith('/')) zip.addEmptyDirectory(item.name, options);
+    if (item.name.endsWith('/')) zip.addEmptyDirectory(item.name, { mode: options.mode, mtime: options.mtime });
     else zip.addBuffer(Buffer.from(item.data || ''), item.name, options);
   }
   zip.end();
@@ -96,7 +103,7 @@ test('Mac ZIP preserves all bundle bytes, executable modes and framework symlink
   const entries = await readZip(f.outputPath);
   for (const original of MAC) {
     const renamed = original.name.replace(APP, 'Curso António.app');
-    assert.deepEqual(entries.get(renamed).data, Buffer.from(original.data));
+    assert.deepEqual(entries.get(renamed).data, Buffer.from(original.data || ''));
     assert.equal(entries.get(renamed).mode, original.mode || 0o100644);
   }
   assert.deepEqual(JSON.parse(entries.get('Curso António.data/data/project-config.json').data), f.config);
@@ -144,7 +151,7 @@ test('Mac project names containing dollar replacement tokens are preserved liter
   const entries = await readZip(f.outputPath);
   for (const original of MAC) {
     const destination = `${projectName}.app${original.name.slice(APP.length)}`;
-    assert.deepEqual(entries.get(destination).data, Buffer.from(original.data));
+    assert.deepEqual(entries.get(destination).data, Buffer.from(original.data || ''));
   }
   assert.deepEqual(JSON.parse(entries.get(`${projectName}.data/data/project-config.json`).data), f.config);
 });
@@ -251,6 +258,55 @@ test('Windows template extraction roundtrip cannot merge with an existing direct
   assert.equal(fs.readFileSync(path.join(destination, 'resources', 'app.asar'), 'utf8'), 'VIEWER SOURCE');
   await assert.rejects(extractWindowsTemplate(f.templatePath, destination), /EEXIST/);
   assert.equal(fs.readFileSync(path.join(destination, 'LaunchBox Viewer.exe'), 'utf8'), 'WINDOWS EXE');
+});
+
+test('Electron extraction writes physical ASAR bytes without the virtual filesystem or global noAsar', async t => {
+  const f = fixture(t);
+  await writeTemplate(f.templatePath, WINDOWS);
+  const enginePath = require.resolve('../src/shared/project-export');
+  const nativeRequire = createRequire(enginePath);
+  const physicalWrites = [];
+  const physicalFs = new Proxy(fs, {
+    get(target, property) {
+      if (property === 'createWriteStream') return (filename, options) => {
+        physicalWrites.push(filename);
+        return fs.createWriteStream(filename, options);
+      };
+      return Reflect.get(target, property);
+    }
+  });
+  const electronFs = new Proxy(fs, {
+    get(target, property) {
+      if (property === 'createWriteStream') return (filename, options) => {
+        if (/\.asar(?:[\\/]|$)/i.test(filename)) throw new Error(`Invalid package ${filename}`);
+        return fs.createWriteStream(filename, options);
+      };
+      return Reflect.get(target, property);
+    }
+  });
+  const electronProcess = { versions: { ...process.versions, electron: '32.3.4' } };
+  Object.defineProperty(electronProcess, 'noAsar', {
+    get() { return undefined; },
+    set() { throw new Error('The exporter must not disable ASAR globally.'); }
+  });
+  const electronModule = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(enginePath, 'utf8'), {
+    module: electronModule,
+    exports: electronModule.exports,
+    process: electronProcess,
+    Buffer,
+    require(name) {
+      if (name === 'fs' || name === 'node:fs') return electronFs;
+      if (name === 'original-fs') return physicalFs;
+      return nativeRequire(name);
+    }
+  }, { filename: enginePath });
+  const destination = path.join(f.root, 'electron-staging');
+  await electronModule.exports.extractWindowsTemplate(f.templatePath, destination);
+  const asarPath = path.join(destination, 'resources', 'app.asar');
+  assert.equal(fs.readFileSync(asarPath, 'utf8'), 'VIEWER SOURCE');
+  assert.ok(physicalWrites.includes(asarPath), 'ASAR must be streamed through the physical filesystem');
+  assert.equal(electronProcess.noAsar, undefined);
 });
 
 test('project names retain Unicode but cannot escape or create reserved Windows paths', () => {

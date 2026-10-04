@@ -101,16 +101,20 @@ jobs:
           pattern: export-template-*
           path: AntonioFradique.net Windows Software Builder/dist/export-templates
           merge-multiple: true
+      - name: Exercise real Electron exports and link navigation
+        run: npm run test:electron 2>&1 | tee build-electron-smoke-source.log
       - name: Build native Builder installer with both templates
         run: npm run build:builder:${{ matrix.platform }} 2>&1 | tee build-builder.log
       - name: Verify packaged app and both embedded templates
         run: npm run verify:package 2>&1 | tee build-verification.log
+      - name: Exercise packaged export code and dependencies in real Electron
+        run: npm run test:electron:packaged 2>&1 | tee build-electron-smoke-packaged.log
       - name: Write installer checksums
         run: npm run checksums 2>&1 | tee build-checksums.log
       - name: Upload installer
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Windows-Mac-Software-Builder-2.0.0-${{ matrix.target }}
+          name: Windows-Mac-Software-Builder-2.0.1-${{ matrix.target }}
           path: |
             AntonioFradique.net Windows Software Builder/dist/builder/*.exe
             AntonioFradique.net Windows Software Builder/dist/builder/*.dmg
@@ -123,6 +127,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: installer-logs-${{ matrix.target }}
-          path: AntonioFradique.net Windows Software Builder/build-*.log
+          path: |
+            AntonioFradique.net Windows Software Builder/build-*.log
+            AntonioFradique.net Windows Software Builder/build-electron-smoke-*.json
           if-no-files-found: ignore
           retention-days: 14

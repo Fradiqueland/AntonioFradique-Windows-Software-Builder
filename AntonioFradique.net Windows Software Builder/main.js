@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeImage, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -10,7 +10,7 @@ const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
-const { isTrustedFrame, lockGuestPreferences } = require('./src/shared/electron-security');
+const { isTrustedFrame, lockGuestPreferences, configureGuestNavigation } = require('./src/shared/electron-security');
 const { fileURLToPath } = require('url');
 
 // Only our own top-level UI may call privileged IPC. Embedded pages have no bridge.
@@ -636,6 +636,7 @@ function concatFilesToTarget(sources, target) {
 
 // A webview's HTML attributes must never grant Node/preload privileges.
 function secureEmbeddedContent(win) {
+  const localWebSessions = new WeakSet();
   const allowed = (value) => {
     try {
       const url = new URL(value);
@@ -647,16 +648,20 @@ function secureEmbeddedContent(win) {
   };
   win.webContents.on('will-attach-webview', (event, preferences, params) => {
     lockGuestPreferences(preferences);
-    if (!allowed(params.src)) event.preventDefault();
+    if (!allowed(params.src)) { event.preventDefault(); return; }
+    const partition = params.partition || preferences.partition;
+    if (typeof partition === 'string' && partition.startsWith('local-web-')) {
+      localWebSessions.add(session.fromPartition(partition));
+    }
   });
   win.webContents.on('did-attach-webview', (_event, guest) => {
     guest.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     guest.session.setPermissionCheckHandler(() => false);
-    guest.on('will-navigate', (event, url) => { if (!allowed(url)) event.preventDefault(); });
-    guest.on('will-redirect', (event, url) => { if (!allowed(url)) event.preventDefault(); });
-    guest.setWindowOpenHandler(({ url }) => {
-      if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
-      return { action: 'deny' };
+    configureGuestNavigation(guest, {
+      isLocalWeb: localWebSessions.has(guest.session),
+      allowed,
+      openExternal: (url) => shell.openExternal(url),
+      onError: (error) => console.warn('Could not open external link:', error.message)
     });
   });
 }

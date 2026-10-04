@@ -1,4 +1,4 @@
-# Windows & Mac Software Builder — v2.0.0
+# Windows & Mac Software Builder — v2.0.1
 
 O Builder instala-se em Windows ou Mac e cria aplicações independentes para ambos os sistemas. Em **Exportar**, escolha **Windows** ou **Mac**.
 

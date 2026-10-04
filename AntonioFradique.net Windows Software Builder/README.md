@@ -1,4 +1,4 @@
-# Windows & Mac Software Builder — v2.0.0
+# Windows & Mac Software Builder — v2.0.1
 
 O Builder instala-se em Windows e macOS. Em **Exportar**, escolha o sistema operativo do software que está a criar. Cada instalador inclui os modelos dos dois sistemas.
 

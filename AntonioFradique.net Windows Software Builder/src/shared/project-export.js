@@ -2,7 +2,10 @@
 
 // Repack templates without extracting the Mac bundle: Windows cannot faithfully
 // materialise its Unix symlinks. The signed app's bytes and modes stay unchanged.
-const fs = require('fs');
+// Electron's patched fs treats *.asar as virtual, read-only directories. This
+// module copies archive bytes on disk, including the Viewer's app.asar, so use
+// the physical filesystem without changing process.noAsar for the running UI.
+const fs = process.versions.electron ? require('original-fs') : require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Transform } = require('stream');
@@ -272,10 +275,12 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     try {
       for (const item of template.entries) {
         const destination = target === 'mac' ? `${name}.app${item.name.slice(MAC_BUNDLE.length)}` : item.name;
-        const options = { mode: item.mode, mtime: item.entry.getLastModDate(), size: item.entry.uncompressedSize };
+        // size belongs only to streamed files. yazl rejects it for directory
+        // and buffer entries, including the explicit directories in real apps.
+        const options = { mode: item.mode, mtime: item.entry.getLastModDate() };
         if (item.kind === 'directory') { archive.addEmptyDirectory(destination, options); completed++; }
-        else if (item.kind === 'symlink') { archive.addBuffer(item.link, destination, { mode: options.mode, mtime: options.mtime }); completed++; }
-        else addLazy(destination, options, () => entryStream(template.zip, item.entry));
+        else if (item.kind === 'symlink') { archive.addBuffer(item.link, destination, options); completed++; }
+        else addLazy(destination, { ...options, size: item.entry.uncompressedSize }, () => entryStream(template.zip, item.entry));
       }
       const base = target === 'windows' ? 'resources' : `${name}.data`;
       archive.addEmptyDirectory(`${base}/dist-assets/`, { mode: 0o040755 });

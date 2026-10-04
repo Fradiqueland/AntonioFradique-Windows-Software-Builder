@@ -85,3 +85,22 @@ e alterações de logos/banners continuam por resolver. A versão Electron 32 fo
 preservada nesta alteração; atualização e revisão de vulnerabilidades continuam
 necessárias antes de distribuição pública. Os testes locais não substituem
 validação manual dos quatro percursos de exportação em Windows e macOS.
+
+## Correção v2.0.1 — regressões observadas no Windows
+
+As primeiras verificações v2.0.0 executavam o motor de exportação no Node,
+com modelos sintéticos que não incluíam diretórios explícitos. Não detetaram:
+
+- `Invalid package ...app.asar`: a escrita pelo filesystem virtual do Electron
+  tratava o arquivo ainda incompleto como pacote. O motor passa a usar
+  `original-fs` para copiar os bytes físicos, sem alterar `process.noAsar`.
+- `options.size not allowed`: o ZIP Mac real contém entradas de diretório,
+  às quais era passada uma opção apenas válida para streams de ficheiros.
+- Links dos módulos web importados não chegavam ao handler de browser porque
+  o webview não tinha `allowpopups`. A nova política permite encaminhar uma
+  navegação HTTP/HTTPS por ativação nativa do utilizador e continua a negar
+  a criação de janelas Electron pelo conteúdo.
+
+A suite passa a incluir estes casos e a pipeline exige um teste no Electron
+real com os dois modelos compilados, exportações e cliques em conteúdo web
+antes de disponibilizar os instaladores.
