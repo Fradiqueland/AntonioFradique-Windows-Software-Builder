@@ -16,7 +16,7 @@ for (const name of ['php', 'ffmpeg']) {
   if (target === 'mac-universal') {
     if (process.platform !== 'darwin') throw new Error('Validate native Mac runtimes on macOS.');
     fs.accessSync(executable, fs.constants.X_OK);
-    const result = spawnSync('/usr/bin/lipo', ['-verify_arch', 'x86_64', 'arm64', executable], { encoding: 'utf8' });
+    const result = spawnSync('/usr/bin/lipo', [executable, '-verify_arch', 'x86_64', 'arm64'], { encoding: 'utf8' });
     if (result.error || result.status !== 0) throw new Error(name + ' must include both Intel and Apple Silicon slices: ' + (result.stderr || result.error));
   }
   console.log('Optional ' + name + ' included from ' + directory);

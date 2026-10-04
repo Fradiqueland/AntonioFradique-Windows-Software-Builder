@@ -15,7 +15,7 @@ async function main() {
   if (target === 'mac-universal') {
     for (const [command, args] of [
       ['/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', source]],
-      ['/usr/bin/lipo', ['-verify_arch', 'x86_64', 'arm64', path.join(source, 'Contents/MacOS/LaunchBox Viewer')]]
+      ['/usr/bin/lipo', [path.join(source, 'Contents/MacOS/LaunchBox Viewer'), '-verify_arch', 'x86_64', 'arm64']]
     ]) {
       const result = spawnSync(command, args, { stdio: 'inherit' });
       if (result.error || result.status !== 0) throw new Error('Mac template verification failed: ' + command);

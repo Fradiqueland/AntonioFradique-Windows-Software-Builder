@@ -22,7 +22,7 @@ async function main() {
   if (mac) {
     for (const [command, args] of [
       ['/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', app]],
-      ['/usr/bin/lipo', ['-verify_arch', 'x86_64', 'arm64', path.join(app, 'Contents/MacOS', pkg.build.productName)]]
+      ['/usr/bin/lipo', [path.join(app, 'Contents/MacOS', pkg.build.productName), '-verify_arch', 'x86_64', 'arm64']]
     ]) {
       const result = spawnSync(command, args, { stdio: 'inherit' });
       if (result.error || result.status !== 0) throw new Error('Packaged Mac verification failed: ' + command);

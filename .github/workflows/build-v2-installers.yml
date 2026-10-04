@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: v2-installers-${{ github.event.pull_request.head.ref || github.ref }}
+  group: v2-installers-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 defaults:
