@@ -47,3 +47,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+
+# Portable PHP is prepared locally before packaging; never commit runtime binaries.
+Windows-Mac-Software-Builder/vendor/php/*
+!Windows-Mac-Software-Builder/vendor/php/README.md

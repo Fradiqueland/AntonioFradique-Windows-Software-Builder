@@ -1,0 +1,110 @@
+{
+  "name": "launchbox-pro",
+  "version": "2.0.1",
+  "description": "Windows & Mac Software Builder — construtor e exportação de aplicações Windows e macOS",
+  "main": "main.js",
+  "author": "AntonioFradique.net",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "build:viewer-template": "node scripts/build-native.js viewer",
+    "build:viewer:win": "node scripts/check-runtimes.js windows-x64 && electron-builder --config build-configs/viewer-win.cjs --win --x64 --publish never && node scripts/package-viewer-template.js windows-x64",
+    "build:viewer:mac": "node scripts/check-runtimes.js mac-universal && electron-builder --config build-configs/viewer-mac.cjs --mac --universal --publish never && node scripts/package-viewer-template.js mac-universal",
+    "check:templates": "node scripts/check-viewer-template.js",
+    "build:builder": "node scripts/build-native.js builder",
+    "build:builder:win": "node scripts/check-runtimes.js windows-x64 && node scripts/check-viewer-template.js && node scripts/check-sfx.js && electron-builder --config build-configs/builder-win.cjs --win --x64 --publish never",
+    "build:builder:mac": "node scripts/check-runtimes.js mac-universal && node scripts/check-viewer-template.js && electron-builder --config build-configs/builder-mac.cjs --mac --universal --publish never",
+    "build:all": "node scripts/build-native.js all",
+    "check:ffmpeg": "node scripts/check-ffmpeg.js",
+    "check:php": "node scripts/check-php.js",
+    "test": "node --test tests/*.test.js",
+    "verify:package": "node scripts/verify-package.js",
+    "checksums": "node scripts/write-checksums.js",
+    "test:electron": "electron scripts/smoke-real-exports.cjs",
+    "test:electron:packaged": "electron scripts/smoke-real-exports.cjs --packaged"
+  },
+  "build": {
+    "appId": "com.launchbox.builder",
+    "productName": "Windows & Mac Software Builder",
+    "directories": {
+      "output": "dist/builder"
+    },
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "preload-viewer.js",
+      "src/builder/**/*",
+      "src/viewer/**/*",
+      "src/shared/**/*",
+      "locales/**/*",
+      "!src/builder/templates/**",
+      "!src/builder/bin/**",
+      "!build-configs/**",
+      "!scripts/**",
+      "!dist/**"
+    ],
+    "extraResources": [
+      {
+        "from": "build-configs/builder-mode/app-mode.json",
+        "to": "app-mode.json"
+      },
+      {
+        "from": "dist/export-templates",
+        "to": "export-templates",
+        "filter": [
+          "windows-x64.zip",
+          "mac-universal.zip",
+          "*.manifest.json"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/builder/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Windows & Mac Software Builder",
+      "artifactName": "Windows-Mac-Software-Builder-${version}-windows-x64-setup.${ext}"
+    },
+    "artifactName": "Windows-Mac-Software-Builder-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "notarize": false,
+      "entitlements": "build-configs/entitlements.mac.plist",
+      "entitlementsInherit": "build-configs/entitlements.mac.plist",
+      "mergeASARs": true,
+      "sign": "./scripts/sign-mac-adhoc.cjs"
+    },
+    "dmg": {
+      "artifactName": "Windows-Mac-Software-Builder-${version}-mac-universal.${ext}",
+      "sign": false
+    }
+  },
+  "dependencies": {
+    "png-to-ico": "^2.1.8",
+    "rcedit": "^4.0.1",
+    "yauzl": "^3.2.0",
+    "yazl": "^3.3.1"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "hls.js": "^1.6.16",
+    "@electron/asar": "^3.2.10",
+    "@electron/osx-sign": "^1.3.1"
+  }
+}
