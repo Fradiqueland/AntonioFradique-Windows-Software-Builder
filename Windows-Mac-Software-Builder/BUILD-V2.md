@@ -69,7 +69,7 @@ Os dados ficam fora do bundle Mac para preservar a assinatura. O ícone personal
 Requisitos: Node.js 22, Git e ferramentas nativas. No Mac, instale as Command Line Tools do Xcode. Os modelos devem corresponder à **mesma versão do código**. Um PC Windows não gera nativamente o modelo Mac nem o DMG.
 
 ```bash
-cd "AntonioFradique.net Windows Software Builder"
+cd "Windows-Mac-Software-Builder"
 npm ci
 npm test
 ```

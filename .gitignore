@@ -50,5 +50,5 @@ Thumbs.db
 
 
 # Portable PHP is prepared locally before packaging; never commit runtime binaries.
-AntonioFradique.net Windows Software Builder/vendor/php/*
-!AntonioFradique.net Windows Software Builder/vendor/php/README.md
+Windows-Mac-Software-Builder/vendor/php/*
+!Windows-Mac-Software-Builder/vendor/php/README.md

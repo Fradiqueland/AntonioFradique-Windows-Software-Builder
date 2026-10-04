@@ -17,7 +17,7 @@ concurrency:
 defaults:
   run:
     shell: bash
-    working-directory: AntonioFradique.net Windows Software Builder
+    working-directory: Windows-Mac-Software-Builder
 
 env:
   CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -45,7 +45,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: AntonioFradique.net Windows Software Builder/package-lock.json
+          cache-dependency-path: Windows-Mac-Software-Builder/package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Test application
@@ -57,8 +57,8 @@ jobs:
         with:
           name: export-template-${{ matrix.target }}
           path: |
-            AntonioFradique.net Windows Software Builder/dist/export-templates/${{ matrix.target }}.zip
-            AntonioFradique.net Windows Software Builder/dist/export-templates/${{ matrix.target }}.manifest.json
+            Windows-Mac-Software-Builder/dist/export-templates/${{ matrix.target }}.zip
+            Windows-Mac-Software-Builder/dist/export-templates/${{ matrix.target }}.manifest.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: template-logs-${{ matrix.target }}
-          path: AntonioFradique.net Windows Software Builder/build-*.log
+          path: Windows-Mac-Software-Builder/build-*.log
           if-no-files-found: ignore
           retention-days: 14
 
@@ -92,14 +92,14 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: AntonioFradique.net Windows Software Builder/package-lock.json
+          cache-dependency-path: Windows-Mac-Software-Builder/package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Download both platform templates
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: export-template-*
-          path: AntonioFradique.net Windows Software Builder/dist/export-templates
+          path: Windows-Mac-Software-Builder/dist/export-templates
           merge-multiple: true
       - name: Exercise real Electron exports and link navigation
         run: npm run test:electron 2>&1 | tee build-electron-smoke-source.log
@@ -116,9 +116,9 @@ jobs:
         with:
           name: Windows-Mac-Software-Builder-2.0.1-${{ matrix.target }}
           path: |
-            AntonioFradique.net Windows Software Builder/dist/builder/*.exe
-            AntonioFradique.net Windows Software Builder/dist/builder/*.dmg
-            AntonioFradique.net Windows Software Builder/dist/builder/SHA256SUMS.txt
+            Windows-Mac-Software-Builder/dist/builder/*.exe
+            Windows-Mac-Software-Builder/dist/builder/*.dmg
+            Windows-Mac-Software-Builder/dist/builder/SHA256SUMS.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
@@ -128,7 +128,7 @@ jobs:
         with:
           name: installer-logs-${{ matrix.target }}
           path: |
-            AntonioFradique.net Windows Software Builder/build-*.log
-            AntonioFradique.net Windows Software Builder/build-electron-smoke-*.json
+            Windows-Mac-Software-Builder/build-*.log
+            Windows-Mac-Software-Builder/build-electron-smoke-*.json
           if-no-files-found: ignore
           retention-days: 14

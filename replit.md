@@ -1,45 +1,32 @@
-# [Project name]
+# Windows & Mac Software Builder — v2.0.1
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Aplicação desktop Electron para editar conteúdos e exportar produtos independentes para Windows e macOS. A apresentação do produto e os downloads atuais estão em [README.md](README.md).
 
-## Run & Operate
+## Código e comandos do produto
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+O código mantido da aplicação está em `Windows-Mac-Software-Builder/`. Use Node.js 22:
 
-## Stack
+```bash
+cd Windows-Mac-Software-Builder
+npm ci
+npm test
+npm start
+```
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+Electron precisa de uma sessão gráfica. Os instaladores e os modelos de exportação são compilados em Windows e macOS pelo workflow `.github/workflows/build-v2-installers.yml`. O ambiente Replit/Linux pode editar o código e executar os testes JavaScript, mas não produz o DMG Mac nativo.
 
-## Where things live
+## Instalação e exportação
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- O Builder é distribuído como Setup EXE Windows e DMG universal Mac.
+- Os produtos exportados incorporam o Viewer e os conteúdos. Windows gera EXE SFX para Windows; Mac gera ZIP portátil para Windows. Ambos geram ZIP para Mac.
+- Os dados dos produtos Mac ficam numa pasta `.data` junto da `.app`, preservando a assinatura do bundle.
+- PHP e ffmpeg são runtimes opcionais preparados antes da compilação; não são descarregados automaticamente.
+- Não há exportação para iOS.
 
-## Architecture decisions
+Consulte [BUILD-V2.md](Windows-Mac-Software-Builder/BUILD-V2.md), [NOTAS.md](Windows-Mac-Software-Builder/NOTAS.md) e a [auditoria](Windows-Mac-Software-Builder/AUDITORIA-2026-10-04.md).
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+## Outros ficheiros do repositório
 
-## Product
+As pastas `artifacts/`, `lib/` e `scripts/`, com a configuração pnpm na raiz, pertencem ao ambiente web/Replit anterior. Não são os comandos de compilação do produto Electron e não são necessários para instalar ou utilizar o Builder. Os ZIPs em `exports/` e os anexos anteriores são material histórico; use os downloads v2 indicados no README principal.
 
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+Conserve os identificadores internos de armazenamento e os formatos dos projetos ao alterar o nome público. Depois de alterar o Viewer, reconstrua os dois modelos, os instaladores e os produtos a distribuir.
