@@ -8,6 +8,27 @@ const { execFile, spawn } = require('child_process');
 const { promisify } = require('util');
 const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
+const localWeb = require('./src/shared/local-web');
+const { isTrustedFrame, lockGuestPreferences } = require('./src/shared/electron-security');
+const { fileURLToPath } = require('url');
+
+// Only our own top-level UI may call privileged IPC. Embedded pages have no bridge.
+const VIEWER_CHANNELS = new Set([
+  'config:load', 'asset:resolve', 'shell:openExternal', 'shell:launchFile',
+  'dialog:saveFileAs', 'i18n:loadLocale', 'youtube:hostUrl', 'iptv:hosts',
+  'iptv:hasFfmpeg', 'iptv:proxyUrl', 'iptv:proxyStatus', 'iptv:proxyStop',
+  'favs:load', 'favs:save', 'state:load', 'state:save', 'web:open', 'web:close'
+]);
+function handleTrustedIpc(channel, handler) {
+  ipcMain.handle(channel, (event, ...args) => {
+    const fromBuilder = isTrustedFrame(event, builderWindow, path.join(__dirname, 'src/builder/index.html'));
+    const fromViewer = VIEWER_CHANNELS.has(channel)
+      && isTrustedFrame(event, viewerWindow, path.join(__dirname, 'src/viewer/index.html'));
+    if (!fromBuilder && !fromViewer) throw new Error('Origem IPC não autorizada.');
+    return handler(event, ...args);
+  });
+}
+
 
 /* =========================================================
  * APP MODE: Builder vs Viewer (SFX-stamped)
@@ -145,7 +166,7 @@ function sanitizeFavs(data) {
   return { folders: out };
 }
 
-ipcMain.handle('favs:load', (_event, key) => {
+handleTrustedIpc('favs:load', (_event, key) => {
   try {
     const file = favsFilePath(key);
     if (!fs.existsSync(file)) return null;
@@ -155,7 +176,7 @@ ipcMain.handle('favs:load', (_event, key) => {
   }
 });
 
-ipcMain.handle('favs:save', (_event, payload) => {
+handleTrustedIpc('favs:save', (_event, payload) => {
   const file = favsFilePath(payload && payload.key);
   const clean = sanitizeFavs(payload && payload.data);
   fs.mkdirSync(FAVS_DIR, { recursive: true });
@@ -174,14 +195,14 @@ function sanitizeViewerState(data) {
   if (data && typeof data.lastModuleId === 'string') out.lastModuleId = data.lastModuleId.slice(0, 64);
   return out;
 }
-ipcMain.handle('state:load', (_event, key) => {
+handleTrustedIpc('state:load', (_event, key) => {
   try {
     const file = favsFilePath(key);
     if (!fs.existsSync(file)) return null;
     return sanitizeViewerState(JSON.parse(fs.readFileSync(file, 'utf-8')));
   } catch (_) { return null; }
 });
-ipcMain.handle('state:save', (_event, payload) => {
+handleTrustedIpc('state:save', (_event, payload) => {
   const file = favsFilePath(payload && payload.key);
   let current = {};
   try { if (fs.existsSync(file)) current = sanitizeViewerState(JSON.parse(fs.readFileSync(file, 'utf-8'))); } catch (_) { current = {}; }
@@ -198,12 +219,18 @@ ipcMain.handle('state:save', (_event, payload) => {
 const PROJECTS_ROOT = path.join(WRITE_BASE, 'projects');
 const PROJECTS_INDEX = path.join(WRITE_BASE, 'projects.json');
 
+const phpDir = app.isPackaged ? path.join(process.resourcesPath, 'php') : path.join(__dirname, 'vendor/php');
+const phpPath = path.join(phpDir, process.platform === 'win32' ? 'php.exe' : 'php');
+const webRuntime = localWeb.createWebRuntime({ phpPath });
+const stopWebModules = () => webRuntime.closeAll().catch((err) => console.warn('Web cleanup:', err.message));
+
+
 const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault']);
 const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'smart-embed', 'iptv'
+  'article-reader', 'smart-embed', 'iptv', 'local-web'
 ]);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
@@ -281,6 +308,7 @@ function sanitizeProjectName(name) {
 }
 
 function applyActiveProjectPaths(id) {
+  stopWebModules();
   const dir = projectDir(id);
   DATA_DIR = path.join(dir, 'data');
   ASSETS_DIR = path.join(dir, 'dist-assets');
@@ -456,8 +484,15 @@ function readConfig() {
 function writeConfig(config) {
   if (isViewer) throw new Error('Viewer não pode escrever configuração.');
   ensureDirs();
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
-  touchActiveProject();
+  const temp = CONFIG_PATH + '.' + crypto.randomUUID() + '.tmp';
+  try {
+    fs.writeFileSync(temp, JSON.stringify(config, null, 2), 'utf-8');
+    fs.renameSync(temp, CONFIG_PATH);
+  } finally {
+    try { fs.unlinkSync(temp); } catch (_) {}
+  }
+  // The config is already committed; an index timestamp failure must not roll back its assets.
+  try { touchActiveProject(); } catch (err) { console.warn('Project timestamp:', err.message); }
 }
 
 function sanitizeFilename(name) {
@@ -540,6 +575,7 @@ function copyDirRecursive(src, dest) {
     const d = path.join(dest, entry.name);
     if (entry.isDirectory()) copyDirRecursive(s, d);
     else if (entry.isFile()) fs.copyFileSync(s, d);
+    else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): ' + s);
   }
 }
 
@@ -562,6 +598,34 @@ function concatFilesToTarget(sources, target) {
 
 /* -------- Windows -------- */
 
+
+// A webview's HTML attributes must never grant Node/preload privileges.
+function secureEmbeddedContent(win) {
+  const allowed = (value) => {
+    try {
+      const url = new URL(value);
+      if (url.protocol === 'https:' || url.protocol === 'http:') return true;
+      if (url.protocol !== 'file:') return false;
+      const file = fs.realpathSync(fileURLToPath(url));
+      return isInsideAssetsDir(file) && path.extname(file).toLowerCase() === '.pdf';
+    } catch (_) { return false; }
+  };
+  win.webContents.on('will-attach-webview', (event, preferences, params) => {
+    lockGuestPreferences(preferences);
+    if (!allowed(params.src)) event.preventDefault();
+  });
+  win.webContents.on('did-attach-webview', (_event, guest) => {
+    guest.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    guest.session.setPermissionCheckHandler(() => false);
+    guest.on('will-navigate', (event, url) => { if (!allowed(url)) event.preventDefault(); });
+    guest.on('will-redirect', (event, url) => { if (!allowed(url)) event.preventDefault(); });
+    guest.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
+      return { action: 'deny' };
+    });
+  });
+}
+
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 1024, minHeight: 680,
@@ -576,6 +640,9 @@ function createBuilderWindow() {
       sandbox: false
     }
   });
+  secureEmbeddedContent(builderWindow);
+  builderWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  builderWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   builderWindow.setMenuBarVisibility(false);
   attachContextMenu(builderWindow.webContents);
   builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
@@ -652,6 +719,7 @@ function createViewerWindow({ standalone = false } = {}) {
     // Recarrega para reler o project-config.json atualizado (módulos novos,
     // logo, banner). Sem isto, reabrir a pré-visualização mostrava o estado
     // antigo (ecrã "Bem-vindo" vazio) em vez do conteúdo já gravado.
+    stopWebModules();
     viewerWindow.webContents.reload();
     viewerWindow.focus();
     return viewerWindow;
@@ -696,7 +764,7 @@ function createViewerWindow({ standalone = false } = {}) {
    * principal quais são os hosts IPTV (iptv:hosts); os redirecionamentos para
    * relays são aprendidos pelo id do pedido, que se mantém entre saltos. */
   ipcMain.removeHandler('iptv:hosts');
-  ipcMain.handle('iptv:hosts', (_event, hosts) => {
+  handleTrustedIpc('iptv:hosts', (_event, hosts) => {
     for (const h of (Array.isArray(hosts) ? hosts : [])) if (typeof h === 'string' && h) iptvHosts.add(h.toLowerCase());
     return true;
   });
@@ -760,7 +828,6 @@ function createViewerWindow({ standalone = false } = {}) {
     if (/^(https?:\/\/|mailto:)/i.test(url)) shell.openExternal(url).catch(() => {});
   };
   viewerWindow.webContents.on('will-navigate', (e, url) => {
-    if (/^file:/i.test(url)) return;
     e.preventDefault();
     openOutside(url);
   });
@@ -768,15 +835,8 @@ function createViewerWindow({ standalone = false } = {}) {
     openOutside(url);
     return { action: 'deny' };
   });
-  // Dentro do <webview> do YouTube, "Ver no YouTube"/popups abriam uma janela
-  // Electron nua; vão para o browser do sistema. Outros sites incorporados
-  // mantêm o comportamento (popups de login, etc.).
-  viewerWindow.webContents.on('did-attach-webview', (_e, guest) => {
-    guest.setWindowOpenHandler(({ url }) => {
-      if (/youtube\.com|youtu\.be|^http:\/\/127\.0\.0\.1:/i.test(guest.getURL())) { openOutside(url); return { action: 'deny' }; }
-      return { action: 'allow' };
-    });
-  });
+  secureEmbeddedContent(viewerWindow);
+  viewerWindow.webContents.on('render-process-gone', stopWebModules);
 
   viewerWindow.setMenuBarVisibility(false);
   viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
@@ -784,7 +844,7 @@ function createViewerWindow({ standalone = false } = {}) {
     if (standalone) viewerWindow.maximize();
     viewerWindow.show();
   });
-  viewerWindow.on('closed', () => { viewerWindow = null; });
+  viewerWindow.on('closed', () => { stopWebModules(); viewerWindow = null; });
   return viewerWindow;
 }
 
@@ -839,7 +899,7 @@ function ensureYoutubeHost() {
   });
 }
 
-ipcMain.handle('youtube:hostUrl', async (_event, id) => {
+handleTrustedIpc('youtube:hostUrl', async (_event, id) => {
   const vid = String(id || '');
   if (!YT_ID_RE.test(vid)) throw new Error('ID de vídeo do YouTube inválido.');
   const port = await ensureYoutubeHost();
@@ -915,7 +975,7 @@ function serveIptvProxy(token, req, res) {
   });
   res.on('close', () => { detach(); try { child.kill('SIGKILL'); } catch (_) { /* noop */ } });
 }
-ipcMain.handle('iptv:proxyUrl', async (_event, url) => {
+handleTrustedIpc('iptv:proxyUrl', async (_event, url) => {
   const u = String(url || '');
   if (!/^https?:\/\//i.test(u)) throw new Error('URL de stream inválido.');
   if (!ffmpegPath()) return null;
@@ -927,12 +987,12 @@ ipcMain.handle('iptv:proxyUrl', async (_event, url) => {
   const port = await ensureYoutubeHost();
   return { url: 'http://127.0.0.1:' + port + '/iptv/' + token, token };
 });
-ipcMain.handle('iptv:proxyStatus', (_event, token) => {
+handleTrustedIpc('iptv:proxyStatus', (_event, token) => {
   const run = iptvProxyRuns.get(String(token || ''));
   return run ? { running: !!run.child, exitCode: run.exitCode, log: run.log.slice(-12) } : null;
 });
-ipcMain.handle('iptv:proxyStop', (_event, token) => { stopIptvProxy(String(token || '')); return true; });
-ipcMain.handle('iptv:hasFfmpeg', () => !!ffmpegPath());
+handleTrustedIpc('iptv:proxyStop', (_event, token) => { stopIptvProxy(String(token || '')); return true; });
+handleTrustedIpc('iptv:hasFfmpeg', () => !!ffmpegPath());
 
 app.on('will-quit', () => {
   try { if (ytServer) ytServer.close(); } catch (_) { /* noop */ }
@@ -958,17 +1018,24 @@ const iptvReqIds = new Set();
 // Decifra os url de IPTV em memória antes de entregar a config à janela. A
 // config do Builder está em texto simples (sem marcador) → passa intacta; só a
 // config embutida num curso gerado vem cifrada e é aqui decifrada.
-ipcMain.handle('config:load', () => Object.assign(iptvCipher.decryptConfigIptv(readConfig()), { viewerVersion: app.getVersion() }));
-ipcMain.handle('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
+handleTrustedIpc('config:load', () => Object.assign(iptvCipher.decryptConfigIptv(readConfig()), { viewerVersion: app.getVersion() }));
+handleTrustedIpc('asset:resolve', (_event, relativePath) => resolveRelativeAsset(relativePath));
+
+handleTrustedIpc('web:open', async (_event, moduleId) => {
+  const mod = findModuleById(readConfig().content || [], moduleId);
+  if (!mod || mod.type !== 'local-web') throw new Error('Módulo web não encontrado.');
+  return webRuntime.open({ data: mod.data, assetsDir: ASSETS_DIR });
+});
+handleTrustedIpc('web:close', (_event, token) => webRuntime.close(token));
 
 /* -------- IPC: projetos (Builder only) -------- */
 
-ipcMain.handle('projects:list', () => {
+handleTrustedIpc('projects:list', () => {
   assertBuilder();
   return projectsState();
 });
 
-ipcMain.handle('projects:create', (_event, payload) => {
+handleTrustedIpc('projects:create', (_event, payload) => {
   assertBuilder();
   const name = sanitizeProjectName(payload && payload.name);
   const id = genProjectId();
@@ -984,7 +1051,7 @@ ipcMain.handle('projects:create', (_event, payload) => {
   return { state: projectsState(), config: readConfig() };
 });
 
-ipcMain.handle('projects:open', (_event, payload) => {
+handleTrustedIpc('projects:open', (_event, payload) => {
   assertBuilder();
   const id = payload && payload.id;
   const idx = readProjectsIndex();
@@ -996,7 +1063,7 @@ ipcMain.handle('projects:open', (_event, payload) => {
   return { state: projectsState(), config: readConfig() };
 });
 
-ipcMain.handle('projects:rename', (_event, payload) => {
+handleTrustedIpc('projects:rename', (_event, payload) => {
   assertBuilder();
   const id = payload && payload.id;
   const name = sanitizeProjectName(payload && payload.name);
@@ -1009,7 +1076,7 @@ ipcMain.handle('projects:rename', (_event, payload) => {
   return projectsState();
 });
 
-ipcMain.handle('projects:delete', (_event, payload) => {
+handleTrustedIpc('projects:delete', (_event, payload) => {
   assertBuilder();
   const id = payload && payload.id;
   const idx = readProjectsIndex();
@@ -1041,7 +1108,7 @@ ipcMain.handle('projects:delete', (_event, payload) => {
   return { state: projectsState(), config: switchedConfig };
 });
 
-ipcMain.handle('projects:duplicate', (_event, payload) => {
+handleTrustedIpc('projects:duplicate', (_event, payload) => {
   assertBuilder();
   const srcId = payload && payload.id;
   const idx = readProjectsIndex();
@@ -1070,10 +1137,11 @@ ipcMain.handle('projects:duplicate', (_event, payload) => {
 /* -------- IPC: brand (Builder only) -------- */
 
 function assertBuilder() {
+  if (exportBusy) throw new Error('Aguarde a conclusão da exportação antes de alterar o projeto.');
   if (isViewer) throw new Error('Operação não disponível no Viewer.');
 }
 
-ipcMain.handle('brand:save', (_event, payload) => {
+handleTrustedIpc('brand:save', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   let logoRelative = current.brand.logo || null;
@@ -1104,7 +1172,7 @@ ipcMain.handle('brand:save', (_event, payload) => {
 
 /* -------- IPC: marketing (Builder only) -------- */
 
-ipcMain.handle('marketing:saveLeads', (_event, payload) => {
+handleTrustedIpc('marketing:saveLeads', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   const updated = {
@@ -1122,7 +1190,7 @@ ipcMain.handle('marketing:saveLeads', (_event, payload) => {
   return updated;
 });
 
-ipcMain.handle('marketing:saveBanners', (_event, payload) => {
+handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   const curBanners = (current.marketing && current.marketing.banners) || {};
@@ -1160,7 +1228,7 @@ ipcMain.handle('marketing:saveBanners', (_event, payload) => {
   return updated;
 });
 
-ipcMain.handle('marketing:saveSocial', (_event, payload) => {
+handleTrustedIpc('marketing:saveSocial', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   const keys = ['site', 'instagram', 'facebook', 'x', 'tiktok', 'pinterest', 'linkedin', 'spotify', 'whatsapp', 'telegram'];
@@ -1206,23 +1274,33 @@ function moduleAssetFiles(mod) {
   return out;
 }
 
-ipcMain.handle('content:save', (_event, payload) => {
+handleTrustedIpc('content:save', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   const previous = Array.isArray(current.content) ? current.content : [];
   const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
   const nextModules = [];
+  const importedWeb = [];
+  try {
   for (const raw of incoming) {
     const mod = sanitizeModule(raw);
     if (!mod) continue;
     const prev = findModuleById(previous, mod.id);
     const d = mod.data || {};
-    if (SINGLE_FILE_TYPES.has(mod.type)) {
+    if (mod.type === 'local-web') {
+      if (typeof d.sourcePath === 'string' && d.sourcePath) {
+        mod.data = localWeb.importWebProject({ sourcePath: d.sourcePath, includeDirectory: d.includeDirectory === true, assetsDir: ASSETS_DIR });
+        importedWeb.push(mod.data);
+      } else {
+        if (!prev || prev.type !== 'local-web') throw new Error('Selecione um ficheiro HTML ou PHP.');
+        localWeb.validateWebProject({ data: prev.data, assetsDir: ASSETS_DIR });
+        mod.data = { ...prev.data };
+      }
+    } else if (SINGLE_FILE_TYPES.has(mod.type)) {
       const sourcePath = typeof d.sourcePath === 'string' ? d.sourcePath : null;
       let file, fileName;
       if (sourcePath) {
         if (!fs.existsSync(sourcePath)) throw new Error('Ficheiro não encontrado: ' + sourcePath);
-        if (prev && prev.data && prev.data.file) deleteAssetIfInside(prev.data.file);
         const prefix = mod.type === 'pdf' ? 'pdf'
           : mod.type === 'local-video' ? 'video'
           : mod.type === 'local-audio' ? 'audio'
@@ -1296,15 +1374,27 @@ ipcMain.handle('content:save', (_event, payload) => {
     }
     nextModules.push(mod);
   }
-  // GC de assets órfãos em todos os tipos com ficheiros (único + galeria).
-  const kept = new Set();
-  for (const m of nextModules) for (const f of moduleAssetFiles(m)) kept.add(f);
-  for (const prev of previous) {
-    for (const f of moduleAssetFiles(prev)) { if (!kept.has(f)) deleteAssetIfInside(f); }
-  }
   const updated = { ...current, content: nextModules };
   writeConfig(updated);
-  return updated;
+  } catch (err) {
+    for (const data of importedWeb) {
+      try { localWeb.removeWebProject({ data, assetsDir: ASSETS_DIR }); } catch (_) {}
+    }
+    throw err;
+  }
+  // Delete retired assets only after the new configuration was saved.
+  const kept = new Set();
+  for (const m of nextModules) for (const f of moduleAssetFiles(m)) kept.add(f);
+  const keptRoots = new Set(nextModules.filter((m) => m.type === 'local-web').map((m) => m.data.root));
+  for (const prev of previous) {
+    for (const f of moduleAssetFiles(prev)) { if (!kept.has(f)) deleteAssetIfInside(f); }
+    if (prev.type === 'local-web' && !keptRoots.has(prev.data.root)) {
+      stopWebModules();
+      try { localWeb.removeWebProject({ data: prev.data, assetsDir: ASSETS_DIR }); }
+      catch (err) { console.warn('Web asset cleanup:', err.message); }
+    }
+  }
+  return { ...current, content: nextModules };
 });
 
 /* -------- IPTV: obtenção/parse de canais (Builder only) --------
@@ -1448,7 +1538,7 @@ function iptvLoadM3UFromFile(filePath) {
   return iptvFinalize(text, null);
 }
 
-ipcMain.handle('iptv:load', async (_event, payload) => {
+handleTrustedIpc('iptv:load', async (_event, payload) => {
   assertBuilder();
   const source = payload && payload.source;
   try {
@@ -1475,6 +1565,7 @@ const PICK_FILTERS = {
   image: [{ name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] }],
   icon: [{ name: 'Ícone / Imagem (.ico, .png, .jpg)', extensions: ['ico', 'png', 'jpg', 'jpeg'] }],
   pdf: [{ name: 'PDF', extensions: ['pdf'] }],
+  web: [{ name: 'HTML / PHP', extensions: ['html', 'htm', 'php'] }],
   video: [{ name: 'Vídeo', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
   audio: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] }],
   playlist: [{ name: 'Listas IPTV', extensions: ['m3u', 'm3u8'] }],
@@ -1494,7 +1585,7 @@ function pickFilters(category) {
   return (PICK_FILTERS[category] || []).concat([{ name: 'Todos os ficheiros', extensions: ['*'] }]);
 }
 
-ipcMain.handle('dialog:pickFile', async (_event, category) => {
+handleTrustedIpc('dialog:pickFile', async (_event, category) => {
   assertBuilder();
   const result = await dialog.showOpenDialog(builderWindow, {
     properties: ['openFile'],
@@ -1505,7 +1596,7 @@ ipcMain.handle('dialog:pickFile', async (_event, category) => {
   return { path: filePath, name: path.basename(filePath) };
 });
 
-ipcMain.handle('dialog:pickFiles', async (_event, category) => {
+handleTrustedIpc('dialog:pickFiles', async (_event, category) => {
   assertBuilder();
   const result = await dialog.showOpenDialog(builderWindow, {
     properties: ['openFile', 'multiSelections'],
@@ -1517,7 +1608,7 @@ ipcMain.handle('dialog:pickFiles', async (_event, category) => {
 
 /* Viewer: "Guardar como" para o módulo Cofre de Downloads. Copia o ficheiro
  * (que vive em dist-assets/) para o local escolhido pelo aluno. */
-ipcMain.handle('dialog:saveFileAs', async (_event, payload) => {
+handleTrustedIpc('dialog:saveFileAs', async (_event, payload) => {
   const rel = payload && typeof payload.file === 'string' ? payload.file : null;
   const suggested = (payload && typeof payload.fileName === 'string' && payload.fileName) || 'ficheiro';
   if (!rel) throw new Error('Ficheiro inválido.');
@@ -1537,13 +1628,13 @@ ipcMain.handle('dialog:saveFileAs', async (_event, payload) => {
 
 /* -------- IPC: viewer + shell -------- */
 
-ipcMain.handle('viewer:open', () => {
+handleTrustedIpc('viewer:open', () => {
   assertBuilder();
   createViewerWindow({ standalone: false });
   return true;
 });
 
-ipcMain.handle('shell:openExternal', async (_event, url) => {
+handleTrustedIpc('shell:openExternal', async (_event, url) => {
   if (typeof url !== 'string' || !url.trim()) return false;
   const trimmed = url.trim();
   if (!/^https?:\/\//i.test(trimmed)) throw new Error('URL inválido (apenas http/https): ' + trimmed);
@@ -1551,7 +1642,7 @@ ipcMain.handle('shell:openExternal', async (_event, url) => {
   return true;
 });
 
-ipcMain.handle('shell:launchFile', async (_event, relativePath) => {
+handleTrustedIpc('shell:launchFile', async (_event, relativePath) => {
   if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro vazio.');
   const abs = relToAbs(relativePath);
   if (!isInsideAssetsDir(abs)) throw new Error('Caminho não permitido: ' + relativePath);
@@ -1575,7 +1666,7 @@ function clearStoredIcons() {
   if (fs.existsSync(ICON_DEST_PATH)) { try { fs.unlinkSync(ICON_DEST_PATH); } catch (_) { /* ignore */ } }
 }
 
-ipcMain.handle('export:saveIcon', (_event, payload) => {
+handleTrustedIpc('export:saveIcon', (_event, payload) => {
   assertBuilder();
   ensureDirs();
 
@@ -1606,7 +1697,7 @@ ipcMain.handle('export:saveIcon', (_event, payload) => {
 // Guard against re-entrant export invocations from a double-click.
 let exportBusy = false;
 
-ipcMain.handle('export:buildExe', async (event, payload) => {
+handleTrustedIpc('export:buildExe', async (event, payload) => {
   assertBuilder();
   // True re-entrancy guard: claim the lock BEFORE any async work (including
   // the save dialog), so two rapid clicks can't both pass the check and
@@ -1706,14 +1797,14 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
     // canais em memória no config:load. Módulos não-IPTV ficam inalterados.
     const courseConfig = iptvCipher.sanitizeConfigForCourse(readConfig());
     fs.writeFileSync(path.join(stageData, 'project-config.json'), JSON.stringify(courseConfig, null, 2), 'utf-8');
-    if (fs.existsSync(ASSETS_DIR)) {
-      for (const name of fs.readdirSync(ASSETS_DIR)) {
-        const src = path.join(ASSETS_DIR, name);
-        try {
-          if (fs.statSync(src).isFile()) fs.copyFileSync(src, path.join(stageAssets, name));
-        } catch (_) { /* skip unreadable */ }
+    for (const mod of courseConfig.content || []) {
+      if (mod.type !== 'local-web') continue;
+      const web = localWeb.validateWebProject({ data: mod.data, assetsDir: ASSETS_DIR });
+      if (web.requiresPhp && !fs.existsSync(path.join(stageResources, 'php', 'php.exe'))) {
+        throw new Error('O curso contém PHP, mas o template não inclui php.exe. Prepare vendor/php e reconstrua o Viewer e o Construtor.');
       }
     }
+    if (fs.existsSync(ASSETS_DIR)) copyDirRecursive(ASSETS_DIR, stageAssets);
 
     /* 3. Compress the staging tree into a .7z payload. Compressão ultra
      *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
@@ -1776,7 +1867,7 @@ ipcMain.handle('export:buildExe', async (event, payload) => {
   }
 });
 
-ipcMain.handle('export:revealInFolder', (_event, p) => {
+handleTrustedIpc('export:revealInFolder', (_event, p) => {
   if (typeof p === 'string' && p && fs.existsSync(p)) {
     shell.showItemInFolder(p);
     return true;
@@ -1786,7 +1877,7 @@ ipcMain.handle('export:revealInFolder', (_event, p) => {
 
 /* -------- IPC: i18n -------- */
 
-ipcMain.handle('i18n:loadLocale', (_event, lang) => {
+handleTrustedIpc('i18n:loadLocale', (_event, lang) => {
   const safeLang = ALLOWED_LANGS.has(lang) ? lang : 'pt';
   const filePath = path.join(LOCALES_DIR, safeLang + '.json');
   if (!fs.existsSync(filePath)) throw new Error('Ficheiro de tradução em falta: ' + safeLang);
@@ -1794,7 +1885,7 @@ ipcMain.handle('i18n:loadLocale', (_event, lang) => {
   return { lang: safeLang, dict: JSON.parse(raw) };
 });
 
-ipcMain.handle('language:save', (_event, lang) => {
+handleTrustedIpc('language:save', (_event, lang) => {
   assertBuilder();
   const safeLang = ALLOWED_LANGS.has(lang) ? lang : 'pt';
   const current = readConfig();
@@ -1804,6 +1895,13 @@ ipcMain.handle('language:save', (_event, lang) => {
 });
 
 /* -------- App lifecycle -------- */
+
+let webShutdownComplete = false;
+app.on('before-quit', (event) => {
+  if (webShutdownComplete) return;
+  event.preventDefault();
+  stopWebModules().finally(() => { webShutdownComplete = true; app.quit(); });
+});
 
 app.whenReady().then(() => {
   if (isViewer) {
@@ -1824,3 +1922,4 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+

@@ -145,7 +145,8 @@
       "gallery": "ছবির গ্যালারি",
       "article": "নিবন্ধ / নোট",
       "embed": "ফর্ম বা কুইজ",
-      "iptv": "IPTV চ্যানেল"
+      "iptv": "IPTV চ্যানেল",
+      "local_web": "HTML / PHP file"
     },
     "youtube_url_label": "ভিডিওর URL বা ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... বা শুধু ID",
@@ -243,7 +244,8 @@
       "gallery": "গ্রিডে একাধিক ছবি।",
       "article": "শিরোনাম ও তালিকাসহ সাধারণ টেক্সট।",
       "embed": "Google Forms, Typeform, কুইজ…",
-      "iptv": "অনলাইন টিভি চ্যানেলের তালিকা।"
+      "iptv": "অনলাইন টিভি চ্যানেলের তালিকা।",
+      "local_web": "Import a page or website from your PC."
     },
     "type_group": {
       "video": "ভিডিও",
@@ -253,7 +255,16 @@
       "media": "মিডিয়া"
     },
     "type_change": "পরিবর্তন",
-    "type_pick_hint": "এই বোতামটি কী খুলবে তা বেছে নিন:"
+    "type_pick_hint": "এই বোতামটি কী খুলবে তা বেছে নিন:",
+    "local_web": {
+      "label": "Import HTML / PHP file",
+      "include_directory": "Also copy this file’s folder, including its resources",
+      "directory_help": "Use a folder prepared only for this website. Its files and subfolders will be included in the distributed product. Do not choose folders containing private data.",
+      "snapshot_help": "A copy is saved. To update files or change the included resources, choose the main file again.",
+      "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
+      "invalid_file": "Choose an .html, .htm or .php file.",
+      "pick_first": "Choose the main HTML or PHP file first."
+    }
   },
   "export": {
     "icon_label": "সফটওয়্যার আইকন",
@@ -344,7 +355,12 @@
     "start_btn": "শুরু করুন",
     "sidebar_collapse": "মেনু গুটান",
     "sidebar_expand": "মেনু প্রসারিত করুন",
-    "retry": "আবার চেষ্টা করুন"
+    "retry": "আবার চেষ্টা করুন",
+    "local_web_loading": "Opening file…",
+    "local_web_error": "This file could not be opened.",
+    "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
+    "local_web_invalid": "The local service is unavailable.",
+    "local_web_load_failed": "Check that the main file and its resources were included."
   },
   "corners": {
     "music_label": "আমার সঙ্গীত",
@@ -398,3 +414,4 @@
     "hide": "লুকান"
   }
 }
+

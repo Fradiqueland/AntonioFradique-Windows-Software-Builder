@@ -18,6 +18,7 @@ let currentHls = null;   // active hls.js instance for the IPTV player (destroye
 let currentTs = null;    // active mpegts.js instance (raw MPEG-TS streams)
 let iptvCleanup = null;  // tears down the IPTV favourites popover + its document listener
 let stageGeneration = 0; // incremented by clearStage(); lets async renderers detect they went stale
+let currentWebModuleToken = null; // local HTTP/PHP service owned by the visible module
 
 const optinOverlay = document.getElementById('optin-overlay');
 const optinHeading = document.getElementById('optin-heading');
@@ -134,11 +135,27 @@ function youtubeEmbedUrl(input) {
 
 function clearStage() {
   stageGeneration++;
+  if (currentWebModuleToken) {
+    closeWebModule(currentWebModuleToken);
+    currentWebModuleToken = null;
+  }
   destroyHls();
   if (iptvCleanup) { try { iptvCleanup(); } catch (_) { /* noop */ } iptvCleanup = null; }
   stageEl.className = 'viewer-stage';
   stageEl.innerHTML = '';
 }
+
+function closeWebModule(token) {
+  if (token && window.viewer && typeof window.viewer.closeWebModule === 'function') {
+    window.viewer.closeWebModule(token).catch((err) => console.warn('Could not close local web module:', err));
+  }
+}
+
+window.addEventListener('beforeunload', () => {
+  stageGeneration++;
+  closeWebModule(currentWebModuleToken);
+  currentWebModuleToken = null;
+});
 
 function destroyHls() {
   if (window.__iptvProxyToken && window.viewer && typeof window.viewer.iptvProxyStop === 'function') {
@@ -269,6 +286,76 @@ function renderWebview(data) {
   wv.setAttribute('src', url);
   wv.setAttribute('allowpopups', 'true');
   stageEl.appendChild(wv);
+}
+
+async function renderLocalWeb(mod) {
+  clearStage();
+  const generation = stageGeneration;
+  const status = document.createElement('div');
+  status.className = 'viewer-empty';
+  status.setAttribute('role', 'status');
+  const message = document.createElement('p');
+  message.textContent = tr('viewer.local_web_loading', 'A abrir o ficheiro…');
+  status.appendChild(message);
+  stageEl.appendChild(status);
+
+  const showFailure = (detail) => {
+    if (generation !== stageGeneration) return;
+    clearStage();
+    const box = document.createElement('div');
+    box.className = 'viewer-empty';
+    box.setAttribute('role', 'alert');
+    const heading = document.createElement('p');
+    heading.textContent = tr('viewer.local_web_error', 'Não foi possível abrir este ficheiro.');
+    box.appendChild(heading);
+    if (detail) {
+      const reason = document.createElement('p');
+      reason.textContent = detail;
+      box.appendChild(reason);
+    }
+    if (mod.data && mod.data.requiresPhp) {
+      const hint = document.createElement('p');
+      hint.textContent = tr('viewer.local_web_php_hint', 'Este módulo requer o runtime PHP incluído no produto. Contacte o autor se estiver em falta.');
+      box.appendChild(hint);
+    }
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'pw-gate-btn';
+    retry.textContent = tr('viewer.retry', 'Tentar novamente');
+    retry.addEventListener('click', () => renderLocalWeb(mod));
+    box.appendChild(retry);
+    stageEl.appendChild(box);
+  };
+
+  try {
+    const opened = await window.viewer.openWebModule(mod.id);
+    if (generation !== stageGeneration) {
+      closeWebModule(opened && opened.token);
+      return;
+    }
+    currentWebModuleToken = opened && opened.token;
+    if (!opened || typeof opened.token !== 'string' || !opened.token
+        || !/^http:\/\/127\.0\.0\.1:\d+\//.test(opened.url)) {
+      throw new Error(tr('viewer.local_web_invalid', 'O serviço local não está disponível.'));
+    }
+    const wv = document.createElement('webview');
+    // Each opening has an isolated, non-persistent session. Imported pages get
+    // no preload or Node bridge; the main process independently enforces this.
+    wv.setAttribute('partition', 'local-web-' + opened.token);
+    wv.setAttribute('webpreferences', 'contextIsolation=yes,nodeIntegration=no,sandbox=yes');
+    wv.setAttribute('src', opened.url);
+    wv.addEventListener('did-fail-load', (event) => {
+      if (event.errorCode === -3 || event.isMainFrame === false) return;
+      showFailure(tr('viewer.local_web_load_failed', 'Verifique se o ficheiro principal e os recursos foram incluídos.'));
+    });
+    wv.addEventListener('render-process-gone', () => {
+      showFailure(tr('viewer.local_web_load_failed', 'Verifique se o ficheiro principal e os recursos foram incluídos.'));
+    });
+    stageEl.classList.add('fill');
+    stageEl.replaceChildren(wv);
+  } catch (err) {
+    showFailure(err && err.message ? err.message : '');
+  }
 }
 
 async function handleExternal(data) {
@@ -507,7 +594,7 @@ function miniMarkdown(src) {
 /* -------- Menu + dispatch -------- */
 
 const MODULE_ICON = {
-  youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩',
+  youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
   'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
@@ -1492,6 +1579,7 @@ async function dispatchModule(mod, btn) {
   switch (mod.type) {
     case 'youtube':  setActiveMenuBtn(btn); await renderYoutube(mod.data); break;
     case 'html':     setActiveMenuBtn(btn); renderHtml(mod.data); break;
+    case 'local-web': setActiveMenuBtn(btn); await renderLocalWeb(mod); break;
     case 'pdf':      setActiveMenuBtn(btn); await renderPdf(mod.data); break;
     case 'webview':  setActiveMenuBtn(btn); renderWebview(mod.data); break;
     case 'smart-embed':    setActiveMenuBtn(btn); renderWebview(mod.data); break;

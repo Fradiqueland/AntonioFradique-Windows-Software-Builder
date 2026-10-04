@@ -166,7 +166,7 @@
                     <option value="webview"></option><option value="external"></option><option value="launch"></option>
                     <option value="local-video"></option><option value="local-audio"></option><option value="download-vault"></option>
                     <option value="image-gallery"></option><option value="article-reader"></option><option value="smart-embed"></option>
-                    <option value="iptv"></option>
+                    <option value="iptv"></option><option value="local-web"></option>
                   </select>
                 </div>
 
@@ -184,6 +184,22 @@
                             data-i18n-placeholder="content.html_placeholder"
                             placeholder="<h1>Bem-vindo</h1>&#10;<p>O seu conteúdo aqui…</p>"></textarea>
                   <small data-i18n="content.html_help">O HTML será injetado tal e qual na área principal do Visualizador.</small>
+                </div>
+
+                <div class="form-group hidden" id="dyn-local-web" data-dyn="local-web">
+                  <label data-i18n="content.local_web.label">Importar ficheiro HTML / PHP</label>
+                  <div class="file-row">
+                    <button type="button" class="file-btn" id="dyn-local-web-pick" data-i18n="common.choose_file">Escolher ficheiro</button>
+                    <span class="file-name" id="dyn-local-web-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
+                  </div>
+                  <div class="file-current" id="dyn-local-web-current" data-i18n="content.file_none">Nenhum ficheiro selecionado.</div>
+                  <label class="web-import-directory" for="dyn-local-web-directory">
+                    <input type="checkbox" id="dyn-local-web-directory" />
+                    <span data-i18n="content.local_web.include_directory">Copiar também a pasta deste ficheiro, incluindo os recursos</span>
+                  </label>
+                  <small data-i18n="content.local_web.directory_help">Use uma pasta preparada apenas com os ficheiros do site. Os ficheiros e subpastas serão incluídos na distribuição. Não escolha pastas com dados privados.</small>
+                  <small data-i18n="content.local_web.snapshot_help">É guardada uma cópia. Para atualizar os ficheiros ou alterar os recursos incluídos, escolha novamente o ficheiro principal.</small>
+                  <small data-i18n="content.local_web.php_help">PHP requer o runtime PHP incluído no produto. Os scripts PHP executam código com as permissões do utilizador: importe apenas código de confiança. HTML, CSS e JavaScript funcionam sem PHP.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-pdf" data-dyn="pdf">

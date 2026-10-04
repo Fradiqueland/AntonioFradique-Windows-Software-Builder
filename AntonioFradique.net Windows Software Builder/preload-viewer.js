@@ -11,6 +11,8 @@ const { contextBridge, ipcRenderer } = require('electron');
  */
 contextBridge.exposeInMainWorld('viewer', {
   loadConfig: () => ipcRenderer.invoke('config:load'),
+  openWebModule: (moduleId) => ipcRenderer.invoke('web:open', moduleId),
+  closeWebModule: (token) => ipcRenderer.invoke('web:close', token),
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   launchFile: (relativePath) => ipcRenderer.invoke('shell:launchFile', relativePath),
@@ -27,3 +29,4 @@ contextBridge.exposeInMainWorld('viewer', {
   loadState: (key) => ipcRenderer.invoke('state:load', key),
   saveState: (key, data) => ipcRenderer.invoke('state:save', { key, data })
 });
+

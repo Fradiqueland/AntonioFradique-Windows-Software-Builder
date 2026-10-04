@@ -271,6 +271,9 @@ input[type="text"]:focus {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .file-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+.form-group .web-import-directory { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; text-transform: none; }
+.web-import-directory input[type="checkbox"] { width: auto; flex: 0 0 auto; margin-top: 3px; }
+#dyn-local-web small { display: block; margin-top: 8px; }
 .file-btn:focus-within { outline: 2px solid #2563eb; outline-offset: 2px; }
 
 /* Selected-filename label sitting next to the custom button. */

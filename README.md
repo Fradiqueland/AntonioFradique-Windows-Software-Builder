@@ -68,3 +68,16 @@ atualizado no computador sem copiar ficheiros à mão:
 3. Sempre que houver alterações novas, clica em **Pull** para atualizar.
 
 Depois é só correr `npm run build:all` dentro da pasta do projeto.
+
+
+## Importação HTML/PHP (1.6.0)
+
+Novo módulo para importar `.html`, `.htm` e `.php`, com opção de copiar a pasta
+de recursos, pré-visualização isolada e inclusão recursiva no `.exe`.
+HTML funciona diretamente; PHP requer preparar o runtime portátil antes de compilar.
+
+- [Guia de importação e limites](AntonioFradique.net%20Windows%20Software%20Builder/IMPORTAR-HTML-PHP.md)
+- [Preparar PHP portátil](AntonioFradique.net%20Windows%20Software%20Builder/vendor/php/README.md)
+- [Falhas identificadas e correções](AntonioFradique.net%20Windows%20Software%20Builder/AUDITORIA-2026-10-04.md)
+
+Testes: `npm test` na pasta do projeto Electron.

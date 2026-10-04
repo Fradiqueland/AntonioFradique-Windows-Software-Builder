@@ -529,17 +529,17 @@ bannerForm.addEventListener('submit', async (e) => {
 // Module type labels are now resolved from the active locale via
 // `content.type.<key>` so the list stays in the user's chosen language
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
-const TYPE_KEYS = ['youtube', 'html', 'pdf', 'webview', 'external', 'launch',
+const TYPE_KEYS = ['youtube', 'html', 'local-web', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv'];
 // Chaves de tradução por tipo (o id do tipo usa '-', a chave usa '_').
 const TYPE_I18N = {
-  youtube: 'youtube', html: 'html', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
+  youtube: 'youtube', html: 'html', 'local-web': 'local_web', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
   'local-video': 'local_video', 'local-audio': 'local_audio', 'download-vault': 'download',
   'image-gallery': 'gallery', 'article-reader': 'article', 'smart-embed': 'embed', iptv: 'iptv'
 };
 const TYPE_ICON = {
-  youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩',
+  youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
   'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
@@ -548,7 +548,7 @@ const TYPE_GROUPS = [
   { key: 'video', types: ['youtube', 'local-video'] },
   { key: 'read',  types: ['pdf', 'article-reader', 'html'] },
   { key: 'files', types: ['download-vault', 'launch'] },
-  { key: 'web',   types: ['webview', 'external', 'smart-embed'] },
+  { key: 'web',   types: ['local-web', 'webview', 'external', 'smart-embed'] },
   { key: 'media', types: ['image-gallery', 'local-audio', 'iptv'] }
 ];
 function typeLabel(type) {
@@ -581,6 +581,12 @@ const showContentStatus = makeStatus(document.getElementById('content-status'));
 const dyn = {
   youtube: { url: document.getElementById('dyn-youtube-url') },
   html: { code: document.getElementById('dyn-html-code') },
+  'local-web': {
+    pick: document.getElementById('dyn-local-web-pick'),
+    name: document.getElementById('dyn-local-web-name'),
+    current: document.getElementById('dyn-local-web-current'),
+    includeDirectory: document.getElementById('dyn-local-web-directory')
+  },
   pdf: {
     file: document.getElementById('dyn-pdf-file'),
     current: document.getElementById('dyn-pdf-current')
@@ -636,6 +642,8 @@ let contentModules = [];
 let editingId = null;        // id of module being edited (null = creating new)
 let pendingFileSourcePath = null;  // absolute path picked in <input type=file> for current edit
 let pendingFileName = null;
+let pendingWebSourcePath = null;
+let editorGeneration = 0;   // ignore a file dialog result after switching projects/editors
 let galleryItems = [];       // current gallery editor items ({kind:'existing'|'new', ...})
 let iptvChannels = [];       // resolved channels for the module being edited (non-manual sources)
 let iptvManual = [];         // manual channel rows [{name,url}]
@@ -713,12 +721,23 @@ function setFileCurrentText(type, text, hasFile) {
   if (!el) return;
   el.textContent = text;
   el.classList.toggle('has-file', !!hasFile);
+  // Do not let a language refresh replace an actual filename with "No file".
+  if (hasFile) el.removeAttribute('data-i18n');
+  else el.setAttribute('data-i18n', 'content.file_none');
 }
 
 function clearEditor() {
+  editorGeneration++;
   editingId = null;
   pendingFileSourcePath = null;
   pendingFileName = null;
+  pendingWebSourcePath = null;
+  dyn['local-web'].includeDirectory.checked = false;
+  dyn['local-web'].includeDirectory.disabled = false;
+  dyn['local-web'].name.textContent = t('common.no_file_chosen');
+  dyn['local-web'].name.setAttribute('data-i18n', 'common.no_file_chosen');
+  dyn['local-web'].name.classList.remove('has-file');
+  setFileCurrentText('local-web', t('content.file_none'), false);
   galleryItems = [];
   moduleTitle.value = '';
   moduleType.value = '';
@@ -793,6 +812,13 @@ function openEditorForEdit(id) {
   const d = mod.data || {};
   if (mod.type === 'youtube') dyn.youtube.url.value = d.url || '';
   else if (mod.type === 'html') dyn.html.code.value = d.html || '';
+  else if (mod.type === 'local-web') {
+    if (d.root && d.entry) {
+      setFileCurrentText('local-web', t('content.file_current_prefix') + (d.fileName || d.entry), true);
+      // The stored copy is immutable until the author chooses a new source.
+      dyn['local-web'].includeDirectory.disabled = true;
+    }
+  }
   else if (mod.type === 'webview') dyn.webview.url.value = d.url || '';
   else if (mod.type === 'external') dyn.external.url.value = d.url || '';
   else if (mod.type === 'smart-embed') dyn['smart-embed'].url.value = d.url || '';
@@ -999,6 +1025,26 @@ bindFilePicker('local-video');
 bindFilePicker('local-audio');
 bindFilePicker('download-vault');
 
+dyn['local-web'].pick.addEventListener('click', async () => {
+  const generation = editorGeneration;
+  try {
+    const picked = await window.icurator.pickFile('web');
+    if (!picked || generation !== editorGeneration) return;
+    if (!/\.(html?|php)$/i.test(picked.name)) {
+      showContentStatus(t('content.local_web.invalid_file'), 'error');
+      return;
+    }
+    pendingWebSourcePath = picked.path;
+    dyn['local-web'].name.textContent = picked.name;
+    dyn['local-web'].name.removeAttribute('data-i18n');
+    dyn['local-web'].name.classList.add('has-file');
+    dyn['local-web'].includeDirectory.disabled = false;
+    setFileCurrentText('local-web', t('content.file_new_prefix') + picked.name, true);
+  } catch (err) {
+    if (generation === editorGeneration) showContentStatus(t('common.error_prefix') + err.message, 'error');
+  }
+});
+
 /* ---- Image gallery editor ---- */
 function renderGalleryList() {
   const list = dyn['image-gallery'].list;
@@ -1172,6 +1218,18 @@ contentForm.addEventListener('submit', async (e) => {
   let data = {};
   if (type === 'youtube') data = { url: dyn.youtube.url.value.trim() };
   else if (type === 'html') data = { html: dyn.html.code.value };
+  else if (type === 'local-web') {
+    if (pendingWebSourcePath) {
+      data = { sourcePath: pendingWebSourcePath, includeDirectory: dyn['local-web'].includeDirectory.checked };
+    } else {
+      const existing = contentModules.find((m) => m.id === editingId && m.type === 'local-web');
+      if (!existing || !existing.data || !existing.data.root || !existing.data.entry) {
+        showContentStatus(t('content.local_web.pick_first'), 'error');
+        return;
+      }
+      data = { ...existing.data };
+    }
+  }
   else if (type === 'webview') data = { url: dyn.webview.url.value.trim() };
   else if (type === 'external') data = { url: dyn.external.url.value.trim() };
   else if (type === 'smart-embed') data = { url: dyn['smart-embed'].url.value.trim() };

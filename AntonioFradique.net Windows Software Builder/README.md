@@ -60,3 +60,16 @@ ffmpeg vai dentro de cada curso exportado (+~90 MB por .exe).
 
 Ver `vendor/ffmpeg/README.txt` para onde obter o binário. Sem ele, tudo o
 resto funciona como antes.
+
+
+## Importação HTML/PHP (1.6.0)
+
+Novo módulo para importar `.html`, `.htm` e `.php`, com opção de copiar a pasta
+de recursos, pré-visualização isolada e inclusão recursiva no `.exe`.
+HTML funciona diretamente; PHP requer preparar o runtime portátil antes de compilar.
+
+- [Guia de importação e limites](IMPORTAR-HTML-PHP.md)
+- [Preparar PHP portátil](vendor/php/README.md)
+- [Falhas identificadas e correções](AUDITORIA-2026-10-04.md)
+
+Testes: `npm test` na pasta do projeto Electron.

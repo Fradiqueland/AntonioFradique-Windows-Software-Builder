@@ -145,7 +145,8 @@
       "gallery": "Galeria de imagens",
       "article": "Artigo / notas",
       "embed": "Formulário ou quiz",
-      "iptv": "Canais IPTV"
+      "iptv": "Canais IPTV",
+      "local_web": "Ficheiro HTML / PHP"
     },
     "youtube_url_label": "URL ou ID do vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou só o ID",
@@ -243,7 +244,8 @@
       "gallery": "Várias imagens em grelha.",
       "article": "Texto simples com títulos e listas.",
       "embed": "Google Forms, Typeform, quizzes…",
-      "iptv": "Lista de canais de TV online."
+      "iptv": "Lista de canais de TV online.",
+      "local_web": "Importe uma página ou site do seu computador."
     },
     "type_group": {
       "video": "Vídeo",
@@ -253,7 +255,16 @@
       "media": "Média"
     },
     "type_change": "Mudar",
-    "type_pick_hint": "Escolha o que este botão vai abrir:"
+    "type_pick_hint": "Escolha o que este botão vai abrir:",
+    "local_web": {
+      "label": "Importar ficheiro HTML / PHP",
+      "include_directory": "Copiar também a pasta deste ficheiro, incluindo os recursos",
+      "directory_help": "Use uma pasta preparada apenas com os ficheiros do site. Os ficheiros e subpastas serão incluídos na distribuição. Não escolha pastas com dados privados.",
+      "snapshot_help": "É guardada uma cópia. Para atualizar os ficheiros ou alterar os recursos incluídos, escolha novamente o ficheiro principal.",
+      "php_help": "PHP requer o runtime PHP incluído no produto. Os scripts PHP executam código com as permissões do utilizador: importe apenas código de confiança. HTML, CSS e JavaScript funcionam sem PHP.",
+      "invalid_file": "Escolha um ficheiro .html, .htm ou .php.",
+      "pick_first": "Escolha primeiro o ficheiro HTML ou PHP principal."
+    }
   },
   "export": {
     "icon_label": "Ícone do Software",
@@ -344,7 +355,12 @@
     "start_btn": "Começar",
     "sidebar_collapse": "Recolher menu",
     "sidebar_expand": "Expandir menu",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "local_web_loading": "A abrir o ficheiro…",
+    "local_web_error": "Não foi possível abrir este ficheiro.",
+    "local_web_php_hint": "Este módulo requer o runtime PHP incluído no produto. Contacte o autor se estiver em falta.",
+    "local_web_invalid": "O serviço local não está disponível.",
+    "local_web_load_failed": "Verifique se o ficheiro principal e os recursos foram incluídos."
   },
   "corners": {
     "music_label": "Minha música",
@@ -398,3 +414,4 @@
     "hide": "Ocultar"
   }
 }
+

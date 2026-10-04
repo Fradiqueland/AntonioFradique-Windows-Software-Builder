@@ -17,8 +17,30 @@
     "!dist/**"
   ],
   "extraResources": [
-    { "from": "build-configs/viewer-mode/app-mode.json", "to": "app-mode.json" },
-    { "from": "vendor/ffmpeg", "to": "ffmpeg", "filter": ["ffmpeg.exe", "ffmpeg", "LICENSE*", "*.txt"] }
+    {
+      "from": "build-configs/viewer-mode/app-mode.json",
+      "to": "app-mode.json"
+    },
+    {
+      "from": "vendor/ffmpeg",
+      "to": "ffmpeg",
+      "filter": [
+        "ffmpeg.exe",
+        "ffmpeg",
+        "LICENSE*",
+        "*.txt"
+      ]
+    },
+    {
+      "from": "vendor/php",
+      "to": "php",
+      "filter": [
+        "**/*",
+        "!**/*.pdb",
+        "!**/*.lib",
+        "!**/*.zip"
+      ]
+    }
   ],
   "win": {
     "target": "dir"

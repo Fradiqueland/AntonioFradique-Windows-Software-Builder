@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "1.5.20",
+  "version": "1.6.0",
   "description": "AntonioFradique.net Windows Software Builder (gera .exe único por curso via SFX 7-Zip)",
   "main": "main.js",
   "author": "AntonioFradique.net",
@@ -12,7 +12,9 @@
     "prune:viewer-template": "node scripts/prune-viewer-template.js",
     "build:builder": "node scripts/check-viewer-template.js && electron-builder --win --x64",
     "check:ffmpeg": "node scripts/check-ffmpeg.js",
-    "build:all": "npm install && node scripts/check-ffmpeg.js && npm run build:viewer-template && npm run build:builder"
+    "build:all": "npm install && node scripts/check-ffmpeg.js && node scripts/check-php.js && npm run build:viewer-template && npm run build:builder",
+    "test": "node --test tests/*.test.js",
+    "check:php": "node scripts/check-php.js"
   },
   "build": {
     "appId": "com.launchbox.builder",
@@ -36,10 +38,41 @@
       "!dist/**"
     ],
     "extraResources": [
-      { "from": "build-configs/builder-mode/app-mode.json", "to": "app-mode.json" },
-      { "from": "vendor/ffmpeg", "to": "ffmpeg", "filter": ["ffmpeg.exe", "ffmpeg", "LICENSE*", "*.txt"] },
-      { "from": "src/builder/bin", "to": "sfx" },
-      { "from": "src/builder/templates/viewer-core/win-unpacked", "to": "viewer-template", "filter": ["**/*"] }
+      {
+        "from": "build-configs/builder-mode/app-mode.json",
+        "to": "app-mode.json"
+      },
+      {
+        "from": "vendor/ffmpeg",
+        "to": "ffmpeg",
+        "filter": [
+          "ffmpeg.exe",
+          "ffmpeg",
+          "LICENSE*",
+          "*.txt"
+        ]
+      },
+      {
+        "from": "src/builder/bin",
+        "to": "sfx"
+      },
+      {
+        "from": "src/builder/templates/viewer-core/win-unpacked",
+        "to": "viewer-template",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "vendor/php",
+        "to": "php",
+        "filter": [
+          "**/*",
+          "!**/*.pdb",
+          "!**/*.lib",
+          "!**/*.zip"
+        ]
+      }
     ],
     "win": {
       "target": "nsis",

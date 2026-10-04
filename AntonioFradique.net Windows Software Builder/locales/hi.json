@@ -145,7 +145,8 @@
       "gallery": "छवि गैलरी",
       "article": "लेख / नोट्स",
       "embed": "फ़ॉर्म या क्विज़",
-      "iptv": "IPTV चैनल"
+      "iptv": "IPTV चैनल",
+      "local_web": "HTML / PHP file"
     },
     "youtube_url_label": "वीडियो का URL या ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... या केवल ID",
@@ -243,7 +244,8 @@
       "gallery": "ग्रिड में कई छवियाँ।",
       "article": "शीर्षकों और सूचियों वाला सादा टेक्स्ट।",
       "embed": "Google Forms, Typeform, क्विज़…",
-      "iptv": "ऑनलाइन टीवी चैनलों की सूची।"
+      "iptv": "ऑनलाइन टीवी चैनलों की सूची।",
+      "local_web": "Import a page or website from your PC."
     },
     "type_group": {
       "video": "वीडियो",
@@ -253,7 +255,16 @@
       "media": "मीडिया"
     },
     "type_change": "बदलें",
-    "type_pick_hint": "चुनें कि यह बटन क्या खोलेगा:"
+    "type_pick_hint": "चुनें कि यह बटन क्या खोलेगा:",
+    "local_web": {
+      "label": "Import HTML / PHP file",
+      "include_directory": "Also copy this file’s folder, including its resources",
+      "directory_help": "Use a folder prepared only for this website. Its files and subfolders will be included in the distributed product. Do not choose folders containing private data.",
+      "snapshot_help": "A copy is saved. To update files or change the included resources, choose the main file again.",
+      "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
+      "invalid_file": "Choose an .html, .htm or .php file.",
+      "pick_first": "Choose the main HTML or PHP file first."
+    }
   },
   "export": {
     "icon_label": "सॉफ़्टवेयर आइकन",
@@ -344,7 +355,12 @@
     "start_btn": "शुरू करें",
     "sidebar_collapse": "मेनू समेटें",
     "sidebar_expand": "मेनू फैलाएँ",
-    "retry": "फिर कोशिश करें"
+    "retry": "फिर कोशिश करें",
+    "local_web_loading": "Opening file…",
+    "local_web_error": "This file could not be opened.",
+    "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
+    "local_web_invalid": "The local service is unavailable.",
+    "local_web_load_failed": "Check that the main file and its resources were included."
   },
   "corners": {
     "music_label": "मेरा संगीत",
@@ -398,3 +414,4 @@
     "hide": "छिपाएँ"
   }
 }
+
