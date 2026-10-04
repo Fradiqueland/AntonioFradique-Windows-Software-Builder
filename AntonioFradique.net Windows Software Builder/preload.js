@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('icurator', {
   openViewer: () => ipcRenderer.invoke('viewer:open'),
   saveIcon: (data) => ipcRenderer.invoke('export:saveIcon', data),
   buildExe: (data) => ipcRenderer.invoke('export:buildExe', data),
+  exportProject: (data) => ipcRenderer.invoke('export:project', data),
+  getExportTargets: () => ipcRenderer.invoke('export:targets'),
   revealInFolder: (filePath) => ipcRenderer.invoke('export:revealInFolder', filePath),
   onExportLog: (cb) => {
     const listener = (_e, payload) => cb(payload);
@@ -35,3 +37,4 @@ contextBridge.exposeInMainWorld('icurator', {
   loadLocale: (lang) => ipcRenderer.invoke('i18n:loadLocale', lang),
   saveLanguage: (lang) => ipcRenderer.invoke('language:save', lang)
 });
+

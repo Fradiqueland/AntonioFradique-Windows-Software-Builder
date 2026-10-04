@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "构建器"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "导出",
-      "subtitle": "将最终产品编译为 .exe（Windows）。"
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "软件图标",
-      "subtitle": "设置最终 .exe 的图标并保存。"
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "项目",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "发布",
-      "subtitle": "检查缺少的内容，并生成交付给学员的 .exe。"
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "导出 .exe"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "预览产品",
@@ -270,11 +270,11 @@
     "icon_label": "软件图标",
     "icon_none": "未定义图标。",
     "icon_current_prefix": "当前图标：",
-    "icon_help": "支持 .png、.jpg 或 .ico。会自动转换并应用到最终 .exe 的图标。（不支持 GIF —— Windows 图标是静态的。）",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "请选择一个 .ico 文件",
     "summary_label": "项目摘要",
-    "build_btn": "导出最终产品 (.exe)",
-    "build_help": "创建单个可交付的 .exe。学员双击即可立即打开课程 — 无需安装任何东西。生成可能需要 30 秒到 1 分钟。",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "状态",
     "log_empty": "无活动。点击“导出”开始。",
     "open_release_btn": "在文件夹中显示文件",
@@ -284,7 +284,7 @@
       "logo": "徽标",
       "leads": "订阅 / 潜在客户",
       "banner": "横幅",
-      "icon": ".exe 图标",
+      "icon": "Windows EXE icon",
       "defined": "已定义",
       "no_logo": "无徽标",
       "active": "已启用",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "正在准备导出…",
-      "saved_prefix": "课程已保存至：",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "操作已取消。",
-      "failed_prefix": "错误："
+      "failed_prefix": "错误：",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "请选择一个 .ico、.png 或 .jpg 文件",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ 一切就绪，可以导出。",
       "no_title": "请设置软件标题（第 2 步 — 外观）。",
       "no_modules": "请至少添加一个模块（第 1 步 — 内容）。"
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "未配置任何模块。",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "品牌与颜色",
     "brand_hint": "最终产品的标题、徽标和颜色。",
-    "icon": ".exe 图标",
+    "icon": "Software icon",
     "icon_hint": "学员在文件上看到的图标。",
     "banners": "横幅",
     "banners_hint": "可选 — 顶部/底部的广告或推广链接。",
@@ -409,9 +422,8 @@
     "leads": "潜在客户收集",
     "leads_hint": "可选 — 显示内容前先询问邮箱。",
     "export": "导出",
-    "export_hint": "生成交付给学员的单个 .exe。",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "显示",
     "hide": "隐藏"
   }
 }
-

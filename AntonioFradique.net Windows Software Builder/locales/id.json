@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "Pembuat"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "Ekspor",
-      "subtitle": "Kompilasi produk akhir menjadi .exe (Windows)."
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "Ikon Perangkat Lunak",
-      "subtitle": "Atur ikon .exe akhir lalu simpan."
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "Proyek",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "Terbitkan",
-      "subtitle": "Periksa yang masih kurang dan buat .exe untuk diserahkan ke siswa."
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Ekspor .exe"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "Pratinjau Produk",
@@ -270,11 +270,11 @@
     "icon_label": "Ikon Perangkat Lunak",
     "icon_none": "Tidak ada ikon ditentukan.",
     "icon_current_prefix": "Ikon saat ini: ",
-    "icon_help": "Menerima .png, .jpg, atau .ico. Dikonversi otomatis dan diterapkan ke ikon .exe akhir. (GIF tidak didukung — ikon Windows bersifat statis.)",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "Silakan pilih file .ico",
     "summary_label": "Ringkasan Proyek",
-    "build_btn": "Ekspor Produk Akhir (.exe)",
-    "build_help": "Membuat satu .exe siap kirim. Siswa klik dua kali dan kursus langsung terbuka — tanpa menginstal apa pun. Pembuatan bisa memakan 30 detik hingga 1 menit.",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "Status",
     "log_empty": "Tidak ada aktivitas. Klik \"Ekspor\" untuk memulai.",
     "open_release_btn": "Tampilkan file di folder",
@@ -284,7 +284,7 @@
       "logo": "Logo",
       "leads": "Opt-in / Prospek",
       "banner": "Spanduk",
-      "icon": "Ikon .exe",
+      "icon": "Windows EXE icon",
       "defined": "Ditentukan",
       "no_logo": "Tanpa logo",
       "active": "Aktif",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "Menyiapkan ekspor…",
-      "saved_prefix": "Kursus disimpan di: ",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "Operasi dibatalkan.",
-      "failed_prefix": "Kesalahan: "
+      "failed_prefix": "Kesalahan: ",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "Silakan pilih file .ico, .png, atau .jpg",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ Semua siap diekspor.",
       "no_title": "Tentukan judul perangkat lunak (langkah 2 — Tampilan).",
       "no_modules": "Tambahkan minimal satu modul (langkah 1 — Konten)."
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "Tidak ada modul dikonfigurasi.",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "Merek dan warna",
     "brand_hint": "Judul, logo, dan warna produk akhir.",
-    "icon": "Ikon .exe",
+    "icon": "Software icon",
     "icon_hint": "Ikon yang dilihat siswa pada berkas.",
     "banners": "Banner",
     "banners_hint": "Opsional — iklan atau tautan afiliasi di atas/bawah.",
@@ -409,9 +422,8 @@
     "leads": "Pengumpulan lead",
     "leads_hint": "Opsional — meminta email sebelum menampilkan konten.",
     "export": "Ekspor",
-    "export_hint": "Membuat satu berkas .exe untuk diserahkan ke siswa.",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "Tampilkan",
     "hide": "Sembunyikan"
   }
 }
-

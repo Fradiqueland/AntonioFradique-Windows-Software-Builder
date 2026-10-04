@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "Builder"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "Export",
-      "subtitle": "Compile the final product to .exe (Windows)."
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "Software Icon",
-      "subtitle": "Set the final .exe icon and save."
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "Projects",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "Publish",
-      "subtitle": "Check what's missing and build the .exe to hand to your students."
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export .exe"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "Preview Product",
@@ -270,11 +270,11 @@
     "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "Accepts .png, .jpg or .ico. It is automatically converted and applied to the final .exe icon. (GIF is not supported — Windows icons are static.)",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
-    "build_btn": "Export Final Product (.exe)",
-    "build_help": "Creates a single ready-to-ship .exe. The student double-clicks and the course opens instantly — nothing to install. Can take 30s to 1 min to generate.",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "Status",
     "log_empty": "No activity. Click \"Export\" to start.",
     "open_release_btn": "Show file in folder",
@@ -284,7 +284,7 @@
       "logo": "Logo",
       "leads": "Opt-in / Leads",
       "banner": "Banner",
-      "icon": ".exe Icon",
+      "icon": "Windows EXE icon",
       "defined": "Defined",
       "no_logo": "No logo",
       "active": "Active",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "Preparing export…",
-      "saved_prefix": "Course saved to: ",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "Cancelled.",
-      "failed_prefix": "Error: "
+      "failed_prefix": "Error: ",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "Please choose a .ico, .png or .jpg file",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ Everything is ready to export.",
       "no_title": "Set the software title (step 2 — Appearance).",
       "no_modules": "Add at least one module (step 1 — Content)."
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "No modules configured.",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "Brand and colours",
     "brand_hint": "Title, logo and colours of the final product.",
-    "icon": ".exe icon",
+    "icon": "Software icon",
     "icon_hint": "The icon students see on the file.",
     "banners": "Banners",
     "banners_hint": "Optional — ads or affiliate links at the top/bottom.",
@@ -409,9 +422,8 @@
     "leads": "Lead capture",
     "leads_hint": "Optional — asks for an email before showing the content.",
     "export": "Export",
-    "export_hint": "Builds the single .exe to deliver to students.",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "Show",
     "hide": "Hide"
   }
 }
-

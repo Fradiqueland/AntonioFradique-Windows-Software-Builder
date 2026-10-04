@@ -1,0 +1,128 @@
+name: Build v2 Windows and Mac installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, 'codex/**']
+    tags: ['v2.*']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-installers-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: AntonioFradique.net Windows Software Builder
+
+env:
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  # Only the explicit ad-hoc signing hook runs; no signing credentials exist.
+  CSC_FOR_PULL_REQUEST: 'true'
+
+jobs:
+  viewer-templates:
+    name: Viewer template (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            platform: win
+            runner: windows-latest
+          - target: mac-universal
+            platform: mac
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: AntonioFradique.net Windows Software Builder/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
+      - name: Test application
+        run: npm test 2>&1 | tee build-tests.log
+      - name: Build native viewer and archive
+        run: npm run build:viewer:${{ matrix.platform }} 2>&1 | tee build-viewer.log
+      - name: Upload export template and manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: export-template-${{ matrix.target }}
+          path: |
+            AntonioFradique.net Windows Software Builder/dist/export-templates/${{ matrix.target }}.zip
+            AntonioFradique.net Windows Software Builder/dist/export-templates/${{ matrix.target }}.manifest.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: template-logs-${{ matrix.target }}
+          path: AntonioFradique.net Windows Software Builder/build-*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  builder-installers:
+    name: Builder installer (${{ matrix.target }})
+    needs: viewer-templates
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: Windows
+            platform: win
+            runner: windows-latest
+          - target: macOS
+            platform: mac
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: AntonioFradique.net Windows Software Builder/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
+      - name: Download both platform templates
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: export-template-*
+          path: AntonioFradique.net Windows Software Builder/dist/export-templates
+          merge-multiple: true
+      - name: Build native Builder installer with both templates
+        run: npm run build:builder:${{ matrix.platform }} 2>&1 | tee build-builder.log
+      - name: Verify packaged app and both embedded templates
+        run: npm run verify:package 2>&1 | tee build-verification.log
+      - name: Write installer checksums
+        run: npm run checksums 2>&1 | tee build-checksums.log
+      - name: Upload installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Windows-Mac-Software-Builder-2.0.0-${{ matrix.target }}
+          path: |
+            AntonioFradique.net Windows Software Builder/dist/builder/*.exe
+            AntonioFradique.net Windows Software Builder/dist/builder/*.dmg
+            AntonioFradique.net Windows Software Builder/dist/builder/SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: installer-logs-${{ matrix.target }}
+          path: AntonioFradique.net Windows Software Builder/build-*.log
+          if-no-files-found: ignore
+          retention-days: 14

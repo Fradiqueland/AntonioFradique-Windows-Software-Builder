@@ -2,7 +2,7 @@
   "appId": "com.launchbox.viewer.template",
   "productName": "LaunchBox Viewer",
   "directories": {
-    "output": "src/builder/templates/viewer-core"
+    "output": "dist/viewer"
   },
   "files": [
     "main.js",
@@ -20,30 +20,28 @@
     {
       "from": "build-configs/viewer-mode/app-mode.json",
       "to": "app-mode.json"
-    },
-    {
-      "from": "vendor/ffmpeg",
-      "to": "ffmpeg",
-      "filter": [
-        "ffmpeg.exe",
-        "ffmpeg",
-        "LICENSE*",
-        "*.txt"
-      ]
-    },
-    {
-      "from": "vendor/php",
-      "to": "php",
-      "filter": [
-        "**/*",
-        "!**/*.pdb",
-        "!**/*.lib",
-        "!**/*.zip"
-      ]
     }
   ],
   "win": {
     "target": "dir"
   },
-  "asar": true
+  "asar": true,
+  "mac": {
+    "target": [
+      {
+        "target": "dir",
+        "arch": [
+          "universal"
+        ]
+      }
+    ],
+    "category": "public.app-category.education",
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "notarize": false,
+    "entitlements": "build-configs/entitlements.mac.plist",
+    "entitlementsInherit": "build-configs/entitlements.mac.plist",
+    "mergeASARs": true,
+    "sign": "./scripts/sign-mac-adhoc.cjs"
+  }
 }

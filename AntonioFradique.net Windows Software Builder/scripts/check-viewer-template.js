@@ -1,43 +1,23 @@
-/*
- * check-viewer-template.js — guarda de pré-compilação do Construtor.
- *
- * Verifica que o template do Viewer (win-unpacked) existe E contém o código do
- * Viewer (resources/app.asar.bin, ou app.asar legado) ANTES de empacotar o
- * Construtor. Sem este ficheiro, o electron-builder produz um instalador onde
- * resources/viewer-template/ fica sem o asar do Viewer, e a exportação de
- * cursos rebenta com:
- *   ENOENT ... resources\viewer-template\resources\app.asar
- *
- * Nota: o asar é guardado como app.asar.bin (renomeado pelo prune) porque o
- * electron-builder DESCARTA ficheiros chamados app.asar ao copiar via
- * extraResources. O export volta a renomear para app.asar ao montar o SFX.
- *
- * Em vez de gerar um instalador silenciosamente partido, falhamos aqui com
- * instruções claras.
- */
-const fs = require('fs');
-const path = require('path');
+#!/usr/bin/env node
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const { inspectTemplate, sha256 } = require('./template-archive');
+const version = require('../package.json').version;
 
-const TEMPLATE_DIR = path.join(
-  __dirname, '..', 'src', 'builder', 'templates', 'viewer-core', 'win-unpacked'
-);
-const ASAR_BIN = path.join(TEMPLATE_DIR, 'resources', 'app.asar.bin');
-const ASAR_RAW = path.join(TEMPLATE_DIR, 'resources', 'app.asar');
-
-if (!fs.existsSync(TEMPLATE_DIR) || (!fs.existsSync(ASAR_BIN) && !fs.existsSync(ASAR_RAW))) {
-  console.error('');
-  console.error('✗ Template do Viewer em falta ou incompleto.');
-  console.error('  Esperado: ' + ASAR_BIN);
-  console.error('       (ou: ' + ASAR_RAW + ')');
-  console.error('');
-  console.error('  Sem este ficheiro o instalador do Construtor fica sem o asar');
-  console.error('  do Viewer e a exportação de cursos falha com ENOENT.');
-  console.error('');
-  console.error('  >> Execute PRIMEIRO:        npm run build:viewer-template');
-  console.error('  >> Ou faça tudo de uma vez: npm run build:all');
-  console.error('');
-  process.exit(1);
+async function checkTemplates(directory = path.join(__dirname, '..', 'dist', 'export-templates')) {
+  for (const target of ['windows-x64', 'mac-universal']) {
+    const archive = path.join(directory, target + '.zip');
+    const manifestPath = path.join(directory, target + '.manifest.json');
+    if (!fs.existsSync(archive) || !fs.existsSync(manifestPath)) {
+      throw new Error('Missing ' + target + ' template. Run both native viewer builds, then copy both ZIP files and manifests into dist/export-templates. GitHub Actions automates this.');
+    }
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (manifest.formatVersion !== 1 || manifest.target !== target || manifest.appVersion !== version) throw new Error('Template version/target mismatch: ' + manifestPath);
+    if (await sha256(archive) !== manifest.sha256) throw new Error('Template checksum mismatch: ' + archive);
+    await inspectTemplate(archive, target);
+    console.log('Verified export template: ' + target + ' v' + version);
+  }
 }
-
-console.log('✓ Template do Viewer presente: '
-  + (fs.existsSync(ASAR_BIN) ? ASAR_BIN : ASAR_RAW));
+module.exports = { checkTemplates };
+if (require.main === module) checkTemplates().catch((error) => { console.error(error.message); process.exitCode = 1; });

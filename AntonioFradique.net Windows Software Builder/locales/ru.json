@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "Конструктор"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "Экспорт",
-      "subtitle": "Скомпилируйте конечный продукт в .exe (Windows)."
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "Значок программы",
-      "subtitle": "Задайте значок итогового .exe и сохраните."
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "Проекты",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "Публикация",
-      "subtitle": "Проверьте, чего не хватает, и соберите .exe для учеников."
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Экспорт .exe"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "Предпросмотр продукта",
@@ -270,11 +270,11 @@
     "icon_label": "Значок программы",
     "icon_none": "Значок не задан.",
     "icon_current_prefix": "Текущий значок: ",
-    "icon_help": "Принимает .png, .jpg или .ico. Автоматически преобразуется и применяется к значку итогового .exe. (GIF не поддерживается — значки Windows статичны.)",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "Пожалуйста, выберите файл .ico",
     "summary_label": "Сводка проекта",
-    "build_btn": "Экспортировать конечный продукт (.exe)",
-    "build_help": "Создаёт единый готовый к доставке .exe. Ученик дважды щёлкает — и курс сразу открывается, без установки. Создание может занять от 30 секунд до 1 минуты.",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "Статус",
     "log_empty": "Нет активности. Нажмите «Экспорт», чтобы начать.",
     "open_release_btn": "Показать файл в папке",
@@ -284,7 +284,7 @@
       "logo": "Логотип",
       "leads": "Подписка / Лиды",
       "banner": "Баннер",
-      "icon": "Значок .exe",
+      "icon": "Windows EXE icon",
       "defined": "Задан",
       "no_logo": "Без логотипа",
       "active": "Активно",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "Подготовка экспорта…",
-      "saved_prefix": "Курс сохранён в: ",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "Операция отменена.",
-      "failed_prefix": "Ошибка: "
+      "failed_prefix": "Ошибка: ",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "Пожалуйста, выберите файл .ico, .png или .jpg",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ Всё готово к экспорту.",
       "no_title": "Укажите название программы (шаг 2 — Оформление).",
       "no_modules": "Добавьте хотя бы один модуль (шаг 1 — Контент)."
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "Модули не настроены.",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "Бренд и цвета",
     "brand_hint": "Название, логотип и цвета готового продукта.",
-    "icon": "Иконка .exe",
+    "icon": "Software icon",
     "icon_hint": "Иконка, которую ученик видит на файле.",
     "banners": "Баннеры",
     "banners_hint": "Необязательно — реклама или партнёрские ссылки сверху/снизу.",
@@ -409,9 +422,8 @@
     "leads": "Сбор лидов",
     "leads_hint": "Необязательно — запрашивает e-mail перед показом контента.",
     "export": "Экспорт",
-    "export_hint": "Создаёт единый .exe для передачи ученикам.",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "Показать",
     "hide": "Скрыть"
   }
 }
-

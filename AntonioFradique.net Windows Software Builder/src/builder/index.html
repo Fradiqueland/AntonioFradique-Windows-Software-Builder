@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
       content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: file:; font-src 'self' https://cdn.jsdelivr.net;" />
-    <title>AntonioFradique.net Windows Software Builder</title>
+    <title>Windows &amp; Mac Software Builder</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -39,7 +39,7 @@
         <div class="brand">
           <img class="brand-mark" src="app-icon.png" alt="" />
           <div class="brand-text">
-            <div class="brand-title" data-i18n="app.brand_title">AntonioFradique.net Windows Software Builder</div>
+            <div class="brand-title" data-i18n="app.brand_title">Windows &amp; Mac Software Builder</div>
             <div class="brand-sub" data-i18n="app.brand_sub">Construtor</div>
           </div>
         </div>
@@ -79,7 +79,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v1.5.20</div>
+          <div class="version">v2.0.0</div>
         </div>
       </aside>
 
@@ -97,7 +97,7 @@
             </div>
             <div class="header-actions" id="header-actions">
               <button type="button" class="btn btn-ghost" id="header-preview" data-i18n="sidebar.preview_btn">Pré-visualizar Produto</button>
-              <button type="button" class="btn btn-primary" id="header-export" data-i18n="header.export_btn">Exportar .exe</button>
+              <button type="button" class="btn btn-primary" id="header-export" data-i18n="header.export_btn">Exportar projeto</button>
             </div>
           </div>
         </header>
@@ -441,7 +441,7 @@
         <section class="panel hidden" data-panel="icon" data-step="aparencia">
           <div class="section-head">
             <div>
-              <h2 data-i18n="section.icon">Ícone do .exe</h2>
+              <h2 data-i18n="section.icon">Ícone do software</h2>
               <p data-i18n="section.icon_hint">O ícone que o aluno vê no ficheiro.</p>
             </div>
           </div>
@@ -458,7 +458,7 @@
                 <span id="icon-preview-empty" class="logo-empty" data-i18n="icon.preview_empty">Sem ícone carregado</span>
               </div>
               <div class="file-current" id="icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
-              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final.</small>
+              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. O ícone personalizado aplica-se à exportação Windows EXE; os pacotes ZIP usam o ícone do visualizador.</small>
             </div>
 
             <div class="form-actions">
@@ -662,7 +662,7 @@
           <div class="section-head">
             <div>
               <h2 data-i18n="section.export">Exportar</h2>
-              <p data-i18n="section.export_hint">Gera o .exe único para entregar aos alunos.</p>
+              <p data-i18n="section.export_hint">Crie uma aplicação para Windows ou Mac a partir deste projeto.</p>
             </div>
           </div>
           <div class="form-card">
@@ -671,12 +671,23 @@
               <div class="export-summary" id="export-summary" data-i18n="common.loading_summary">A carregar resumo…</div>
             </div>
 
+            <div class="form-group export-target-group">
+              <label for="export-target" data-i18n="export.target_label">Plataforma da aplicação a criar</label>
+              <select id="export-target" aria-describedby="export-target-description export-target-status">
+                <option value="windows">Windows</option>
+                <option value="mac">Mac (macOS)</option>
+              </select>
+              <small id="export-target-description"></small>
+              <div class="export-target-status" id="export-target-status" role="status" aria-live="polite"></div>
+              <small data-i18n="export.compatibility_help">Os ficheiros e programas incluídos nos módulos têm de ser compatíveis com a plataforma escolhida. PHP requer o runtime dessa plataforma.</small>
+            </div>
+
             <div class="form-group">
-              <button type="button" class="btn btn-export" id="export-build" data-i18n="export.build_btn">
-                Exportar Produto Final (.exe)
+              <button type="button" class="btn btn-export" id="export-build" disabled data-i18n="export.build_btn">
+                Exportar aplicação
               </button>
               <small data-i18n="export.build_help">
-                Cria um único .exe pronto a entregar. O aluno dá duplo-clique e o curso abre imediatamente — sem instalar nada. Pode demorar 30s a 1 min a gerar.
+                Exporta o produto deste projeto para a plataforma selecionada. Para entregar as duas versões, exporte uma vez para Windows e outra para Mac.
               </small>
             </div>
 

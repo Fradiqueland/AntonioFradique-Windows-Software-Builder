@@ -66,3 +66,22 @@ aprovadas. A suite usa ficheiros e HTTP locais reais, com funções IPC/Electron
 verificadas através de stubs; não demonstra o comportamento real do Chromium.
 A execução PHP, isolamento Electron em Windows e exportação SFX completa continuam
 pendentes de validação na plataforma de destino.
+
+## Atualização v2.0.0 — Windows e Mac
+
+- A exportação SFX escreve agora num temporário e só substitui o destino no fim.
+- O empacotamento preserva os avisos/licenças do Electron.
+- Exportações ZIP validam referências a recursos, caminhos, CRC, colisões de nomes
+  e symlinks. A cópia mantém intactos os bytes e permissões do bundle Mac.
+- Dados de projetos Mac ficam numa pasta `.data` externa, preservando a assinatura.
+- Exportações Mac bloqueiam módulos de execução Windows; PHP é validado no modelo
+  da plataforma de destino.
+- A pipeline compila em runners nativos, valida ambos os modelos incorporados e
+  verifica assinatura ad-hoc e arquiteturas Mac. Certificados de editor e
+  notarização não estão configurados.
+
+As limitações de palavras-passe/IPTV, leads, persistência web, backup/recuperação
+e alterações de logos/banners continuam por resolver. A versão Electron 32 foi
+preservada nesta alteração; atualização e revisão de vulnerabilidades continuam
+necessárias antes de distribuição pública. Os testes locais não substituem
+validação manual dos quatro percursos de exportação em Windows e macOS.

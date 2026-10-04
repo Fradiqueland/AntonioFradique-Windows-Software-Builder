@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "Construtor"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "Exportar",
-      "subtitle": "Compile o produto final para .exe (Windows)."
+      "subtitle": "Crie o produto final para Windows ou Mac."
     },
     "icon": {
       "title": "Ícone do Software",
-      "subtitle": "Defina o ícone do .exe final e guarde."
+      "subtitle": "Escolha o ícone para a exportação Windows EXE."
     },
     "projetos": {
       "title": "Projetos",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "Publicar",
-      "subtitle": "Confirme o que falta e gere o .exe para entregar aos alunos."
+      "subtitle": "Reveja o projeto e escolha Windows ou Mac para a aplicação que vai entregar."
     },
-    "export_btn": "Exportar .exe"
+    "export_btn": "Exportar projeto"
   },
   "sidebar": {
     "preview_btn": "Pré-visualizar Produto",
@@ -270,11 +270,11 @@
     "icon_label": "Ícone do Software",
     "icon_none": "Nenhum ícone definido.",
     "icon_current_prefix": "Ícone atual: ",
-    "icon_help": "Aceita .png, .jpg ou .ico. É convertido automaticamente e aplicado ao ícone do .exe final. (O GIF não é suportado — os ícones de Windows são estáticos.)",
+    "icon_help": "Aceita .png, .jpg ou .ico. O ícone personalizado aplica-se à exportação Windows EXE; os pacotes ZIP usam o ícone do visualizador.",
     "icon_must_be_ico": "Por favor, escolha um ficheiro .ico",
     "summary_label": "Resumo do Projeto",
-    "build_btn": "Exportar Produto Final (.exe)",
-    "build_help": "Cria um único .exe pronto a entregar. O aluno dá duplo-clique e o curso abre imediatamente — sem instalar nada. Pode demorar 30s a 1 min a gerar.",
+    "build_btn": "Exportar aplicação",
+    "build_help": "Exporta o produto deste projeto para a plataforma selecionada. Para entregar as duas versões, exporte uma vez para Windows e outra para Mac.",
     "status_label": "Status",
     "log_empty": "Sem atividade. Clique em \"Exportar\" para começar.",
     "open_release_btn": "Mostrar ficheiro na pasta",
@@ -284,7 +284,7 @@
       "logo": "Logo",
       "leads": "Opt-in / Leads",
       "banner": "Banner",
-      "icon": "Ícone .exe",
+      "icon": "Ícone Windows EXE",
       "defined": "Definido",
       "no_logo": "Sem logo",
       "active": "Ativo",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "A preparar exportação…",
-      "saved_prefix": "Curso guardado em: ",
+      "saved_prefix": "Aplicação guardada em: ",
       "cancelled": "Operação cancelada.",
-      "failed_prefix": "Erro: "
+      "failed_prefix": "Erro: ",
+      "no_result": "A exportação não produziu um ficheiro."
     },
     "icon_must_be_image": "Por favor, escolha um ficheiro .ico, .png ou .jpg",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ Tudo pronto para exportar.",
       "no_title": "Defina o título do software (passo 2 — Aparência).",
       "no_modules": "Adicione pelo menos um módulo (passo 1 — Conteúdo)."
-    }
+    },
+    "target_label": "Plataforma da aplicação a criar",
+    "target_ready": "Pronto para exportar para esta plataforma.",
+    "target_unavailable": "Exportação indisponível: o modelo de aplicação necessário não está incluído ou disponível.",
+    "target_check_failed": "Não foi possível verificar as plataformas de exportação disponíveis.",
+    "compatibility_help": "Os ficheiros e programas incluídos nos módulos têm de ser compatíveis com a plataforma escolhida. PHP requer o runtime dessa plataforma.",
+    "formats": {
+      "windows_exe": "Windows — aplicação num único ficheiro EXE",
+      "windows_zip": "Windows — ZIP com a aplicação e os ficheiros necessários",
+      "mac_zip": "Mac — ZIP com aplicação .app e pasta de dados"
+    },
+    "mac_delivery_help": "No Mac, extraia o ZIP completo e mantenha a aplicação .app e a sua pasta de dados juntas. Abra a .app para executar o produto.",
+    "windows_zip_delivery_help": "No Windows, extraia o ZIP completo e mantenha todos os ficheiros juntos. Abra o .exe incluído para executar o produto."
   },
   "viewer": {
     "menu_empty": "Nenhum módulo configurado.",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "Marca e cores",
     "brand_hint": "Título, logo e cores do produto final.",
-    "icon": "Ícone do .exe",
+    "icon": "Ícone do software",
     "icon_hint": "O ícone que o aluno vê no ficheiro.",
     "banners": "Banners",
     "banners_hint": "Opcional — publicidade ou links de afiliado no topo/rodapé.",
@@ -409,9 +422,8 @@
     "leads": "Captura de leads",
     "leads_hint": "Opcional — pede o email antes de mostrar o conteúdo.",
     "export": "Exportar",
-    "export_hint": "Gera o .exe único para entregar aos alunos.",
+    "export_hint": "Crie uma aplicação para Windows ou Mac a partir deste projeto.",
     "show": "Mostrar",
     "hide": "Ocultar"
   }
 }
-

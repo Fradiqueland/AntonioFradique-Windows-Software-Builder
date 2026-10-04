@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "बिल्डर"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "निर्यात",
-      "subtitle": "अंतिम उत्पाद को .exe (Windows) में संकलित करें।"
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "सॉफ़्टवेयर आइकन",
-      "subtitle": "अंतिम .exe का आइकन सेट करें और सहेजें।"
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "परियोजनाएँ",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "प्रकाशित करें",
-      "subtitle": "देखें क्या बाकी है और छात्रों को देने के लिए .exe बनाएँ।"
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": ".exe निर्यात करें"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "उत्पाद का पूर्वावलोकन",
@@ -270,11 +270,11 @@
     "icon_label": "सॉफ़्टवेयर आइकन",
     "icon_none": "कोई आइकन परिभाषित नहीं।",
     "icon_current_prefix": "वर्तमान आइकन: ",
-    "icon_help": ".png, .jpg या .ico स्वीकार करता है। यह स्वचालित रूप से बदला जाता है और अंतिम .exe आइकन पर लागू होता है। (GIF समर्थित नहीं है — Windows आइकन स्थिर होते हैं।)",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "कृपया एक .ico फ़ाइल चुनें",
     "summary_label": "परियोजना सारांश",
-    "build_btn": "अंतिम उत्पाद निर्यात करें (.exe)",
-    "build_help": "डिलीवरी के लिए तैयार एकल .exe बनाता है। छात्र डबल-क्लिक करता है और कोर्स तुरंत खुल जाता है — कुछ भी इंस्टॉल किए बिना। बनाने में 30 सेकंड से 1 मिनट लग सकता है।",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "स्थिति",
     "log_empty": "कोई गतिविधि नहीं। शुरू करने के लिए \"निर्यात\" पर क्लिक करें।",
     "open_release_btn": "फ़ोल्डर में फ़ाइल दिखाएं",
@@ -284,7 +284,7 @@
       "logo": "लोगो",
       "leads": "ऑप्ट-इन / लीड",
       "banner": "बैनर",
-      "icon": ".exe आइकन",
+      "icon": "Windows EXE icon",
       "defined": "परिभाषित",
       "no_logo": "कोई लोगो नहीं",
       "active": "सक्रिय",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "निर्यात तैयार किया जा रहा है…",
-      "saved_prefix": "कोर्स यहां सहेजा गया: ",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "ऑपरेशन रद्द किया गया।",
-      "failed_prefix": "त्रुटि: "
+      "failed_prefix": "त्रुटि: ",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "कृपया एक .ico, .png या .jpg फ़ाइल चुनें",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ निर्यात के लिए सब तैयार है।",
       "no_title": "सॉफ़्टवेयर का शीर्षक तय करें (चरण 2 — रूप-रंग)।",
       "no_modules": "कम से कम एक मॉड्यूल जोड़ें (चरण 1 — सामग्री)।"
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "कोई मॉड्यूल कॉन्फ़िगर नहीं किया गया।",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "ब्रांड और रंग",
     "brand_hint": "अंतिम उत्पाद का शीर्षक, लोगो और रंग।",
-    "icon": ".exe आइकन",
+    "icon": "Software icon",
     "icon_hint": "फ़ाइल पर छात्र को दिखने वाला आइकन।",
     "banners": "बैनर",
     "banners_hint": "वैकल्पिक — ऊपर/नीचे विज्ञापन या एफ़िलिएट लिंक।",
@@ -409,9 +422,8 @@
     "leads": "लीड कैप्चर",
     "leads_hint": "वैकल्पिक — सामग्री दिखाने से पहले ईमेल माँगता है।",
     "export": "निर्यात",
-    "export_hint": "छात्रों को देने के लिए एकल .exe बनाता है।",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "दिखाएँ",
     "hide": "छिपाएँ"
   }
 }
-

@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "Constructeur"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "Exporter",
-      "subtitle": "Compilez le produit final en .exe (Windows)."
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "Icône du Logiciel",
-      "subtitle": "Définissez l'icône du .exe final et enregistrez."
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "Projets",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "Publier",
-      "subtitle": "Vérifiez ce qui manque et générez le .exe à remettre aux élèves."
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Exporter .exe"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "Aperçu du Produit",
@@ -270,11 +270,11 @@
     "icon_label": "Icône du Logiciel",
     "icon_none": "Aucune icône définie.",
     "icon_current_prefix": "Icône actuelle : ",
-    "icon_help": "Accepte .png, .jpg ou .ico. Converti automatiquement et appliqué à l'icône du .exe final. (Le GIF n'est pas pris en charge : les icônes Windows sont statiques.)",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "Veuillez choisir un fichier .ico",
     "summary_label": "Résumé du Projet",
-    "build_btn": "Exporter le Produit Final (.exe)",
-    "build_help": "Crée un seul .exe prêt à livrer. L'élève double-clique et le cours s'ouvre immédiatement — rien à installer. Peut prendre 30s à 1 min à générer.",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "Statut",
     "log_empty": "Aucune activité. Cliquez sur \"Exporter\" pour commencer.",
     "open_release_btn": "Afficher le fichier dans le dossier",
@@ -284,7 +284,7 @@
       "logo": "Logo",
       "leads": "Opt-in / Leads",
       "banner": "Bannière",
-      "icon": "Icône .exe",
+      "icon": "Windows EXE icon",
       "defined": "Défini",
       "no_logo": "Aucun logo",
       "active": "Actif",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "Préparation de l'exportation…",
-      "saved_prefix": "Cours enregistré dans : ",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "Annulé.",
-      "failed_prefix": "Erreur : "
+      "failed_prefix": "Erreur : ",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "Veuillez choisir un fichier .ico, .png ou .jpg",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ Tout est prêt pour exporter.",
       "no_title": "Définissez le titre du logiciel (étape 2 — Apparence).",
       "no_modules": "Ajoutez au moins un module (étape 1 — Contenu)."
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "Aucun module configuré.",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "Marque et couleurs",
     "brand_hint": "Titre, logo et couleurs du produit final.",
-    "icon": "Icône du .exe",
+    "icon": "Software icon",
     "icon_hint": "L'icône que l'élève voit sur le fichier.",
     "banners": "Bannières",
     "banners_hint": "Facultatif — publicité ou liens affiliés en haut/bas.",
@@ -409,9 +422,8 @@
     "leads": "Capture de leads",
     "leads_hint": "Facultatif — demande l'e-mail avant d'afficher le contenu.",
     "export": "Exporter",
-    "export_hint": "Génère le .exe unique à remettre aux élèves.",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "Afficher",
     "hide": "Masquer"
   }
 }
-

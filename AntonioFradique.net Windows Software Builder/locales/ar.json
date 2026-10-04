@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand_title": "AntonioFradique.net Windows Software Builder",
+    "brand_title": "Windows & Mac Software Builder",
     "brand_sub": "المُنشئ"
   },
   "lang": {
@@ -37,11 +37,11 @@
     },
     "export": {
       "title": "تصدير",
-      "subtitle": "اجمع المنتج النهائي في ملف .exe (Windows)."
+      "subtitle": "Create the final product for Windows or Mac."
     },
     "icon": {
       "title": "أيقونة البرنامج",
-      "subtitle": "حدّد أيقونة ملف .exe النهائي ثم احفظ."
+      "subtitle": "Choose the icon for Windows EXE exports."
     },
     "projetos": {
       "title": "المشاريع",
@@ -57,9 +57,9 @@
     },
     "publicar": {
       "title": "النشر",
-      "subtitle": "تحقّق مما ينقص وأنشئ ملف .exe لتسليمه للطلاب."
+      "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "تصدير .exe"
+    "export_btn": "Export project"
   },
   "sidebar": {
     "preview_btn": "معاينة المنتج",
@@ -270,11 +270,11 @@
     "icon_label": "أيقونة البرنامج",
     "icon_none": "لم يتم تحديد أيقونة.",
     "icon_current_prefix": "الأيقونة الحالية: ",
-    "icon_help": "يقبل .png أو .jpg أو .ico. يُحوَّل تلقائيًا ويُطبَّق على أيقونة ملف .exe النهائي. (صيغة GIF غير مدعومة — أيقونات Windows ثابتة.)",
+    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
     "icon_must_be_ico": "يرجى اختيار ملف .ico",
     "summary_label": "ملخص المشروع",
-    "build_btn": "تصدير المنتج النهائي (.exe)",
-    "build_help": "ينشئ ملف .exe واحدًا جاهزًا للتسليم. ينقر الطالب نقرًا مزدوجًا فتُفتح الدورة فورًا — دون تثبيت أي شيء. قد يستغرق الإنشاء من 30 ثانية إلى دقيقة.",
+    "build_btn": "Export application",
+    "build_help": "Exports this project’s product for the selected platform. To deliver both versions, export once for Windows and again for Mac.",
     "status_label": "الحالة",
     "log_empty": "لا يوجد نشاط. انقر على \"تصدير\" للبدء.",
     "open_release_btn": "إظهار الملف في المجلد",
@@ -284,7 +284,7 @@
       "logo": "الشعار",
       "leads": "الاشتراك / العملاء المحتملون",
       "banner": "اللافتة",
-      "icon": "أيقونة .exe",
+      "icon": "Windows EXE icon",
       "defined": "محدّد",
       "no_logo": "بدون شعار",
       "active": "مفعّل",
@@ -293,9 +293,10 @@
     },
     "log": {
       "starting": "جارٍ تحضير التصدير…",
-      "saved_prefix": "تم حفظ الدورة في: ",
+      "saved_prefix": "Application saved to: ",
       "cancelled": "تم إلغاء العملية.",
-      "failed_prefix": "خطأ: "
+      "failed_prefix": "خطأ: ",
+      "no_result": "The export did not produce a file."
     },
     "icon_must_be_image": "يرجى اختيار ملف .ico أو .png أو .jpg",
     "check": {
@@ -303,7 +304,19 @@
       "ready": "✓ كل شيء جاهز للتصدير.",
       "no_title": "حدّد عنوان البرنامج (الخطوة 2 — المظهر).",
       "no_modules": "أضف وحدة واحدة على الأقل (الخطوة 1 — المحتوى)."
-    }
+    },
+    "target_label": "Platform of the application to create",
+    "target_ready": "Ready to export for this platform.",
+    "target_unavailable": "Export unavailable: the required application template is missing or unavailable.",
+    "target_check_failed": "Could not check the available export platforms.",
+    "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
+    "formats": {
+      "windows_exe": "Windows — single EXE application",
+      "windows_zip": "Windows — ZIP with the application and required files",
+      "mac_zip": "Mac — ZIP with a .app application and data folder"
+    },
+    "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
   },
   "viewer": {
     "menu_empty": "لم يتم تكوين أي وحدة.",
@@ -400,7 +413,7 @@
   "section": {
     "brand": "العلامة والألوان",
     "brand_hint": "العنوان والشعار وألوان المنتج النهائي.",
-    "icon": "أيقونة .exe",
+    "icon": "Software icon",
     "icon_hint": "الأيقونة التي يراها الطالب على الملف.",
     "banners": "اللافتات",
     "banners_hint": "اختياري — إعلانات أو روابط تسويق بالعمولة أعلى/أسفل.",
@@ -409,9 +422,8 @@
     "leads": "جمع العملاء المحتملين",
     "leads_hint": "اختياري — يطلب البريد الإلكتروني قبل عرض المحتوى.",
     "export": "تصدير",
-    "export_hint": "ينشئ ملف .exe واحدًا لتسليمه للطلاب.",
+    "export_hint": "Create a Windows or Mac application from this project.",
     "show": "إظهار",
     "hide": "إخفاء"
   }
 }
-

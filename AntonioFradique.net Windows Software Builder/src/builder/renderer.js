@@ -48,6 +48,8 @@ async function setLanguage(lang, { persist = true } = {}) {
     I18N.dict = dict;
     I18N.ready = true;
     applyI18n();
+    renderExportTarget();
+    if (lastExportConfig) updateExportSummary(lastExportConfig);
     // Os cartões de tipo de módulo são gerados por JS: refazê-los no novo idioma.
     if (typeof renderTypeCards === 'function' && typeof moduleType !== 'undefined') {
       renderTypeCards();
@@ -1375,6 +1377,7 @@ async function applyConfig(config) {
 
 async function loadInitialConfig() {
   try {
+    await loadExportTargets();
     const config = await window.icurator.loadConfig();
     await applyConfig(config);
     await refreshProjects();
@@ -1634,8 +1637,58 @@ const exportSummaryEl = document.getElementById('export-summary');
 const exportBuildBtn = document.getElementById('export-build');
 const exportLogEl = document.getElementById('export-log');
 const exportOpenReleaseBtn = document.getElementById('export-open-release');
+const exportTargetSelect = document.getElementById('export-target');
+const exportTargetDescription = document.getElementById('export-target-description');
+const exportTargetStatus = document.getElementById('export-target-status');
+let exportTargets = [];
+let exportTargetsError = '';
+let exportInProgress = false;
+let lastExportConfig = null;
+
+function selectedExportTarget() {
+  return exportTargets.find((target) => target.id === exportTargetSelect.value);
+}
+
+function updateExportButton() {
+  const target = selectedExportTarget();
+  const moduleCount = lastExportConfig && Array.isArray(lastExportConfig.content) ? lastExportConfig.content.length : 0;
+  exportBuildBtn.disabled = exportInProgress || moduleCount === 0 || !target || !target.available;
+  exportTargetSelect.disabled = exportInProgress;
+}
+
+function renderExportTarget() {
+  const target = selectedExportTarget();
+  const isMac = exportTargetSelect.value === 'mac';
+  const formatKey = isMac ? 'mac_zip' : (target && target.format === 'exe' ? 'windows_exe' : 'windows_zip');
+  exportTargetDescription.textContent = t('export.formats.' + formatKey);
+  exportTargetStatus.classList.toggle('unavailable', !target || !target.available);
+  if (target && target.available) {
+    exportTargetStatus.textContent = t('export.target_ready');
+  } else {
+    const reason = exportTargetsError || (target && target.reason);
+    exportTargetStatus.textContent = t('export.target_unavailable') + (reason ? ' ' + reason : '');
+  }
+  updateExportButton();
+}
+
+async function loadExportTargets() {
+  try {
+    const result = await window.icurator.getExportTargets();
+    if (!result || !Array.isArray(result.targets)) throw new Error(t('export.target_check_failed'));
+    exportTargets = result.targets.filter((target) => target && ['windows', 'mac'].includes(target.id));
+    exportTargetsError = '';
+    exportTargetSelect.value = result.hostPlatform === 'darwin' ? 'mac' : 'windows';
+  } catch (err) {
+    exportTargets = [];
+    exportTargetsError = err && err.message ? err.message : String(err);
+  }
+  renderExportTarget();
+}
+
+exportTargetSelect.addEventListener('change', renderExportTarget);
 
 function updateExportSummary(config) {
+  lastExportConfig = config;
   const title = (config.brand && config.brand.title) || '—';
   const moduleCount = Array.isArray(config.content) ? config.content.length : 0;
   const leadsOn = !!(config.marketing && config.marketing.leads && config.marketing.leads.enabled);
@@ -1653,7 +1706,8 @@ function updateExportSummary(config) {
     ? '<div class="export-check warn"><strong>' + t('export.check.title') + '</strong><ul>'
       + problems.map((p) => '<li>' + p + '</li>').join('') + '</ul></div>'
     : '<div class="export-check ok">' + t('export.check.ready') + '</div>';
-  if (exportBuildBtn) exportBuildBtn.disabled = moduleCount === 0;
+  updateExportButton();
+  exportSummaryEl.removeAttribute('data-i18n');
   exportSummaryEl.innerHTML = checkHtml + `
     <div class="summary-row"><span class="summary-label">${S('project')}</span><span class="summary-value"></span></div>
     <div class="summary-row"><span class="summary-label">${S('modules')}</span><span class="summary-value">${moduleCount}</span></div>
@@ -1789,33 +1843,41 @@ if (window.icurator && window.icurator.onExportLog) {
   window.icurator.onExportLog(({ msg, kind }) => appendExportLog(msg, kind));
 }
 
-// Tracks the last successfully written .lbpro path so the "reveal in folder"
+// Tracks the last successfully written product path so the "reveal in folder"
 // button knows what to show. Reset to null after each new export attempt.
 let lastExportedPath = null;
 
 exportBuildBtn.addEventListener('click', async () => {
-  exportBuildBtn.disabled = true;
+  const target = selectedExportTarget();
+  if (exportInProgress || !target || !target.available) return;
+  exportInProgress = true;
+  updateExportButton();
   exportLogEl.innerHTML = '';
   appendExportLog(t('export.log.starting'));
   lastExportedPath = null;
   exportOpenReleaseBtn.disabled = true;
   try {
-    // Use the project title as the default file name so the user gets
-    // "Curso de Photoshop.exe" pre-filled in the save dialog.
+    // The main process chooses the correct extension for this platform.
     const cfg = await window.icurator.loadConfig();
     const suggested = (cfg && cfg.brand && cfg.brand.title) || 'meu-curso';
-    const result = await window.icurator.buildExe({ defaultName: suggested });
+    const result = await window.icurator.exportProject({ target: target.id, defaultName: suggested });
     if (result && result.cancelled) {
       appendExportLog(t('export.log.cancelled'));
     } else if (result && result.ok && result.path) {
       lastExportedPath = result.path;
       exportOpenReleaseBtn.disabled = false;
       appendExportLog(t('export.log.saved_prefix') + result.path, 'success');
+      if (target.id === 'mac' || target.format === 'zip') {
+        appendExportLog(t(target.id === 'mac' ? 'export.mac_delivery_help' : 'export.windows_zip_delivery_help'));
+      }
+    } else {
+      throw new Error((result && (result.error || result.message)) || t('export.log.no_result'));
     }
   } catch (err) {
     appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
-    exportBuildBtn.disabled = false;
+    exportInProgress = false;
+    updateExportButton();
   }
 });
 

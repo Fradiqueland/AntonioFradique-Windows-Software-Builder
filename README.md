@@ -1,83 +1,29 @@
-# AntonioFradique.net Windows Software Builder
+# Windows & Mac Software Builder — v2.0.0
 
-App de secretária (Electron) que gera software para Windows: cada curso é empacotado
-num `.exe` único e auto-extraível (via SFX 7-Zip), com o visualizador já embutido.
+O Builder instala-se em Windows ou Mac e cria aplicações independentes para ambos os sistemas. Em **Exportar**, escolha **Windows** ou **Mac**.
 
-> **Importante:** o projeto é desenvolvido aqui no Replit, mas é **compilado e executado
-> no teu PC Windows**. O Replit não corre aplicações de secretária Electron (não tem
-> ambiente gráfico), por isso a compilação tem de ser feita no teu computador.
+| Sistema do Builder | Projeto para Windows | Projeto para Mac |
+| --- | --- | --- |
+| Windows x64 | EXE único auto-extraível | ZIP com .app universal e pasta .data |
+| Mac Intel / Apple Silicon | ZIP portátil com EXE e dependências | ZIP com .app universal e pasta .data |
 
-## Onde está o projeto
+Os instaladores do **Builder** são um Setup EXE e um DMG. Ambos incluem os dois modelos de exportação. São diferentes dos softwares criados pelo utilizador, que funcionam sem instalar o Builder.
 
-O código está na pasta **`AntonioFradique.net Windows Software Builder/`**.
-Abre o terminal dentro dessa pasta (atenção ao espaço no nome — usa aspas):
+O código mantém a pasta original para preservar os caminhos existentes.
+
+- [Criar os dois instaladores, instalar e exportar](AntonioFradique.net%20Windows%20Software%20Builder/BUILD-V2.md)
+- [Importar HTML/PHP e conhecer os limites](AntonioFradique.net%20Windows%20Software%20Builder/IMPORTAR-HTML-PHP.md)
+- [Auditoria do produto](AntonioFradique.net%20Windows%20Software%20Builder/AUDITORIA-2026-10-04.md)
+
+O workflow **Build v2 Windows and Mac installers** compila nativamente os dois modelos e os dois instaladores. Consulte o estado da execução e descarregue os seus artefactos no GitHub Actions.
+
+Desenvolvimento: Node.js 22, Windows x64 ou macOS.
 
 ```bash
 cd "AntonioFradique.net Windows Software Builder"
+npm ci
+npm test
+npm start
 ```
 
-## Requisitos (no teu PC)
-
-- Windows 64-bit
-- [Node.js](https://nodejs.org) 18 ou superior (recomendado 20+)
-
-## Compilar tudo (recomendado)
-
-```bash
-npm run build:all
-```
-
-Este comando trata de tudo: instala as dependências, gera o template do visualizador e
-cria o instalador final. O resultado fica em **`dist/builder/`**.
-
-## Outros comandos
-
-| Comando | O que faz |
-| --- | --- |
-| `npm start` | Abre a app em modo desenvolvimento |
-| `npm run build:viewer-template` | Gera apenas o template do visualizador |
-| `npm run build:builder` | Gera apenas o instalador do Construtor |
-
-## Como funciona
-
-- **Construtor** — configuras a marca, banners, captura de leads e os menus/conteúdos do curso.
-- **Visualizador** — a aplicação que o aluno abre para ver o curso.
-- **Exportar** — cada curso é empacotado num `.exe` único auto-extraível, pronto a distribuir.
-
-## Estrutura
-
-```
-main.js              # processo principal do Electron
-preload.js           # ponte segura (Construtor)
-preload-viewer.js    # ponte segura (Visualizador)
-package.json         # dependências + configuração do electron-builder
-src/builder/         # interface do Construtor (+ icon.ico da app)
-src/viewer/          # interface do Visualizador
-build-configs/       # configurações de compilação
-scripts/             # scripts auxiliares de build
-locales/  assets/    # recursos
-```
-
-## Atualizar no teu PC (via GitHub)
-
-Este projeto está guardado num repositório **privado** no GitHub. Para o manteres
-atualizado no computador sem copiar ficheiros à mão:
-
-1. Instala o **[GitHub Desktop](https://desktop.github.com)** e inicia sessão com a tua conta.
-2. **File → Clone repository** e escolhe este repositório.
-3. Sempre que houver alterações novas, clica em **Pull** para atualizar.
-
-Depois é só correr `npm run build:all` dentro da pasta do projeto.
-
-
-## Importação HTML/PHP (1.6.0)
-
-Novo módulo para importar `.html`, `.htm` e `.php`, com opção de copiar a pasta
-de recursos, pré-visualização isolada e inclusão recursiva no `.exe`.
-HTML funciona diretamente; PHP requer preparar o runtime portátil antes de compilar.
-
-- [Guia de importação e limites](AntonioFradique.net%20Windows%20Software%20Builder/IMPORTAR-HTML-PHP.md)
-- [Preparar PHP portátil](AntonioFradique.net%20Windows%20Software%20Builder/vendor/php/README.md)
-- [Falhas identificadas e correções](AntonioFradique.net%20Windows%20Software%20Builder/AUDITORIA-2026-10-04.md)
-
-Testes: `npm test` na pasta do projeto Electron.
+PHP e ffmpeg são opcionais e não estão incluídos no Git. HTML funciona sem PHP. Esta versão não exporta para iOS.

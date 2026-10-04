@@ -9,6 +9,7 @@ const { promisify } = require('util');
 const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
+const projectExport = require('./src/shared/project-export');
 const { isTrustedFrame, lockGuestPreferences } = require('./src/shared/electron-security');
 const { fileURLToPath } = require('url');
 
@@ -84,7 +85,13 @@ if (isViewer) {
   app.setName('LaunchBox Viewer');
   if (app.isPackaged) {
     const exeDir = path.dirname(app.getPath('exe'));
-    app.setPath('userData', path.join(exeDir, '.electron-cache'));
+    // macOS app bundles must remain immutable: writing caches inside a signed
+    // .app invalidates it and fails in read-only/Applications locations.
+    const cacheDir = process.platform === 'darwin'
+      ? path.join(app.getPath('appData'), 'LaunchBox Viewer', crypto.createHash('sha256').update(exeDir).digest('hex').slice(0, 20))
+      : path.join(exeDir, '.electron-cache');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    app.setPath('userData', cacheDir);
   }
 } else {
   app.setName('LaunchBox Builder');
@@ -95,7 +102,7 @@ if (isViewer) {
  * degradado ou recusam a reprodução a agentes desconhecidos — uma das causas
  * do vídeo do YouTube não abrir. Apresentamo-nos como o Chrome equivalente
  * (mesma versão de motor), tanto na janela como nos <webview>. */
-app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/'
+app.userAgentFallback = 'Mozilla/5.0 (' + (process.platform === 'darwin' ? 'Macintosh; Intel Mac OS X 10_15_7' : 'Windows NT 10.0; Win64; x64') + ') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/'
   + process.versions.chrome + ' Safari/537.36';
 
 /* =========================================================
@@ -109,8 +116,14 @@ app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
  *                    it's a fresh %TEMP% extraction every launch)
  * ========================================================= */
 const PROJECT_ROOT = __dirname;
-const WRITE_BASE = (() => {
+function macProjectDirectory(resourcesPath) {
+  const bundle = path.resolve(resourcesPath, '..', '..');
+  const name = path.basename(bundle).replace(/\.app$/i, '');
+  return path.join(path.dirname(bundle), name + '.data');
+}
+let WRITE_BASE = (() => {
   if (!app.isPackaged) return PROJECT_ROOT;
+  if (isViewer && process.platform === 'darwin') return macProjectDirectory(process.resourcesPath);
   if (isViewer) return process.resourcesPath;
   return app.getPath('userData');
 })();
@@ -219,7 +232,13 @@ handleTrustedIpc('state:save', (_event, payload) => {
 const PROJECTS_ROOT = path.join(WRITE_BASE, 'projects');
 const PROJECTS_INDEX = path.join(WRITE_BASE, 'projects.json');
 
-const phpDir = app.isPackaged ? path.join(process.resourcesPath, 'php') : path.join(__dirname, 'vendor/php');
+function runtimeDirectory(runtime) {
+  if (app.isPackaged) return path.join(process.resourcesPath, runtime);
+  const target = process.platform === 'darwin' ? 'mac-universal' : 'windows-x64';
+  const specific = path.join(PROJECT_ROOT, 'vendor', runtime, target);
+  return fs.existsSync(specific) ? specific : path.join(PROJECT_ROOT, 'vendor', runtime);
+}
+const phpDir = runtimeDirectory('php');
 const phpPath = path.join(phpDir, process.platform === 'win32' ? 'php.exe' : 'php');
 const webRuntime = localWeb.createWebRuntime({ phpPath });
 const stopWebModules = () => webRuntime.closeAll().catch((err) => console.warn('Web cleanup:', err.message));
@@ -245,9 +264,25 @@ function getSfxBinDir() {
 }
 function getViewerTemplateDir() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'viewer-template');
-  // electron-builder's dir target writes into <output>/win-unpacked/
   return path.join(PROJECT_ROOT, 'src', 'builder', 'templates', 'viewer-core', 'win-unpacked');
 }
+function getExportTemplatePath(target) {
+  const root = app.isPackaged ? process.resourcesPath : path.join(PROJECT_ROOT, 'dist');
+  return path.join(root, 'export-templates', target === 'mac' ? 'mac-universal.zip' : 'windows-x64.zip');
+}
+function exportTargets() {
+  const windowsTemplate = fs.existsSync(getExportTemplatePath('windows'));
+  const legacy = fs.existsSync(path.join(getViewerTemplateDir(), 'LaunchBox Viewer.exe'));
+  const sfx = process.platform === 'win32' && fs.existsSync(path.join(getSfxBinDir(), '7za.exe'))
+    && fs.existsSync(path.join(getSfxBinDir(), '7zsd_All_x64.sfx'));
+  return { hostPlatform: process.platform, targets: [
+    { id: 'windows', available: windowsTemplate || (sfx && legacy), format: sfx ? 'exe' : 'zip',
+      reason: windowsTemplate || (sfx && legacy) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
+    { id: 'mac', available: fs.existsSync(getExportTemplatePath('mac')), format: 'zip',
+      reason: fs.existsSync(getExportTemplatePath('mac')) ? '' : 'Template Mac em falta. Reinstale o construtor ou prepare export-templates/mac-universal.zip.' }
+  ] };
+}
+
 
 const DEFAULT_CONFIG = {
   language: 'pt',
@@ -629,7 +664,7 @@ function secureEmbeddedContent(win) {
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 1024, minHeight: 680,
-    title: 'AntonioFradique.net Windows Software Builder',
+    title: 'Windows & Mac Software Builder',
     icon: path.join(__dirname, 'src', 'builder', 'app-icon.png'),
     backgroundColor: '#0f172a',
     webPreferences: {
@@ -926,7 +961,7 @@ const iptvProxyTargets = new Map();   // token → { url, createdAt }
 const iptvProxyRuns = new Map();      // token → { child, log:[], exitCode }
 function ffmpegPath() {
   const names = process.platform === 'win32' ? ['ffmpeg.exe'] : ['ffmpeg'];
-  const dirs = [path.join(process.resourcesPath || '', 'ffmpeg'), path.join(PROJECT_ROOT, 'vendor', 'ffmpeg')];
+  const dirs = [runtimeDirectory('ffmpeg')];
   for (const d of dirs) for (const n of names) { const p = path.join(d, n); if (fs.existsSync(p)) return p; }
   return null;
 }
@@ -1697,7 +1732,7 @@ handleTrustedIpc('export:saveIcon', (_event, payload) => {
 // Guard against re-entrant export invocations from a double-click.
 let exportBusy = false;
 
-handleTrustedIpc('export:buildExe', async (event, payload) => {
+async function buildWindowsExe(event, payload) {
   assertBuilder();
   // True re-entrancy guard: claim the lock BEFORE any async work (including
   // the save dialog), so two rapid clicks can't both pass the check and
@@ -1730,25 +1765,14 @@ handleTrustedIpc('export:buildExe', async (event, payload) => {
     const sfxBinDir = getSfxBinDir();
     const sevenZipExe = path.join(sfxBinDir, '7za.exe');
     const sfxStub = path.join(sfxBinDir, '7zsd_All_x64.sfx');
+    const templateZip = getExportTemplatePath('windows');
     const templateDir = getViewerTemplateDir();
     const templateExe = path.join(templateDir, 'LaunchBox Viewer.exe');
-
-    // Pre-flight checks with very specific error messages — these are the
-    // most common reasons exports fail on a fresh dev setup.
-    if (!fs.existsSync(sevenZipExe)) {
-      throw new Error('Binário 7za.exe em falta em ' + sfxBinDir + '. Verifique src/builder/bin/ — os binários SFX são commitados no repositório (ver src/builder/bin/README.md).');
+    if (!fs.existsSync(sevenZipExe) || !fs.existsSync(sfxStub)) {
+      throw new Error('Ferramentas de exportação Windows em falta. Reinstale o construtor.');
     }
-    if (!fs.existsSync(sfxStub)) {
-      throw new Error('SFX 7zsd_All_x64.sfx em falta em ' + sfxBinDir + '. Siga as instruções em src/builder/bin/README.md');
-    }
-    if (!fs.existsSync(templateExe)) {
-      throw new Error('Template do Viewer em falta em ' + templateDir + '. Execute primeiro: npm run build:viewer-template');
-    }
-    // O código do Viewer vive em resources/app.asar.bin (renomeado pelo prune
-    // para sobreviver ao electron-builder). Aceitamos também app.asar legado.
-    if (!fs.existsSync(path.join(templateDir, 'resources', 'app.asar.bin'))
-      && !fs.existsSync(path.join(templateDir, 'resources', 'app.asar'))) {
-      throw new Error('Template do Viewer incompleto: falta resources/app.asar(.bin) em ' + templateDir + '. Reconstrua: npm run build:viewer-template');
+    if (!fs.existsSync(templateZip) && !fs.existsSync(templateExe)) {
+      throw new Error('Template Windows em falta. Prepare export-templates/windows-x64.zip.');
     }
 
     const defaultName = sanitizeFilename((payload && payload.defaultName) || 'meu-curso');
@@ -1766,8 +1790,12 @@ handleTrustedIpc('export:buildExe', async (event, payload) => {
 
     /* 1. Stage = copy Viewer template (LaunchBox Viewer.exe + DLLs + asar). */
     send('A copiar template do Viewer…');
-    fs.mkdirSync(stagingRoot, { recursive: true });
-    copyDirRecursive(templateDir, stagingRoot);
+    if (fs.existsSync(templateZip)) {
+      await projectExport.extractWindowsTemplate(templateZip, stagingRoot);
+    } else {
+      fs.mkdirSync(stagingRoot, { recursive: true });
+      copyDirRecursive(templateDir, stagingRoot);
+    }
 
     /* O template guarda o código do Viewer como resources/app.asar.bin (ver
      * scripts/prune-viewer-template.js — contorna o electron-builder, que
@@ -1851,7 +1879,11 @@ handleTrustedIpc('export:buildExe', async (event, payload) => {
 
     /* 6. The single-file magic: SFX stub + config + 7z payload, concatenated
      *    in that order, IS a valid Windows .exe that auto-extracts + runs. */
-    await concatFilesToTarget([stubToUse, sfxCfgPath, archivePath], target);
+    const pendingTarget = target + '.' + stamp + '.tmp';
+    try {
+      await concatFilesToTarget([stubToUse, sfxCfgPath, archivePath], pendingTarget);
+      fs.renameSync(pendingTarget, target);
+    } finally { try { fs.unlinkSync(pendingTarget); } catch (_) {} }
 
     send('Curso guardado: ' + target, 'success');
     return { ok: true, path: target };
@@ -1865,7 +1897,50 @@ handleTrustedIpc('export:buildExe', async (event, payload) => {
     try { if (fs.existsSync(sfxCfgPath)) fs.unlinkSync(sfxCfgPath); } catch (_) {}
     try { if (fs.existsSync(iconTmpDir)) fs.rmSync(iconTmpDir, { recursive: true, force: true }); } catch (_) {}
   }
-});
+}
+
+handleTrustedIpc('export:targets', () => { assertBuilder(); return exportTargets(); });
+
+async function exportProject(event, payload = {}) {
+  assertBuilder();
+  const target = payload.target;
+  if (!['windows', 'mac'].includes(target)) throw new Error('Escolha Windows ou Mac.');
+  const selected = exportTargets().targets.find((entry) => entry.id === target);
+  if (!selected.available) throw new Error(selected.reason);
+  if (target === 'windows' && selected.format === 'exe') return buildWindowsExe(event, payload);
+  exportBusy = true;
+  const send = (msg, kind = 'info') => {
+    try { event.sender.send('export:log', { msg, kind }); } catch (_) {}
+  };
+  try {
+    if (!hasProject()) throw new Error('Guarde o projeto antes de exportar.');
+    const config = iptvCipher.sanitizeConfigForCourse(readConfig());
+    const name = projectExport.safeProjectName(payload.defaultName || config.brand?.title || 'Meu Software');
+    for (const mod of config.content || []) {
+      if (mod.type === 'local-web') localWeb.validateWebProject({ data: mod.data, assetsDir: ASSETS_DIR });
+    }
+    const choice = await dialog.showSaveDialog(builderWindow, {
+      title: target === 'mac' ? 'Guardar aplicação Mac (.zip)' : 'Guardar aplicação Windows portátil (.zip)',
+      defaultPath: name + '-' + target + '.zip', filters: [{ name: 'Aplicação portátil ZIP', extensions: ['zip'] }]
+    });
+    if (choice.canceled || !choice.filePath) return { ok: false, cancelled: true };
+    const outputPath = /\.zip$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.zip';
+    let lastProgress = -1;
+    const result = await projectExport.exportProject({ target, templatePath: getExportTemplatePath(target),
+      outputPath, projectName: name, config, assetsDir: ASSETS_DIR, onProgress: ({ completed, total }) => {
+        const progress = Math.floor(10 * completed / Math.max(total, 1));
+        if (progress !== lastProgress) { lastProgress = progress; send('A empacotar a aplicação: ' + progress * 10 + '%'); }
+      } });
+    send('Aplicação exportada: ' + result.path, 'success');
+    return { ...result, ok: true };
+  } catch (err) {
+    send('Erro: ' + err.message, 'error');
+    throw err;
+  } finally { exportBusy = false; }
+}
+handleTrustedIpc('export:project', exportProject);
+// Backwards-compatible bridge for older Builder renderers.
+handleTrustedIpc('export:buildExe', (event, payload) => exportProject(event, { ...payload, target: 'windows' }));
 
 handleTrustedIpc('export:revealInFolder', (_event, p) => {
   if (typeof p === 'string' && p && fs.existsSync(p)) {
@@ -1903,8 +1978,33 @@ app.on('before-quit', (event) => {
   stopWebModules().finally(() => { webShutdownComplete = true; app.quit(); });
 });
 
-app.whenReady().then(() => {
+async function locateMacProject() {
+  if (!(isViewer && app.isPackaged && process.platform === 'darwin')) return true;
+  if (fs.existsSync(CONFIG_PATH)) return true;
+  const choice = await dialog.showOpenDialog({
+    title: 'Selecionar dados da aplicação',
+    message: 'Mantenha a aplicação .app e a respetiva pasta .data juntas. Selecione a pasta .data deste projeto.',
+    properties: ['openDirectory']
+  });
+  if (choice.canceled || !choice.filePaths[0]) return false;
+  const base = choice.filePaths[0];
+  const config = path.join(base, 'data', 'project-config.json');
+  try {
+    const parsed = JSON.parse(fs.readFileSync(config, 'utf-8'));
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.content)) throw new Error('Configuração inválida.');
+  } catch (_) {
+    dialog.showErrorBox('Dados não encontrados', 'A pasta escolhida não contém data/project-config.json válido.');
+    return false;
+  }
+  WRITE_BASE = base;
+  DATA_DIR = path.join(base, 'data'); ASSETS_DIR = path.join(base, 'dist-assets');
+  CONFIG_PATH = config; ICON_DEST_PATH = path.join(DATA_DIR, 'icon.ico');
+  return true;
+}
+
+app.whenReady().then(async () => {
   if (isViewer) {
+    if (!await locateMacProject()) { app.quit(); return; }
     createViewerWindow({ standalone: true });
   } else {
     initProjects();
