@@ -52,3 +52,11 @@ Thumbs.db
 # Portable PHP is prepared locally before packaging; never commit runtime binaries.
 Windows-Mac-Software-Builder/vendor/php/*
 !Windows-Mac-Software-Builder/vendor/php/README.md
+
+# FFmpeg is built from pinned sources before packaging.
+Windows-Mac-Software-Builder/vendor/ffmpeg/*
+!Windows-Mac-Software-Builder/vendor/ffmpeg/README.md
+
+# Native validation reports and compiler logs.
+Windows-Mac-Software-Builder/build-*.log
+Windows-Mac-Software-Builder/build-iptv-smoke-*.json

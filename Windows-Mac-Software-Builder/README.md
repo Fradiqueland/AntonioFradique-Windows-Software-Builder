@@ -1,4 +1,4 @@
-# Windows & Mac Software Builder — v2.1
+# Windows & Mac Software Builder — v2.1.1
 
 Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Builder permite gerir projetos, personalizar a apresentação e exportar produtos independentes para os dois sistemas.
 
@@ -27,7 +27,9 @@ Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e
 
 A importação HTML/PHP pode copiar a pasta da página inicial com CSS, JavaScript, imagens e subpastas. Guarde nessa pasta apenas os recursos que pretende distribuir. Para atualizar a cópia importada, volte a selecionar o ficheiro principal.
 
-PHP e ffmpeg são runtimes opcionais e não são descarregados pelo workflow. HTML funciona sem PHP. Projetos PHP exigem um runtime incluído para a plataforma do Builder e para cada destino utilizado; consulte os guias abaixo.
+FFmpeg é compilado a partir de fontes fixadas e incluído no Builder e nos produtos exportados. Quando a reprodução direta IPTV falha, o leitor tenta converter o canal para H.264/AAC compatível. A conversão usa o processador e limita o vídeo a 720p/30 fps. Consulte [IPTV.md](IPTV.md).
+
+PHP continua opcional. HTML funciona sem PHP. Projetos PHP exigem um runtime incluído para a plataforma do Builder e para cada destino utilizado; consulte os guias abaixo.
 
 ## Navegação e links
 
@@ -39,6 +41,7 @@ A navegação interna entre páginas da mesma origem local continua no módulo i
 
 - [Compilação, instalação e exportação](BUILD-V2.md)
 - [Software portable: importação, execução e limites de compatibilidade](PORTABLE.md)
+- [IPTV: reprodução, conversão e diagnóstico](IPTV.md)
 - [Importação HTML/PHP e persistência](IMPORTAR-HTML-PHP.md)
 - [Runtime PHP opcional](vendor/php/README.md)
 - [Revisão de bugs e correções v2.1](AUDITORIA-V2.1.md)
