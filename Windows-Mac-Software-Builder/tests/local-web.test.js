@@ -58,6 +58,7 @@ test('folder import preserves resources, detects nested PHP and skips hidden/dep
   const sourcePath = f.write('index.html', '<link href="assets/style.css">');
   f.write('assets/style.css', 'body { color: red; }');
   f.write('api/submit.PHP', '<?php echo "ok";');
+  fs.mkdirSync(path.join(f.source, 'empty/cache'), { recursive: true });
   for (const name of ['.env', '.git/config', '.secret/file', 'node_modules/lib.js', 'assets/.env']) f.write(name, 'excluded');
   const data = importWebProject({ sourcePath, includeDirectory: true, assetsDir: f.assetsDir });
   assert.equal(data.fileCount, 3);
@@ -66,6 +67,7 @@ test('folder import preserves resources, detects nested PHP and skips hidden/dep
   assert.equal(validated.requiresPhp, true, 'manifest cannot conceal PHP files');
   assert.equal(fs.readFileSync(path.join(validated.rootPath, 'assets/style.css'), 'utf8'), 'body { color: red; }');
   assert.equal(fs.existsSync(path.join(validated.rootPath, '.env')), false);
+  assert.equal(fs.statSync(path.join(validated.rootPath, 'empty/cache')).isDirectory(), true);
 });
 
 test('rejects invalid entry names, unsupported files and recursive destination imports', t => {
@@ -163,12 +165,29 @@ test('denies missing tokens, foreign hosts/origins, traversal and PHP source', a
     assert.equal((await request(session.url, { requestPath: prefix + bad })).status, 403, bad);
   }
   const { rootPath } = validateWebProject({ data, assetsDir: f.assetsDir });
-  for (const name of ['added.php', 'secret.PHP', 'secret.inc', 'secret.phtml']) {
+  for (const name of ['added.php', 'secret.PHP', 'secret.inc', 'secret.phtml', 'secret.phps', 'secret.pht', 'secret.php.bak', 'secret.php~', 'secret.inc.old']) {
     fs.writeFileSync(path.join(rootPath, name), '<?php $secret = "NEVER-SERVE";');
     const result = await request(session.url, { requestPath: prefix + '/' + name });
     assert.equal(result.status, 403);
     assert.doesNotMatch(result.body, /NEVER-SERVE/);
   }
+});
+
+test('directory URLs redirect with a trailing slash so relative resources resolve correctly', async t => {
+  const f = fixture(t);
+  const sourcePath = f.write('index.html', 'home');
+  f.write('pages/index.html', '<link href="style.css">');
+  f.write('pages/style.css', 'body{color:red}');
+  const data = importWebProject({ sourcePath, includeDirectory: true, assetsDir: f.assetsDir });
+  const runtime = createWebRuntime();
+  t.after(() => runtime.closeAll());
+  const session = await runtime.open({ data, assetsDir: f.assetsDir });
+  const page = await request(session.url, { requestPath: `/${session.token}/pages?name=value` });
+  assert.equal(page.status, 308);
+  assert.equal(page.headers.location, `/${session.token}/pages/?name=value`);
+  const directoryUrl = new URL(page.headers.location, session.url);
+  assert.equal((await request(directoryUrl.href)).status, 200);
+  assert.equal((await request(new URL('style.css', directoryUrl).href)).body, 'body{color:red}');
 });
 
 test('blocks a symlink introduced after runtime validation', async t => {

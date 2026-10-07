@@ -10,6 +10,9 @@ const { contextBridge, ipcRenderer } = require('electron');
  * ao fecho do curso.
  */
 contextBridge.exposeInMainWorld('viewer', {
+  platform: process.platform,
+  launchPortable: (moduleId) => ipcRenderer.invoke('portable:launch', moduleId),
+  configurePortableWine: () => ipcRenderer.invoke('portable:configureWine'),
   loadConfig: () => ipcRenderer.invoke('config:load'),
   openWebModule: (moduleId) => ipcRenderer.invoke('web:open', moduleId),
   closeWebModule: (token) => ipcRenderer.invoke('web:close', token),
@@ -29,4 +32,3 @@ contextBridge.exposeInMainWorld('viewer', {
   loadState: (key) => ipcRenderer.invoke('state:load', key),
   saveState: (key, data) => ipcRenderer.invoke('state:save', { key, data })
 });
-

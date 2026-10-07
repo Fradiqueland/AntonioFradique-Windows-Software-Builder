@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Windows & Mac Software Builder — construtor e exportação de aplicações Windows e macOS",
   "main": "main.js",
   "author": "AntonioFradique.net",
@@ -101,10 +101,10 @@
     "yazl": "^3.3.1"
   },
   "devDependencies": {
-    "electron": "^32.0.0",
-    "electron-builder": "^25.0.0",
-    "hls.js": "^1.6.16",
     "@electron/asar": "^3.2.10",
-    "@electron/osx-sign": "^1.3.1"
+    "@electron/osx-sign": "^1.3.1",
+    "electron": "44.6.0",
+    "electron-builder": "^25.0.0",
+    "hls.js": "^1.6.16"
   }
 }

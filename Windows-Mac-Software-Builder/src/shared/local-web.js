@@ -12,7 +12,8 @@ const { spawn } = require('child_process');
 const LIMITS = Object.freeze({ files: 2000, fileBytes: 32 * 1024 * 1024, totalBytes: 256 * 1024 * 1024 });
 const ROOT_PATTERN = /^dist-assets\/web-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const ENTRY_PATTERN = /\.(?:html?|php)$/i;
-const PHP_SOURCE_PATTERN = /\.(?:php\d*|phtml|phar|inc)$/i;
+// Backups and highlighted source copies are code too, not public downloads.
+const PHP_SOURCE_PATTERN = /\.(?:php\d*|phps|phtml|pht|phar|inc)(?:$|[.~])/i;
 const COOKIE_NAME = 'local-web-session';
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8',
@@ -77,6 +78,7 @@ function walkFiles(root, visitor) {
       const stat = fs.lstatSync(absolute);
       if (stat.isSymbolicLink()) throw new Error(`Ligações simbólicas não são permitidas: ${relative}`);
       if (stat.isDirectory()) {
+        if (visitor) visitor(absolute, relative, stat);
         walk(absolute, relative, depth + 1);
       } else if (stat.isFile()) {
         totals.fileCount++;
@@ -135,7 +137,11 @@ function importWebProject({ sourcePath, includeDirectory = false, assetsDir }) {
   fs.mkdirSync(rootPath, { mode: 0o700 });
   try {
     if (includeDirectory) {
-      walkFiles(sourceDirectory, (source, relative, stat) => copyRegularFile(source, path.join(rootPath, relative), stat));
+      walkFiles(sourceDirectory, (source, relative, stat) => {
+        const destination = path.join(rootPath, relative);
+        if (stat.isDirectory()) fs.mkdirSync(destination, { recursive: true, mode: 0o700 });
+        else copyRegularFile(source, destination, stat);
+      });
     } else {
       if (sourceStat.size > LIMITS.fileBytes) throw new Error('O ficheiro excede o limite de 32 MB.');
       copyRegularFile(sourcePath, path.join(rootPath, entry), sourceStat);
@@ -191,12 +197,31 @@ function requestFile(root, segments) {
     current = path.join(current, segment);
     if (fs.lstatSync(current).isSymbolicLink()) return null;
   }
-  if (fs.statSync(candidate).isDirectory()) {
+  const directory = fs.lstatSync(candidate).isDirectory();
+  if (directory) {
     candidate = ['index.html', 'index.htm', 'index.php'].map(name => path.join(candidate, name)).find(name => fs.existsSync(name));
     if (!candidate || fs.lstatSync(candidate).isSymbolicLink()) return null;
   }
-  if (!fs.statSync(candidate).isFile() || !isInside(root, fs.realpathSync(candidate))) return null;
-  return candidate;
+  const stat = fs.lstatSync(candidate);
+  if (!stat.isFile() || !isInside(root, fs.realpathSync(candidate))) return null;
+  return { filename: candidate, stat, directory };
+}
+
+function openRequestFile(root, resource) {
+  const descriptor = fs.openSync(resource.filename, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+  try {
+    const actual = fs.fstatSync(descriptor);
+    // Use the descriptor we checked for streaming. Checking the pathname then
+    // reopening it asynchronously would permit a late symlink replacement.
+    if (!actual.isFile() || actual.dev !== resource.stat.dev || actual.ino !== resource.stat.ino ||
+      actual.size !== resource.stat.size || !isInside(root, fs.realpathSync(resource.filename))) {
+      throw new Error('O ficheiro mudou durante o pedido.');
+    }
+    return { descriptor, stat: actual };
+  } catch (error) {
+    fs.closeSync(descriptor);
+    throw error;
+  }
 }
 
 function respond(response, status, message) {
@@ -261,7 +286,7 @@ $prefix = realpath($root) . DIRECTORY_SEPARATOR;
 $check = $real;
 if (DIRECTORY_SEPARATOR === '\\\\') { $prefix = strtolower($prefix); $check = strtolower($check === false ? '' : $check); }
 if ($real === false || !is_file($real) || is_link($target) || strpos($check, $prefix) !== 0) { http_response_code(404); exit; }
-if (preg_match('/\\.(php[0-9]*|phtml|phar|inc)$/i', $real) && !preg_match('/\\.php$/i', $real)) { http_response_code(403); exit; }
+if (preg_match('/\\.(php[0-9]*|phps|phtml|pht|phar|inc)($|[.~])/i', $real) && !preg_match('/\\.php$/i', $real)) { http_response_code(403); exit; }
 if (preg_match('/\\.php$/i', $real)) {
   $_SERVER['SCRIPT_FILENAME'] = $real;
   $_SERVER['SCRIPT_NAME'] = '/' . str_replace(DIRECTORY_SEPARATOR, '/', substr($real, strlen(realpath($root)) + 1));
@@ -363,7 +388,8 @@ function createWebRuntime({ phpPath } = {}) {
         const raw = request.url || '';
         if (!raw.startsWith('/') || raw.startsWith('//')) return respond(response, 400, 'Pedido inválido.');
         const split = raw.indexOf('?');
-        let requestPath = split < 0 ? raw : raw.slice(0, split);
+        const originalPath = split < 0 ? raw : raw.slice(0, split);
+        let requestPath = originalPath;
         const query = split < 0 ? '' : raw.slice(split);
         const tokenPrefix = `/${token}/`;
         const hasToken = requestPath.startsWith(tokenPrefix);
@@ -375,9 +401,16 @@ function createWebRuntime({ phpPath } = {}) {
         }
         const segments = safeRequestPath(requestPath);
         if (!segments) return respond(response, 403, 'Caminho não permitido.');
-        let file;
-        try { file = requestFile(project.rootPath, segments); } catch (_) { /* missing/unreadable path */ }
-        if (!file) return respond(response, 404, 'Ficheiro não encontrado.');
+        let resource;
+        try { resource = requestFile(project.rootPath, segments); } catch (_) { /* missing/unreadable path */ }
+        if (!resource) return respond(response, 404, 'Ficheiro não encontrado.');
+        if (resource.directory && !requestPath.endsWith('/')) {
+          // The slash is the browser's base for relative stylesheets and links.
+          response.writeHead(308, { Location: `${originalPath}/${query}` });
+          response.end();
+          return;
+        }
+        const file = resource.filename;
         if (PHP_SOURCE_PATTERN.test(file) && (!record.backendPort || !/\.php$/i.test(file))) {
           return respond(response, 403, 'O código PHP não pode ser servido como ficheiro estático.');
         }
@@ -398,6 +431,8 @@ function createWebRuntime({ phpPath } = {}) {
             headers['referrer-policy'] = 'no-referrer';
             headers['cache-control'] = 'no-store';
             response.writeHead(result.statusCode || 502, headers);
+            result.on('aborted', () => response.destroy());
+            result.on('error', () => response.destroy());
             result.pipe(response);
           });
           upstream.on('timeout', () => upstream.destroy());
@@ -411,17 +446,23 @@ function createWebRuntime({ phpPath } = {}) {
           return;
         }
         if (request.method !== 'GET' && request.method !== 'HEAD') return respond(response, 405, 'Método não permitido em conteúdo HTML.');
+        let descriptor;
         try {
-          const stat = fs.statSync(file);
+          const opened = openRequestFile(project.rootPath, resource);
+          descriptor = opened.descriptor;
+          const stat = opened.stat;
           response.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Content-Length': stat.size });
           if (request.method === 'HEAD') return response.end();
-          const stream = fs.createReadStream(file);
+          const stream = fs.createReadStream(file, { fd: descriptor, autoClose: true });
+          descriptor = undefined; // The stream now owns and closes the handle.
           stream.on('error', () => response.destroy());
           response.on('close', () => stream.destroy());
           stream.pipe(response);
         } catch (_) {
           if (!response.headersSent) respond(response, 404, 'Ficheiro não encontrado.');
           else response.destroy();
+        } finally {
+          if (descriptor !== undefined) fs.closeSync(descriptor);
         }
       });
       record.server.requestTimeout = 30000;

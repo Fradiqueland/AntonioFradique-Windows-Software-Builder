@@ -980,3 +980,20 @@ form.autosave .form-actions { justify-content: flex-start; padding-top: 10px; mi
   background: #eff6ff; color: var(--primary); border: 1px solid #bfdbfe;
 }
 #content-editor-save:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Portable programs keep executable selection separate from the source folder. */
+.portable-editor { gap: 10px; }
+.portable-entry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.portable-entry-grid > div { min-width: 0; }
+.portable-entry-grid label { display: block; margin-bottom: 6px; }
+.portable-entry-grid select { width: 100%; min-width: 0; }
+.portable-wine-option { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.5; }
+.portable-wine-option input { flex: 0 0 auto; margin-top: 3px; }
+.portable-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.portable-scan-summary, .portable-status { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.portable-scan-summary { color: var(--text-dark-muted); }
+.portable-status.error { color: var(--danger); }
+.portable-status.success { color: var(--success); }
+.content-delete-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 260px; }
+.content-delete-confirm > span { flex-basis: 100%; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+@media (max-width: 900px) { .portable-entry-grid { grid-template-columns: 1fr; } }

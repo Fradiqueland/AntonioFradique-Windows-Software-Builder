@@ -6,6 +6,7 @@ const APP_VERSION = (() => { try { return require('./package.json').version; } c
 
 contextBridge.exposeInMainWorld('icurator', {
   version: APP_VERSION,
+  platform: process.platform,
   loadConfig: () => ipcRenderer.invoke('config:load'),
   projectsList: () => ipcRenderer.invoke('projects:list'),
   projectsCreate: (name) => ipcRenderer.invoke('projects:create', { name }),
@@ -21,6 +22,9 @@ contextBridge.exposeInMainWorld('icurator', {
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   pickFile: (category) => ipcRenderer.invoke('dialog:pickFile', category),
   pickFiles: (category) => ipcRenderer.invoke('dialog:pickFiles', category),
+  pickPortableFolder: () => ipcRenderer.invoke('portable:pickFolder'),
+  launchPortable: (moduleId) => ipcRenderer.invoke('portable:launch', moduleId),
+  configurePortableWine: () => ipcRenderer.invoke('portable:configureWine'),
   iptvLoad: (payload) => ipcRenderer.invoke('iptv:load', payload),
   openViewer: () => ipcRenderer.invoke('viewer:open'),
   saveIcon: (data) => ipcRenderer.invoke('export:saveIcon', data),
@@ -37,4 +41,3 @@ contextBridge.exposeInMainWorld('icurator', {
   loadLocale: (lang) => ipcRenderer.invoke('i18n:loadLocale', lang),
   saveLanguage: (lang) => ipcRenderer.invoke('language:save', lang)
 });
-

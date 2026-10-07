@@ -10,12 +10,15 @@ const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
+const portableApps = require('./src/shared/portable-app');
+const portableRuntime = require('./src/shared/portable-runtime');
 const { isTrustedFrame, lockGuestPreferences, configureGuestNavigation } = require('./src/shared/electron-security');
 const { fileURLToPath } = require('url');
 
 // Only our own top-level UI may call privileged IPC. Embedded pages have no bridge.
 const VIEWER_CHANNELS = new Set([
   'config:load', 'asset:resolve', 'shell:openExternal', 'shell:launchFile',
+  'portable:launch', 'portable:configureWine',
   'dialog:saveFileAs', 'i18n:loadLocale', 'youtube:hostUrl', 'iptv:hosts',
   'iptv:hasFfmpeg', 'iptv:proxyUrl', 'iptv:proxyStatus', 'iptv:proxyStop',
   'favs:load', 'favs:save', 'state:load', 'state:save', 'web:open', 'web:close'
@@ -249,7 +252,7 @@ const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'smart-embed', 'iptv', 'local-web'
+  'article-reader', 'smart-embed', 'iptv', 'local-web', 'portable'
 ]);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
@@ -275,9 +278,16 @@ function exportTargets() {
   const legacy = fs.existsSync(path.join(getViewerTemplateDir(), 'LaunchBox Viewer.exe'));
   const sfx = process.platform === 'win32' && fs.existsSync(path.join(getSfxBinDir(), '7za.exe'))
     && fs.existsSync(path.join(getSfxBinDir(), '7zsd_All_x64.sfx'));
+  // A mixed portable folder may contain Mac framework symlinks. ZIP preserves
+  // them; the Windows SFX extractor cannot reliably recreate those links.
+  let portableLinks = false;
+  try {
+    portableLinks = (readConfig().content || []).some((mod) => mod.type === 'portable'
+      && portableApps.validatePortableProject({ data: mod.data, assetsDir: ASSETS_DIR }).hasSymlinks);
+  } catch (_) { /* The export itself reports the invalid project precisely. */ }
   return { hostPlatform: process.platform, targets: [
-    { id: 'windows', available: windowsTemplate || (sfx && legacy), format: sfx ? 'exe' : 'zip',
-      reason: windowsTemplate || (sfx && legacy) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
+    { id: 'windows', available: windowsTemplate || (sfx && legacy && !portableLinks), format: sfx && !portableLinks ? 'exe' : 'zip',
+      reason: windowsTemplate || (sfx && legacy && !portableLinks) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
     { id: 'mac', available: fs.existsSync(getExportTemplatePath('mac')), format: 'zip',
       reason: fs.existsSync(getExportTemplatePath('mac')) ? '' : 'Template Mac em falta. Reinstale o construtor ou prepare export-templates/mac-universal.zip.' }
   ] };
@@ -358,19 +368,29 @@ function createProjectFolder(id) {
 
 function readProjectsIndex() {
   try {
-    if (fs.existsSync(PROJECTS_INDEX)) {
-      const idx = JSON.parse(fs.readFileSync(PROJECTS_INDEX, 'utf-8'));
-      if (idx && Array.isArray(idx.projects)) return idx;
+    if (!fs.existsSync(PROJECTS_INDEX)) return { activeId: null, projects: [] };
+    const idx = JSON.parse(fs.readFileSync(PROJECTS_INDEX, 'utf-8'));
+    const ids = new Set();
+    if (!idx || typeof idx !== 'object' || !Array.isArray(idx.projects) ||
+        (idx.activeId !== null && typeof idx.activeId !== 'string')) throw new Error('Formato do índice inválido.');
+    for (const project of idx.projects) {
+      if (!project || typeof project.id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(project.id) ||
+          ids.has(project.id) || typeof project.name !== 'string') throw new Error('Projeto inválido no índice.');
+      ids.add(project.id);
     }
+    return idx;
   } catch (err) {
-    console.error('Falha a ler projects.json:', err);
+    throw new Error(`Não foi possível ler ${PROJECTS_INDEX}. O ficheiro foi preservado; corrija-o ou restaure uma cópia de segurança. ${err.message}`);
   }
-  return { activeId: null, projects: [] };
 }
 
 function writeProjectsIndex(idx) {
   fs.mkdirSync(WRITE_BASE, { recursive: true });
-  fs.writeFileSync(PROJECTS_INDEX, JSON.stringify(idx, null, 2), 'utf-8');
+  const temp = PROJECTS_INDEX + '.' + crypto.randomUUID() + '.tmp';
+  try {
+    fs.writeFileSync(temp, JSON.stringify(idx, null, 2), { encoding: 'utf8', flag: 'wx' });
+    fs.renameSync(temp, PROJECTS_INDEX);
+  } finally { try { fs.unlinkSync(temp); } catch (_) {} }
 }
 
 /* Move o conteúdo de srcDir para destDir (usado só na migração inicial do
@@ -411,28 +431,35 @@ function touchActiveProject() {
   } catch (err) { console.warn('Falha a atualizar updatedAt do projeto:', err); }
 }
 
-/* Arranque do Builder: garante que existe pelo menos um projeto, migra o
- * layout antigo (data/ + dist-assets/ na raiz) para o primeiro projeto, e
- * aponta as constantes para o projeto ativo. */
+/* Arranque do Builder: garante que existe pelo menos um projeto, copia o
+ * layout antigo para o primeiro projeto preservando o original como backup,
+ * e aponta as constantes para o projeto ativo após validar a configuração. */
 function initProjects() {
   let idx = readProjectsIndex();
 
   if (idx.projects.length === 0) {
     const id = genProjectId();
-    createProjectFolder(id);
-
-    // Migração do projeto único antigo, se existir na raiz.
     const legacyDataDir = path.join(WRITE_BASE, 'data');
     const legacyAssetsDir = path.join(WRITE_BASE, 'dist-assets');
     const legacyConfig = path.join(legacyDataDir, 'project-config.json');
-    if (fs.existsSync(legacyConfig)) {
-      moveDirContents(legacyDataDir, path.join(projectDir(id), 'data'));
-      moveDirContents(legacyAssetsDir, path.join(projectDir(id), 'dist-assets'));
+    try {
+      createProjectFolder(id);
+      // Keep the legacy copy until the new index has committed successfully.
+      if (fs.existsSync(legacyConfig)) {
+        const legacy = readConfig(legacyConfig);
+        copyDirRecursive(legacyDataDir, path.join(projectDir(id), 'data'));
+        if (fs.existsSync(legacyAssetsDir)) copyProjectAssets(legacyAssetsDir, path.join(projectDir(id), 'dist-assets'), legacy);
+      } else {
+        fs.writeFileSync(path.join(projectDir(id), 'data', 'project-config.json'), JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+      }
+      const now = Date.now();
+      idx = { activeId: id, projects: [{ id, name: 'Projeto 1', createdAt: now, updatedAt: now }] };
+      writeProjectsIndex(idx);
+    } catch (error) {
+      try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (_) {}
+      throw error;
     }
-
-    const now = Date.now();
-    idx = { activeId: id, projects: [{ id, name: 'Projeto 1', createdAt: now, updatedAt: now }] };
-    writeProjectsIndex(idx);
+    // Retain the original legacy folders as a migration backup.
   }
 
   if (!idx.activeId || !idx.projects.some((p) => p.id === idx.activeId)) {
@@ -440,11 +467,9 @@ function initProjects() {
     writeProjectsIndex(idx);
   }
 
+  readConfig(path.join(projectDir(idx.activeId), 'data', 'project-config.json'));
   applyActiveProjectPaths(idx.activeId);
   ensureDirs();
-  if (!fs.existsSync(CONFIG_PATH)) {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-  }
 }
 
 function deepMerge(defaults, override) {
@@ -497,22 +522,35 @@ function migrateConfig(cfg) {
   return cfg;
 }
 
-function readConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    // Viewer in SFX mode should ALWAYS have a stamped-in project; if it
-    // doesn't, something went wrong with the export — surface defaults
-    // rather than throw, so the window still opens with the corners.
-    if (isViewer) return structuredClone(DEFAULT_CONFIG);
-    ensureDirs();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-    return structuredClone(DEFAULT_CONFIG);
+function validateConfigShape(config) {
+  const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!record(config)) throw new Error('A configuração deve ser um objeto JSON.');
+  function check(defaults, value, key) {
+    if (value === undefined) return;
+    if (defaults === null) {
+      if (value !== null && typeof value !== 'string') throw new Error(`Definição inválida: ${key}.`);
+    } else if (Array.isArray(defaults)) {
+      if (!Array.isArray(value)) throw new Error(`Definição inválida: ${key}.`);
+    } else if (record(defaults)) {
+      if (!record(value)) throw new Error(`Definição inválida: ${key}.`);
+      for (const child of Object.keys(defaults)) check(defaults[child], value[child], `${key}.${child}`);
+    } else if (typeof value !== typeof defaults) throw new Error(`Definição inválida: ${key}.`);
   }
+  check(DEFAULT_CONFIG, config, 'config');
+  for (const mod of config.content || []) {
+    if (!record(mod) || typeof mod.type !== 'string' || (mod.data !== undefined && !record(mod.data))) {
+      throw new Error('Módulo inválido na configuração.');
+    }
+  }
+  return config;
+}
+
+function readConfig(configPath = CONFIG_PATH) {
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    return migrateConfig(deepMerge(DEFAULT_CONFIG, JSON.parse(raw)));
+    const parsed = validateConfigShape(JSON.parse(fs.readFileSync(configPath, 'utf8')));
+    return migrateConfig(deepMerge(DEFAULT_CONFIG, parsed));
   } catch (err) {
-    console.error('Failed to read config, returning defaults:', err);
-    return structuredClone(DEFAULT_CONFIG);
+    throw new Error(`Não foi possível ler ${configPath}. O projeto não foi alterado; corrija o ficheiro ou restaure uma cópia de segurança. ${err.message}`);
   }
 }
 
@@ -538,10 +576,25 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
   ensureDirs();
   const ext = path.extname(sourcePath) || '';
   const base = sanitizeFilename(path.basename(sourcePath, ext)) || prefix;
-  const finalName = `${prefix}-${Date.now()}-${base}${ext}`;
+  const finalName = `${prefix}-${crypto.randomUUID()}-${base}${ext}`;
   const destAbs = path.join(ASSETS_DIR, finalName);
-  fs.copyFileSync(sourcePath, destAbs);
+  try { fs.copyFileSync(sourcePath, destAbs, fs.constants.COPYFILE_EXCL); }
+  catch (error) { try { fs.unlinkSync(destAbs); } catch (_) {} throw error; }
   return path.posix.join('dist-assets', finalName);
+}
+
+function cleanupFiles(files) {
+  for (const filename of new Set(files)) {
+    try { fs.unlinkSync(filename); }
+    catch (error) { if (error.code !== 'ENOENT') console.warn('Falha a limpar recurso:', filename, error.message); }
+  }
+}
+
+function commitConfigFiles(config, created, retired) {
+  try { writeConfig(config); }
+  catch (error) { cleanupFiles(created); throw error; }
+  cleanupFiles(retired.filter(filename => !created.includes(filename)));
+  return config;
 }
 
 /* Extrai o ID (11 caracteres) de qualquer variante de link do YouTube:
@@ -593,14 +646,27 @@ function relToAbs(relativePath) {
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
   const abs = relToAbs(relativePath);
-  if (isInsideAssetsDir(abs) && fs.existsSync(abs)) {
+  try {
+    resolveProjectFile(relativePath);
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
-  }
+  } catch (_) { /* Missing or unsafe references must never delete other files. */ }
 }
 
 function resolveRelativeAsset(relativePath) {
   if (!relativePath) return null;
   return relToAbs(relativePath);
+}
+
+function resolveProjectFile(relativePath) {
+  if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro inválido.');
+  const absolute = relToAbs(relativePath);
+  const root = fs.realpathSync(ASSETS_DIR);
+  const real = fs.realpathSync(absolute);
+  const relative = path.relative(root, real);
+  if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative) || !fs.statSync(real).isFile()) {
+    throw new Error('Caminho não permitido: ' + relativePath);
+  }
+  return real;
 }
 
 function copyDirRecursive(src, dest) {
@@ -611,6 +677,24 @@ function copyDirRecursive(src, dest) {
     if (entry.isDirectory()) copyDirRecursive(s, d);
     else if (entry.isFile()) fs.copyFileSync(s, d);
     else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): ' + s);
+  }
+}
+
+function copyProjectAssets(src, dest, config) {
+  const portableRoots = new Map();
+  for (const mod of config.content || []) {
+    if (mod.type !== 'portable') continue;
+    const validated = portableApps.validatePortableProject({ data: mod.data, assetsDir: src });
+    portableRoots.set(path.basename(validated.rootPath), validated.rootPath);
+  }
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const from = path.join(src, entry.name);
+    const to = path.join(dest, entry.name);
+    if (portableRoots.has(entry.name)) portableApps.copyPortableTree(from, to);
+    else if (entry.isDirectory()) copyDirRecursive(from, to);
+    else if (entry.isFile()) fs.copyFileSync(from, to);
+    else throw new Error('Recurso não suportado: ' + from);
   }
 }
 
@@ -1077,17 +1161,21 @@ handleTrustedIpc('projects:list', () => {
 
 handleTrustedIpc('projects:create', (_event, payload) => {
   assertBuilder();
+  const idx = readProjectsIndex();
   const name = sanitizeProjectName(payload && payload.name);
   const id = genProjectId();
-  createProjectFolder(id);
+  try {
+    createProjectFolder(id);
+    fs.writeFileSync(path.join(projectDir(id), 'data', 'project-config.json'), JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+    const now = Date.now();
+    idx.projects.push({ id, name, createdAt: now, updatedAt: now });
+    idx.activeId = id;
+    writeProjectsIndex(idx);
+  } catch (error) {
+    try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (_) {}
+    throw error;
+  }
   applyActiveProjectPaths(id);
-  ensureDirs();
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-  const idx = readProjectsIndex();
-  const now = Date.now();
-  idx.projects.push({ id, name, createdAt: now, updatedAt: now });
-  idx.activeId = id;
-  writeProjectsIndex(idx);
   return { state: projectsState(), config: readConfig() };
 });
 
@@ -1096,11 +1184,12 @@ handleTrustedIpc('projects:open', (_event, payload) => {
   const id = payload && payload.id;
   const idx = readProjectsIndex();
   if (!idx.projects.some((p) => p.id === id)) throw new Error('Projeto não encontrado.');
+  const config = readConfig(path.join(projectDir(id), 'data', 'project-config.json'));
   idx.activeId = id;
   writeProjectsIndex(idx);
   applyActiveProjectPaths(id);
   ensureDirs();
-  return { state: projectsState(), config: readConfig() };
+  return { state: projectsState(), config };
 });
 
 handleTrustedIpc('projects:rename', (_event, payload) => {
@@ -1121,31 +1210,38 @@ handleTrustedIpc('projects:delete', (_event, payload) => {
   const id = payload && payload.id;
   const idx = readProjectsIndex();
   if (!idx.projects.some((p) => p.id === id)) throw new Error('Projeto não encontrado.');
-  try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (err) { console.warn('Falha a apagar pasta do projeto:', err); }
   idx.projects = idx.projects.filter((p) => p.id !== id);
 
   let switchedConfig = null;
-  if (idx.activeId === id) {
-    if (idx.projects.length === 0) {
-      const nid = genProjectId();
-      createProjectFolder(nid);
-      applyActiveProjectPaths(nid);
-      ensureDirs();
-      fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-      const now = Date.now();
-      idx.projects.push({ id: nid, name: 'Projeto 1', createdAt: now, updatedAt: now });
-      idx.activeId = nid;
-    } else {
-      // O mais recente passa a ativo.
-      const next = idx.projects.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
-      idx.activeId = next.id;
-      applyActiveProjectPaths(next.id);
-      ensureDirs();
+  let replacementId = null;
+  const switching = idx.activeId === id;
+  try {
+    if (switching) {
+      if (idx.projects.length === 0) {
+        const nid = genProjectId();
+        replacementId = nid;
+        createProjectFolder(nid);
+        fs.writeFileSync(path.join(projectDir(nid), 'data', 'project-config.json'), JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+        const now = Date.now();
+        idx.projects.push({ id: nid, name: 'Projeto 1', createdAt: now, updatedAt: now });
+        idx.activeId = nid;
+      } else {
+        // O mais recente passa a ativo.
+        const next = idx.projects.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+        idx.activeId = next.id;
+      }
+      switchedConfig = readConfig(path.join(projectDir(idx.activeId), 'data', 'project-config.json'));
     }
-    switchedConfig = readConfig();
+    writeProjectsIndex(idx);
+  } catch (error) {
+    if (replacementId) { try { fs.rmSync(projectDir(replacementId), { recursive: true, force: true }); } catch (_) {} }
+    throw error;
   }
-  writeProjectsIndex(idx);
-  return { state: projectsState(), config: switchedConfig };
+  if (switching) applyActiveProjectPaths(idx.activeId);
+  let warning = null;
+  try { fs.rmSync(projectDir(id), { recursive: true, force: true }); }
+  catch (err) { warning = `O projeto saiu da lista, mas não foi possível limpar ${projectDir(id)}: ${err.message}`; console.warn(warning); }
+  return { state: projectsState(), config: switchedConfig, ...(warning ? { warning } : {}) };
 });
 
 handleTrustedIpc('projects:duplicate', (_event, payload) => {
@@ -1155,20 +1251,29 @@ handleTrustedIpc('projects:duplicate', (_event, payload) => {
   const src = idx.projects.find((p) => p.id === srcId);
   if (!src) throw new Error('Projeto não encontrado.');
   const newId = genProjectId();
-  createProjectFolder(newId);
   // Copia data/ (config + ícone) e dist-assets/ (logo, banners, ficheiros) do
   // projeto de origem para a nova pasta, de forma independente.
   const srcRoot = projectDir(srcId);
   const dstRoot = projectDir(newId);
-  for (const sub of ['data', 'dist-assets']) {
-    const from = path.join(srcRoot, sub);
-    if (fs.existsSync(from)) copyDirRecursive(from, path.join(dstRoot, sub));
+  try {
+    const sourceConfig = readConfig(path.join(srcRoot, 'data', 'project-config.json'));
+    createProjectFolder(newId);
+    copyDirRecursive(path.join(srcRoot, 'data'), path.join(dstRoot, 'data'));
+    const sourceAssets = path.join(srcRoot, 'dist-assets');
+    if (fs.existsSync(sourceAssets)) copyProjectAssets(sourceAssets, path.join(dstRoot, 'dist-assets'), sourceConfig);
+    // A duplicate gets its own persistent program settings at runtime.
+    const duplicateConfig = { ...sourceConfig, content: (sourceConfig.content || []).map((mod) => mod.type === 'portable'
+      ? { ...mod, data: { ...mod.data, revision: crypto.randomUUID() } } : mod) };
+    fs.writeFileSync(path.join(dstRoot, 'data', 'project-config.json'), JSON.stringify(duplicateConfig, null, 2), 'utf8');
+    const now = Date.now();
+    const name = sanitizeProjectName(src.name + ' (cópia)');
+    idx.projects.push({ id: newId, name, createdAt: now, updatedAt: now });
+    idx.activeId = newId;
+    writeProjectsIndex(idx);
+  } catch (error) {
+    try { fs.rmSync(dstRoot, { recursive: true, force: true }); } catch (_) {}
+    throw error;
   }
-  const now = Date.now();
-  const name = sanitizeProjectName(src.name + ' (cópia)');
-  idx.projects.push({ id: newId, name, createdAt: now, updatedAt: now });
-  idx.activeId = newId;
-  writeProjectsIndex(idx);
   applyActiveProjectPaths(newId);
   ensureDirs();
   return { state: projectsState(), config: readConfig() };
@@ -1185,12 +1290,12 @@ handleTrustedIpc('brand:save', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   let logoRelative = current.brand.logo || null;
+  const created = [];
   if (payload && payload.logoSourcePath) {
     if (!fs.existsSync(payload.logoSourcePath)) throw new Error('Ficheiro de logo não encontrado: ' + payload.logoSourcePath);
-    deleteAssetIfInside(logoRelative);
     logoRelative = copyAssetToProject(payload.logoSourcePath, 'logo');
+    created.push(relToAbs(logoRelative));
   } else if (payload && payload.removeLogo) {
-    deleteAssetIfInside(logoRelative);
     logoRelative = null;
   }
   const updated = {
@@ -1200,13 +1305,14 @@ handleTrustedIpc('brand:save', (_event, payload) => {
         ? payload.title.trim() : DEFAULT_CONFIG.brand.title,
       logo: logoRelative,
       colors: {
-        sidebar: (payload && payload.colors && payload.colors.sidebar) || current.brand.colors.sidebar,
-        background: (payload && payload.colors && payload.colors.background) || current.brand.colors.background,
-        buttons: (payload && payload.colors && payload.colors.buttons) || current.brand.colors.buttons
+        sidebar: (typeof payload?.colors?.sidebar === 'string' && payload.colors.sidebar) || current.brand.colors.sidebar,
+        background: (typeof payload?.colors?.background === 'string' && payload.colors.background) || current.brand.colors.background,
+        buttons: (typeof payload?.colors?.buttons === 'string' && payload.colors.buttons) || current.brand.colors.buttons
       }
     }
   };
-  writeConfig(updated);
+  commitConfigFiles(updated, created, []);
+  if (current.brand.logo !== logoRelative) deleteAssetIfInside(current.brand.logo);
   return updated;
 });
 
@@ -1234,6 +1340,7 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   const curBanners = (current.marketing && current.marketing.banners) || {};
+  const created = [];
 
   // Cada slot (top/bottom) é independente: copia a imagem nova, remove a
   // existente, ou mantém a atual conforme o payload do slot.
@@ -1243,10 +1350,9 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
     let image = cur.image || null;
     if (p.imageSourcePath) {
       if (!fs.existsSync(p.imageSourcePath)) throw new Error('Ficheiro de banner não encontrado: ' + p.imageSourcePath);
-      deleteAssetIfInside(image);
       image = copyAssetToProject(p.imageSourcePath, 'banner-' + slotName);
+      created.push(relToAbs(image));
     } else if (p.removeImage) {
-      deleteAssetIfInside(image);
       image = null;
     }
     return {
@@ -1256,15 +1362,21 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
     };
   };
 
-  const updated = {
-    ...current,
-    marketing: {
-      ...current.marketing,
-      banners: { top: saveSlot('top'), bottom: saveSlot('bottom') }
-    }
-  };
-  if (updated.marketing.banner) delete updated.marketing.banner;
-  writeConfig(updated);
+  let updated;
+  try {
+    updated = {
+      ...current,
+      marketing: {
+        ...current.marketing,
+        banners: { top: saveSlot('top'), bottom: saveSlot('bottom') }
+      }
+    };
+    if (updated.marketing.banner) delete updated.marketing.banner;
+    commitConfigFiles(updated, created, []);
+  } catch (error) { cleanupFiles(created); throw error; }
+  for (const slot of ['top', 'bottom']) {
+    if (curBanners[slot]?.image !== updated.marketing.banners[slot].image) deleteAssetIfInside(curBanners[slot]?.image);
+  }
   return updated;
 });
 
@@ -1316,11 +1428,13 @@ function moduleAssetFiles(mod) {
 
 handleTrustedIpc('content:save', (_event, payload) => {
   assertBuilder();
+  if (!Array.isArray(payload && payload.modules)) throw new Error('Lista de módulos inválida. O projeto não foi alterado.');
   const current = readConfig();
   const previous = Array.isArray(current.content) ? current.content : [];
-  const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
+  const incoming = payload.modules;
   const nextModules = [];
   const importedWeb = [];
+  const importedPortable = [];
   try {
   for (const raw of incoming) {
     const mod = sanitizeModule(raw);
@@ -1335,6 +1449,17 @@ handleTrustedIpc('content:save', (_event, payload) => {
         if (!prev || prev.type !== 'local-web') throw new Error('Selecione um ficheiro HTML ou PHP.');
         localWeb.validateWebProject({ data: prev.data, assetsDir: ASSETS_DIR });
         mod.data = { ...prev.data };
+      }
+    } else if (mod.type === 'portable') {
+      if (typeof d.sourcePath === 'string' && d.sourcePath) {
+        mod.data = portableApps.importPortableProject({ sourcePath: d.sourcePath,
+          assetsDir: ASSETS_DIR, entries: d.entries, allowWine: d.allowWine === true });
+        importedPortable.push(mod.data);
+      } else {
+        if (!prev || prev.type !== 'portable') throw new Error('Selecione uma pasta de software portable.');
+        mod.data = portableApps.updatePortableProject({ data: prev.data,
+          assetsDir: ASSETS_DIR, entries: d.entries === undefined ? prev.data.entries : d.entries,
+          allowWine: d.allowWine === undefined ? prev.data.allowWine : d.allowWine === true });
       }
     } else if (SINGLE_FILE_TYPES.has(mod.type)) {
       const sourcePath = typeof d.sourcePath === 'string' ? d.sourcePath : null;
@@ -1420,18 +1545,26 @@ handleTrustedIpc('content:save', (_event, payload) => {
     for (const data of importedWeb) {
       try { localWeb.removeWebProject({ data, assetsDir: ASSETS_DIR }); } catch (_) {}
     }
+    for (const data of importedPortable) {
+      try { portableApps.removePortableProject({ data, assetsDir: ASSETS_DIR }); } catch (_) {}
+    }
     throw err;
   }
   // Delete retired assets only after the new configuration was saved.
   const kept = new Set();
   for (const m of nextModules) for (const f of moduleAssetFiles(m)) kept.add(f);
   const keptRoots = new Set(nextModules.filter((m) => m.type === 'local-web').map((m) => m.data.root));
+  const keptPortableRoots = new Set(nextModules.filter((m) => m.type === 'portable').map((m) => m.data.root));
   for (const prev of previous) {
     for (const f of moduleAssetFiles(prev)) { if (!kept.has(f)) deleteAssetIfInside(f); }
     if (prev.type === 'local-web' && !keptRoots.has(prev.data.root)) {
       stopWebModules();
       try { localWeb.removeWebProject({ data: prev.data, assetsDir: ASSETS_DIR }); }
       catch (err) { console.warn('Web asset cleanup:', err.message); }
+    }
+    if (prev.type === 'portable' && !keptPortableRoots.has(prev.data.root)) {
+      try { portableApps.removePortableProject({ data: prev.data, assetsDir: ASSETS_DIR }); }
+      catch (err) { console.warn('Portable asset cleanup:', err.message); }
     }
   }
   return { ...current, content: nextModules };
@@ -1646,22 +1779,78 @@ handleTrustedIpc('dialog:pickFiles', async (_event, category) => {
   return result.filePaths.map((p) => ({ path: p, name: path.basename(p) }));
 });
 
+/* Portable imports keep the entire folder. Scanning identifies candidates;
+ * it never executes a program. Runtime paths belong to this computer only. */
+const PORTABLE_LOCAL_DIR = path.join(app.getPath('appData'), 'LaunchBox Portable Apps');
+const WINE_SETTINGS_PATH = path.join(PORTABLE_LOCAL_DIR, 'wine.json');
+
+handleTrustedIpc('portable:pickFolder', async () => {
+  assertBuilder();
+  const result = await dialog.showOpenDialog(builderWindow, {
+    title: 'Selecionar pasta do software portable',
+    properties: ['openDirectory', 'treatPackageAsDirectory']
+  });
+  if (result.canceled || !result.filePaths?.[0]) return null;
+  const sourcePath = result.filePaths[0];
+  return { sourcePath, ...portableApps.scanPortableFolder(sourcePath) };
+});
+
+function readPortableWineSettings() {
+  try {
+    const settings = JSON.parse(fs.readFileSync(WINE_SETTINGS_PATH, 'utf8'));
+    return { executable: settings.executable, prefix: settings.prefix };
+  } catch (_) { return null; }
+}
+
+handleTrustedIpc('portable:configureWine', async () => {
+  if (process.platform !== 'darwin') throw new Error('A opção Wine deste módulo está disponível apenas no Mac.');
+  const parent = BrowserWindow.getFocusedWindow() || viewerWindow || builderWindow;
+  const previous = readPortableWineSettings();
+  const executable = await dialog.showOpenDialog(parent, {
+    title: 'Selecionar executável Wine já instalado (wine)',
+    ...(previous?.executable ? { defaultPath: previous.executable } : {}),
+    properties: ['openFile', 'showHiddenFiles']
+  });
+  if (executable.canceled || !executable.filePaths?.[0]) return { configured: false, cancelled: true };
+  const prefix = await dialog.showOpenDialog(parent, {
+    title: 'Selecionar prefixo Wine já preparado (contém system.reg e user.reg)',
+    ...(previous?.prefix ? { defaultPath: previous.prefix } : {}),
+    properties: ['openDirectory', 'showHiddenFiles']
+  });
+  if (prefix.canceled || !prefix.filePaths?.[0]) return { configured: false, cancelled: true };
+  const settings = portableRuntime.validateWineConfiguration({ executable: executable.filePaths[0], prefix: prefix.filePaths[0] });
+  fs.mkdirSync(PORTABLE_LOCAL_DIR, { recursive: true });
+  const temporary = WINE_SETTINGS_PATH + '.' + crypto.randomUUID() + '.tmp';
+  try {
+    fs.writeFileSync(temporary, JSON.stringify(settings, null, 2), { mode: 0o600, flag: 'wx' });
+    fs.renameSync(temporary, WINE_SETTINGS_PATH);
+  } finally { fs.rmSync(temporary, { force: true }); }
+  return { configured: true };
+});
+
+handleTrustedIpc('portable:launch', async (_event, moduleId) => {
+  if (exportBusy) throw new Error('Aguarde a conclusão da exportação antes de abrir o programa.');
+  if (typeof moduleId !== 'string' || !moduleId || moduleId.length > 256) throw new Error('Módulo portable inválido.');
+  const module = findModuleById(readConfig().content || [], moduleId);
+  if (!module || module.type !== 'portable') throw new Error('Módulo portable não encontrado.');
+  return portableRuntime.launchPortableProject({ data: module.data, assetsDir: ASSETS_DIR,
+    storageDir: path.join(PORTABLE_LOCAL_DIR, 'projects'), wine: readPortableWineSettings(),
+    arch: app.runningUnderARM64Translation ? 'arm64' : process.arch });
+});
+
 /* Viewer: "Guardar como" para o módulo Cofre de Downloads. Copia o ficheiro
  * (que vive em dist-assets/) para o local escolhido pelo aluno. */
 handleTrustedIpc('dialog:saveFileAs', async (_event, payload) => {
   const rel = payload && typeof payload.file === 'string' ? payload.file : null;
   const suggested = (payload && typeof payload.fileName === 'string' && payload.fileName) || 'ficheiro';
   if (!rel) throw new Error('Ficheiro inválido.');
-  const abs = resolveRelativeAsset(rel);
-  // Validação de fronteira canónica (resolve + separador) — evita bypass por
-  // confusão de prefixo (ex.: ../dist-assets-evil/x começa por "dist-assets").
-  const real = abs ? path.resolve(abs) : null;
-  const root = path.resolve(ASSETS_DIR) + path.sep;
-  if (!real || !real.startsWith(root)) throw new Error('Caminho não permitido: ' + rel);
-  if (!fs.existsSync(real)) throw new Error('Ficheiro não existe: ' + real);
+  const real = resolveProjectFile(rel);
   const win = BrowserWindow.getFocusedWindow() || viewerWindow || builderWindow;
   const result = await dialog.showSaveDialog(win, { defaultPath: suggested });
   if (result.canceled || !result.filePath) return { ok: false, cancelled: true };
+  // The dialog can remain open while projects change. Keep the selected source
+  // and reject a substituted symlink instead of following it after the wait.
+  if (fs.realpathSync(real) !== real || !fs.statSync(real).isFile()) throw new Error('O ficheiro mudou enquanto o diálogo estava aberto.');
   fs.copyFileSync(real, result.filePath);
   return { ok: true, path: result.filePath };
 });
@@ -1683,10 +1872,8 @@ handleTrustedIpc('shell:openExternal', async (_event, url) => {
 });
 
 handleTrustedIpc('shell:launchFile', async (_event, relativePath) => {
-  if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro vazio.');
-  const abs = relToAbs(relativePath);
-  if (!isInsideAssetsDir(abs)) throw new Error('Caminho não permitido: ' + relativePath);
-  if (!fs.existsSync(abs)) throw new Error('Ficheiro não existe: ' + abs);
+  if (exportBusy) throw new Error('Aguarde a conclusão da exportação antes de abrir o ficheiro.');
+  const abs = resolveProjectFile(relativePath);
   const errMsg = await shell.openPath(abs);
   if (errMsg) throw new Error(errMsg);
   return true;
@@ -1697,25 +1884,25 @@ handleTrustedIpc('shell:launchFile', async (_event, relativePath) => {
 const ICON_ALLOWED_EXTS = ['.ico', '.png', '.jpg', '.jpeg'];
 const ICON_SOURCE_NAMES = ICON_ALLOWED_EXTS.map((e) => 'icon-source' + e);
 
-function clearStoredIcons() {
-  // Remove qualquer ícone-fonte anterior (qualquer extensão) e o legado icon.ico.
-  for (const f of ICON_SOURCE_NAMES) {
-    const p = path.join(DATA_DIR, f);
-    if (fs.existsSync(p)) { try { fs.unlinkSync(p); } catch (_) { /* ignore */ } }
+function storedIconPaths(config) {
+  const files = ICON_SOURCE_NAMES.map(name => path.join(DATA_DIR, name)).concat(ICON_DEST_PATH);
+  const icon = config.export && config.export.iconPath;
+  if (typeof icon === 'string' && /^data\/icon-source-[A-Za-z0-9-]+\.(ico|png|jpg|jpeg)$/.test(icon)) {
+    files.push(path.join(DATA_DIR, path.posix.basename(icon)));
   }
-  if (fs.existsSync(ICON_DEST_PATH)) { try { fs.unlinkSync(ICON_DEST_PATH); } catch (_) { /* ignore */ } }
+  return files;
 }
 
 handleTrustedIpc('export:saveIcon', (_event, payload) => {
   assertBuilder();
   ensureDirs();
+  const current = readConfig();
+  const retired = storedIconPaths(current);
 
   // Remover o ícone personalizado (volta ao predefinido).
   if (payload && payload.removeIcon) {
-    clearStoredIcons();
-    const current = readConfig();
     const updated = { ...current, export: { ...(current.export || {}), iconPath: null } };
-    writeConfig(updated);
+    commitConfigFiles(updated, [], retired);
     return updated;
   }
 
@@ -1725,12 +1912,12 @@ handleTrustedIpc('export:saveIcon', (_event, payload) => {
   if (!ICON_ALLOWED_EXTS.includes(ext)) {
     throw new Error('O ícone tem de ser .ico, .png ou .jpg. O GIF não é suportado — os ícones de Windows são estáticos. Converta a imagem para PNG e tente de novo.');
   }
-  clearStoredIcons();
-  const destName = 'icon-source' + ext;
-  fs.copyFileSync(payload.sourcePath, path.join(DATA_DIR, destName));
-  const current = readConfig();
+  const destName = 'icon-source-' + crypto.randomUUID() + ext;
+  const destination = path.join(DATA_DIR, destName);
+  try { fs.copyFileSync(payload.sourcePath, destination, fs.constants.COPYFILE_EXCL); }
+  catch (error) { cleanupFiles([destination]); throw error; }
   const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/' + destName } };
-  writeConfig(updated);
+  commitConfigFiles(updated, [destination], retired);
   return updated;
 });
 
@@ -1765,6 +1952,12 @@ async function buildWindowsExe(event, payload) {
 
     if (!hasProject()) {
       throw new Error('Sem projeto para exportar. Guarde primeiro pelo menos uma definição no Construtor.');
+    }
+
+    for (const mod of readConfig().content || []) {
+      if (mod.type !== 'portable') continue;
+      const portable = portableApps.assertPortableTarget({ data: mod.data, assetsDir: ASSETS_DIR, target: 'windows' });
+      if (portable.hasSymlinks) throw new Error('Esta pasta portable contém ligações simbólicas Mac. Utilize a exportação Windows ZIP.');
     }
 
     const sfxBinDir = getSfxBinDir();
@@ -1837,7 +2030,7 @@ async function buildWindowsExe(event, payload) {
         throw new Error('O curso contém PHP, mas o template não inclui php.exe. Prepare vendor/php e reconstrua o Viewer e o Construtor.');
       }
     }
-    if (fs.existsSync(ASSETS_DIR)) copyDirRecursive(ASSETS_DIR, stageAssets);
+    if (fs.existsSync(ASSETS_DIR)) copyProjectAssets(ASSETS_DIR, stageAssets, courseConfig);
 
     /* 3. Compress the staging tree into a .7z payload. Compressão ultra
      *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
@@ -1923,6 +2116,10 @@ async function exportProject(event, payload = {}) {
     const name = projectExport.safeProjectName(payload.defaultName || config.brand?.title || 'Meu Software');
     for (const mod of config.content || []) {
       if (mod.type === 'local-web') localWeb.validateWebProject({ data: mod.data, assetsDir: ASSETS_DIR });
+      if (mod.type === 'portable') {
+        const portable = portableApps.assertPortableTarget({ data: mod.data, assetsDir: ASSETS_DIR, target });
+        for (const warning of portable.warnings || []) send(warning, 'warning');
+      }
     }
     const choice = await dialog.showSaveDialog(builderWindow, {
       title: target === 'mac' ? 'Guardar aplicação Mac (.zip)' : 'Guardar aplicação Windows portátil (.zip)',
@@ -2022,9 +2219,12 @@ app.whenReady().then(async () => {
       else createBuilderWindow();
     }
   });
+}).catch(error => {
+  console.error('Não foi possível abrir o projeto:', error);
+  dialog.showErrorBox('Não foi possível abrir o projeto', error.message);
+  app.quit();
 });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-

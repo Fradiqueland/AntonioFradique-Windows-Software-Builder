@@ -11,7 +11,7 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { createRequire } = require('node:module');
-const { execFile } = require('node:child_process');
+const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
 const yauzl = require('yauzl');
 const execFileP = promisify(execFile);
@@ -98,6 +98,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     projectExport: engine,
     iptvCipher: appRequire('./src/shared/iptv-cipher'),
     localWeb: appRequire('./src/shared/local-web'),
+    portableApps: appRequire('./src/shared/portable-app'),
     ASSETS_DIR: assetsDir, builderWindow: window, exportBusy: false,
     assertBuilder() {}, hasProject: () => true, readConfig: () => config,
     getSfxBinDir: () => sfxDir,
@@ -124,6 +125,61 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   report.checks.push('production buildWindowsExe + real 7-Zip SFX extraction + valid ASAR');
 }
 
+async function verifyRealPortableLaunch(applicationRoot, assetsDir) {
+  const appRequire = createRequire(path.join(applicationRoot, 'package.json'));
+  const portable = appRequire('./src/shared/portable-app');
+  const runtime = appRequire('./src/shared/portable-runtime');
+  const mac = process.platform === 'darwin';
+  const source = path.join(temporary, 'portable-source');
+  fs.mkdirSync(path.join(source, 'resources'), { recursive: true });
+  const entry = mac ? 'portable-check' : 'portable-check.exe';
+  const systemProgram = mac ? '/usr/bin/true' : path.join(process.env.SystemRoot, 'System32', 'whoami.exe');
+  fs.copyFileSync(systemProgram, path.join(source, entry));
+  if (mac) fs.chmodSync(path.join(source, entry), 0o755);
+  // A genuine ASAR payload exercises physical copying in Electron. It must not
+  // be interpreted as a virtual directory by the portable importer or runtime.
+  const asarSource = path.join(temporary, 'windows-template/resources/app.asar');
+  fs.copyFileSync(asarSource, path.join(source, 'resources/app.asar'));
+  const asarHash = await fileHash(asarSource);
+  const scan = portable.scanPortableFolder(source);
+  assert.ok(scan.candidates.some(item => item.path === entry && item.platform === (mac ? 'mac' : 'windows')));
+  const data = portable.importPortableProject({ sourcePath: source, assetsDir,
+    entries: { windows: mac ? null : entry, mac: mac ? entry : null }, allowWine: false });
+  assert.equal(data.sourcePath, undefined);
+  fs.rmSync(source, { recursive: true, force: true });
+  const storageDir = path.join(temporary, 'persistent-portable');
+  let launched;
+  let completed;
+  const spawnImpl = (executable, args, options) => {
+    launched = { executable, args, options };
+    const child = spawn(executable, args, options);
+    completed = new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', (code, signal) => code === 0 ? resolve() : reject(new Error('Native portable process failed: ' + code + '/' + signal)));
+    });
+    completed.catch(() => {});
+    return child;
+  };
+  const result = await runtime.launchPortableProject({ data, assetsDir, storageDir, spawnImpl });
+  await completed;
+  assert.equal(result.ok, true);
+  assert.equal(result.via, 'native');
+  assert.equal(launched.options.shell, false);
+  const workingDirectory = launched.options.cwd;
+  assert.ok(workingDirectory.startsWith(storageDir + path.sep));
+  assert.equal(await fileHash(path.join(workingDirectory, 'resources/app.asar')), asarHash);
+  const settingsPath = path.join(workingDirectory, 'user-settings.txt');
+  fs.writeFileSync(settingsPath, 'keep between launches');
+  // Exported resources may be in a different SFX temporary folder on each run.
+  // The existing local revision is usable after its original payload is gone.
+  portable.removePortableProject({ data, assetsDir });
+  await runtime.launchPortableProject({ data, assetsDir, storageDir, spawnImpl });
+  await completed;
+  assert.equal(launched.options.cwd, workingDirectory);
+  assert.equal(fs.readFileSync(settingsPath, 'utf8'), 'keep between launches');
+  report.checks.push('portable import + real native process + physical ASAR + persistent working copy');
+}
+
 async function main() {
   assert.ok(process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE, 'This gate must run in the actual Electron main process');
   assert.ok(['win32', 'darwin'].includes(process.platform), 'Run this smoke on a native Windows or Mac runner');
@@ -139,7 +195,7 @@ async function main() {
   report.dependencies = Object.fromEntries(['yauzl', 'yazl'].map(name => [name, appRequire(name + '/package.json').version]));
   const lock = require('../package-lock.json');
   for (const [name, version] of Object.entries(report.dependencies)) assert.equal(version, lock.packages['node_modules/' + name].version);
-  temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'builder-real-electron-'));
+  temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'builder-real-electron-')));
   window = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   await window.loadURL('data:text/html,<title>Export regression smoke</title>');
   const assetsDir = path.join(temporary, 'assets');
@@ -188,6 +244,7 @@ async function main() {
     }
   }
   if (!mac) await verifyRealWindowsSfx({ applicationRoot, resources, engine, config, assetsDir, templates, expectedAsar: expectedWindowsAsar });
+  await verifyRealPortableLaunch(applicationRoot, assetsDir);
   if (!packaged) {
     report.links = await require('../tests/electron-links.cjs').runElectronLinkTests({ app, BrowserWindow });
     report.checks.push('real Electron webview link navigation');

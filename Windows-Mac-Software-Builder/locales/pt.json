@@ -146,7 +146,8 @@
       "article": "Artigo / notas",
       "embed": "Formulário ou quiz",
       "iptv": "Canais IPTV",
-      "local_web": "Ficheiro HTML / PHP"
+      "local_web": "Ficheiro HTML / PHP",
+      "portable": "Programa portátil (Windows / Mac)"
     },
     "youtube_url_label": "URL ou ID do vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou só o ID",
@@ -245,7 +246,8 @@
       "article": "Texto simples com títulos e listas.",
       "embed": "Google Forms, Typeform, quizzes…",
       "iptv": "Lista de canais de TV online.",
-      "local_web": "Importe uma página ou site do seu computador."
+      "local_web": "Importe uma página ou site do seu computador.",
+      "portable": "Inclua uma pasta de programa com os ficheiros e dependências necessários."
     },
     "type_group": {
       "video": "Vídeo",
@@ -425,5 +427,42 @@
     "export_hint": "Crie uma aplicação para Windows ou Mac a partir deste projeto.",
     "show": "Mostrar",
     "hide": "Ocultar"
+  },
+  "portable": {
+    "folder_label": "Pasta do programa",
+    "choose_folder": "Escolher pasta",
+    "no_folder": "Nenhuma pasta selecionada.",
+    "folder_help": "É guardada uma cópia da pasta, com os ficheiros e dependências incluídos. Escolha apenas uma pasta preparada para distribuição.",
+    "snapshot_help": "Para atualizar o programa, escolha novamente a pasta e guarde o módulo.",
+    "windows_entry": "Programa para Windows",
+    "mac_entry": "Programa para Mac",
+    "no_entry": "Sem versão selecionada",
+    "selection_help": "Reveja os programas sugeridos e guarde para confirmar a seleção. A deteção do formato e arquitetura não comprova compatibilidade.",
+    "wine_allow": "Permitir abrir a versão Windows no Mac com Wine externo (compatibilidade por testar)",
+    "native_help": "A versão nativa é preferida. A importação não converte programas; para executar no Windows é necessária uma versão Windows.",
+    "wine_local_help": "O runtime Wine e o prefixo já preparados são escolhidos neste Mac. A configuração fica apenas neste computador e não é exportada.",
+    "scan_summary": "{files} ficheiros · {size} MB",
+    "scanning": "A analisar a pasta…",
+    "no_candidates": "Não foram encontrados programas Windows EXE ou Mac compatíveis com a deteção.",
+    "pick_first": "Escolha primeiro a pasta do programa.",
+    "entry_required": "Selecione pelo menos um programa Windows ou Mac.",
+    "test_program": "Testar programa",
+    "test_help": "Guarde as alterações antes de testar. O teste abre a versão guardada numa janela própria; processo iniciado não significa compatibilidade confirmada.",
+    "viewer_title": "Programa portátil",
+    "viewer_launch": "Abrir programa",
+    "viewer_launching": "A iniciar o processo…",
+    "viewer_started": "Processo iniciado.",
+    "viewer_started_wine": "Processo iniciado através do Wine.",
+    "viewer_description": "Abre numa janela própria do sistema. O programa não fica incorporado no visualizador.",
+    "viewer_compatibility": "Não converte programas entre sistemas. No Windows, é necessária uma versão Windows.",
+    "viewer_configure_wine": "Configurar Wine neste Mac",
+    "viewer_configuring_wine": "A configurar o Wine…",
+    "viewer_wine_ready": "Wine configurado. Clique em Abrir programa para tentar iniciar.",
+    "viewer_wine_help": "Para tentar abrir uma versão Windows neste Mac, configure um runtime Wine e um prefixo já preparados. A compatibilidade depende do programa.",
+    "viewer_launch_error": "Não foi possível iniciar o programa: ",
+    "viewer_config_error": "Não foi possível configurar o Wine: ",
+    "viewer_unavailable": "Esta versão do visualizador não suporta programas portáteis.",
+    "viewer_invalid_result": "O sistema não confirmou o início do processo.",
+    "wine_ready": "Wine configurado. Guarde o módulo, se necessário, e clique em Testar programa."
   }
 }

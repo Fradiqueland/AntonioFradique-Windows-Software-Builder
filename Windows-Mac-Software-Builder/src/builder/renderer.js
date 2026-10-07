@@ -6,6 +6,11 @@ const I18N = {
   dict: {},
   ready: false
 };
+let projectGeneration = 0;
+let projectTransition = null;
+let contentMutation = null;
+let localeRequest = 0;
+const settingsWrites = new Set();
 
 function tRaw(key) {
   if (!key) return undefined;
@@ -42,13 +47,17 @@ function applyI18n(root = document) {
 }
 
 async function setLanguage(lang, { persist = true } = {}) {
+  const request = ++localeRequest;
+  const generation = projectGeneration;
   try {
     const { lang: applied, dict } = await window.icurator.loadLocale(lang);
+    if (request !== localeRequest || generation !== projectGeneration) return;
     I18N.lang = applied;
     I18N.dict = dict;
     I18N.ready = true;
     applyI18n();
     renderExportTarget();
+    renderPortableEditor();
     if (lastExportConfig) updateExportSummary(lastExportConfig);
     // Os cartões de tipo de módulo são gerados por JS: refazê-los no novo idioma.
     if (typeof renderTypeCards === 'function' && typeof moduleType !== 'undefined') {
@@ -154,11 +163,52 @@ document.querySelectorAll('.panel.collapsible .section-head h2').forEach((h) => 
 const autosaveTimers = new WeakMap();
 function queueAutosave(form) {
   if (!form) return;
+  const generation = projectGeneration;
   clearTimeout(autosaveTimers.get(form));
   autosaveTimers.set(form, setTimeout(() => {
+    if (generation !== projectGeneration || projectTransition) return;
     if (typeof form.reportValidity === 'function' && !form.checkValidity()) { form.reportValidity(); return; }
     form.requestSubmit();
   }, 250));
+}
+
+function beginSettingsSave(form) {
+  if (projectTransition || settingsWrites.has(form)) return false;
+  if (contentMutation) { queueAutosave(form); return false; }
+  settingsWrites.add(form);
+  form.inert = true;
+  updateBuilderBusyUI();
+  return true;
+}
+
+function endSettingsSave(form) {
+  settingsWrites.delete(form);
+  form.inert = !!projectTransition;
+  updateBuilderBusyUI();
+}
+
+async function pickForCurrentProject(pick, showStatus) {
+  if (projectTransition) return null;
+  const generation = projectGeneration;
+  try {
+    const result = await pick();
+    return generation === projectGeneration ? result : null;
+  } catch (err) {
+    if (generation === projectGeneration) showStatus(t('common.error_prefix') + err.message, 'error');
+    return null;
+  }
+}
+
+function updateBuilderBusyUI() {
+  const writing = !!contentMutation || settingsWrites.size > 0;
+  document.querySelectorAll('.panel').forEach((panel) => { panel.inert = !!projectTransition; });
+  if (projectsListEl) projectsListEl.inert = writing || !!projectTransition || exportInProgress;
+  if (projectNewForm) projectNewForm.inert = writing || !!projectTransition || exportInProgress;
+  contentList.inert = writing || !!projectTransition;
+  contentAddBtn.disabled = !!projectTransition;
+  if (contentEditorSave) contentEditorSave.disabled = writing || !!projectTransition || !TYPE_KEYS.includes(moduleType.value)
+    || (moduleType.value === 'portable' && !!portableOperation);
+  updateExportButton();
 }
 document.querySelectorAll('form.autosave').forEach((form) => {
   form.addEventListener('change', () => queueAutosave(form));
@@ -284,7 +334,7 @@ Object.keys(colorInputs).forEach((key) => {
 const logoPickLabel = document.querySelector('label[for="brand-logo"]');
 if (logoPickLabel) logoPickLabel.addEventListener('click', async (e) => {
   e.preventDefault();
-  const picked = await window.icurator.pickFile('image');
+  const picked = await pickForCurrentProject(() => window.icurator.pickFile('image'), showBrandStatus);
   if (!picked) return;
   brandState.pendingLogoSourcePath = picked.path;
   brandState.pendingRemoveLogo = false;
@@ -304,6 +354,7 @@ logoRemoveBtn.addEventListener('click', () => {
 
 brandForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!beginSettingsSave(brandForm)) return;
   brandSaveBtn.disabled = true;
   showBrandStatus(t('common.saving'), '');
   const justPickedLogo = brandState.pendingLogoSourcePath;
@@ -336,6 +387,7 @@ brandForm.addEventListener('submit', async (e) => {
     showBrandStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     brandSaveBtn.disabled = false;
+    endSettingsSave(brandForm);
   }
 });
 
@@ -368,6 +420,7 @@ function fillSocialInputs(social) {
 if (socialForm) {
   socialForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!beginSettingsSave(socialForm)) return;
     socialSaveBtn.disabled = true;
     showSocialStatus(t('common.saving'), '');
     try {
@@ -383,6 +436,7 @@ if (socialForm) {
       showSocialStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
     } finally {
       socialSaveBtn.disabled = false;
+      endSettingsSave(socialForm);
     }
   });
 }
@@ -399,20 +453,23 @@ const showLeadsStatus = makeStatus(document.getElementById('leads-status'));
 
 leadsForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!beginSettingsSave(leadsForm)) return;
   leadsSaveBtn.disabled = true;
   showLeadsStatus(t('common.saving'), '');
   try {
-    await window.icurator.saveLeadsConfig({
+    const updated = await window.icurator.saveLeadsConfig({
       enabled: leadsEnabled.checked,
       heading: leadsHeading.value,
       formHtml: leadsHtml.value
     });
+    updateExportSummary(updated);
     showLeadsStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);
     showLeadsStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     leadsSaveBtn.disabled = false;
+    endSettingsSave(leadsForm);
   }
 });
 
@@ -437,7 +494,7 @@ function makeBannerSlot(slotName) {
   const pickLabel = document.querySelector('label[for="banner-' + slotName + '-image"]');
   if (pickLabel) pickLabel.addEventListener('click', async (e) => {
     e.preventDefault();
-    const picked = await window.icurator.pickFile('image');
+    const picked = await pickForCurrentProject(() => window.icurator.pickFile('image'), showBannerStatus);
     if (!picked) return;
     state.pendingImageSourcePath = picked.path;
     state.pendingRemoveImage = false;
@@ -502,6 +559,7 @@ const bannerBottomSlot = makeBannerSlot('bottom');
 
 bannerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!beginSettingsSave(bannerForm)) return;
   bannerSaveBtn.disabled = true;
   showBannerStatus(t('common.saving'), '');
   const justPickedTop = bannerTopSlot.state.pendingImageSourcePath;
@@ -521,6 +579,7 @@ bannerForm.addEventListener('submit', async (e) => {
     showBannerStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     bannerSaveBtn.disabled = false;
+    endSettingsSave(bannerForm);
   }
 });
 
@@ -531,25 +590,25 @@ bannerForm.addEventListener('submit', async (e) => {
 // Module type labels are now resolved from the active locale via
 // `content.type.<key>` so the list stays in the user's chosen language
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
-const TYPE_KEYS = ['youtube', 'html', 'local-web', 'pdf', 'webview', 'external', 'launch',
+const TYPE_KEYS = ['youtube', 'html', 'local-web', 'portable', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv'];
 // Chaves de tradução por tipo (o id do tipo usa '-', a chave usa '_').
 const TYPE_I18N = {
-  youtube: 'youtube', html: 'html', 'local-web': 'local_web', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
+  youtube: 'youtube', html: 'html', 'local-web': 'local_web', portable: 'portable', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
   'local-video': 'local_video', 'local-audio': 'local_audio', 'download-vault': 'download',
   'image-gallery': 'gallery', 'article-reader': 'article', 'smart-embed': 'embed', iptv: 'iptv'
 };
 const TYPE_ICON = {
   youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
-  'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'download-vault': '⬇️', launch: '🚀', portable: '💼', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
 // Cartões agrupados por intenção (o que o aluno vai fazer), não por tecnologia.
 const TYPE_GROUPS = [
   { key: 'video', types: ['youtube', 'local-video'] },
   { key: 'read',  types: ['pdf', 'article-reader', 'html'] },
-  { key: 'files', types: ['download-vault', 'launch'] },
+  { key: 'files', types: ['download-vault', 'launch', 'portable'] },
   { key: 'web',   types: ['local-web', 'webview', 'external', 'smart-embed'] },
   { key: 'media', types: ['image-gallery', 'local-audio', 'iptv'] }
 ];
@@ -588,6 +647,18 @@ const dyn = {
     name: document.getElementById('dyn-local-web-name'),
     current: document.getElementById('dyn-local-web-current'),
     includeDirectory: document.getElementById('dyn-local-web-directory')
+  },
+  portable: {
+    pick: document.getElementById('dyn-portable-pick'),
+    name: document.getElementById('dyn-portable-name'),
+    summary: document.getElementById('dyn-portable-summary'),
+    windows: document.getElementById('dyn-portable-windows'),
+    mac: document.getElementById('dyn-portable-mac'),
+    allowWine: document.getElementById('dyn-portable-wine'),
+    test: document.getElementById('dyn-portable-test'),
+    configureWine: document.getElementById('dyn-portable-configure-wine'),
+    wineHelp: document.getElementById('dyn-portable-wine-help'),
+    status: document.getElementById('dyn-portable-status')
   },
   pdf: {
     file: document.getElementById('dyn-pdf-file'),
@@ -644,16 +715,132 @@ let contentModules = [];
 let editingId = null;        // id of module being edited (null = creating new)
 let pendingFileSourcePath = null;  // absolute path picked in <input type=file> for current edit
 let pendingFileName = null;
+const pendingFilesByType = new Map();
 let pendingWebSourcePath = null;
 let editorGeneration = 0;   // ignore a file dialog result after switching projects/editors
+let pendingPortableSourcePath = null;
+let portableCandidates = [];
+let portableSourceName = '';
+let portableScanStats = null;
+let portableOperation = null;
+let portableStatus = null;
+let portableHostPlatform = '';
+let activeDynamicType = '';
+let editorRevision = 0;
+let iptvRequest = 0;
 let galleryItems = [];       // current gallery editor items ({kind:'existing'|'new', ...})
 let iptvChannels = [];       // resolved channels for the module being edited (non-manual sources)
 let iptvManual = [];         // manual channel rows [{name,url}]
 let iptvM3uPath = null;      // absolute path of a picked .m3u file
 
 function showDynamicGroup(type) {
+  if (activeDynamicType !== type) {
+    editorGeneration++;
+    portableOperation = null;
+    activeDynamicType = type;
+    const fileDraft = pendingFilesByType.get(type);
+    pendingFileSourcePath = fileDraft ? fileDraft.path : null;
+    pendingFileName = fileDraft ? fileDraft.name : null;
+    iptvRequest++;
+    dyn.iptv.load.disabled = false;
+  }
   dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
   syncTypeUI(type);
+  updatePortableActions();
+}
+
+function portableEntries() {
+  return { windows: dyn.portable.windows.value || null, mac: dyn.portable.mac.value || null };
+}
+
+function portableSavedModule() {
+  return contentModules.find((mod) => mod.id === editingId && mod.type === 'portable'
+    && mod.data && mod.data.root && !mod.data.sourcePath);
+}
+
+function portableHasSavedSelection() {
+  const saved = portableSavedModule();
+  if (!saved || pendingPortableSourcePath) return false;
+  const entries = portableEntries();
+  const previous = saved.data.entries || {};
+  return entries.windows === (previous.windows || null) && entries.mac === (previous.mac || null)
+    && dyn.portable.allowWine.checked === !!saved.data.allowWine;
+}
+
+function updatePortableActions() {
+  const busy = !!portableOperation;
+  dyn.portable.pick.disabled = busy;
+  dyn.portable.windows.disabled = busy || !portableCandidates.some((item) => item.platform === 'windows');
+  dyn.portable.mac.disabled = busy || !portableCandidates.some((item) => item.platform === 'mac');
+  dyn.portable.allowWine.disabled = busy || !dyn.portable.windows.value;
+  dyn.portable.test.disabled = busy || !portableHasSavedSelection();
+  dyn.portable.configureWine.disabled = busy;
+  dyn.portable.configureWine.classList.toggle('hidden', portableHostPlatform !== 'darwin');
+  dyn.portable.wineHelp.classList.toggle('hidden', portableHostPlatform !== 'darwin');
+  if (moduleType.value === 'portable') contentEditorSave.disabled = busy || !!contentMutation || !!projectTransition || settingsWrites.size > 0;
+}
+
+function setPortableStatus(key, kind = '', detail = '') {
+  portableStatus = key ? { key, kind, detail } : null;
+  dyn.portable.status.textContent = portableStatus ? t('portable.' + key) + detail : '';
+  dyn.portable.status.className = 'portable-status' + (kind ? ' ' + kind : '');
+}
+
+function renderPortableEditor(entries = portableEntries()) {
+  const ui = dyn.portable;
+  ui.name.textContent = portableSourceName || t('portable.no_folder');
+  ui.name.classList.toggle('has-file', !!portableSourceName);
+  ui.name.removeAttribute('data-i18n');
+  for (const platform of ['windows', 'mac']) {
+    const select = ui[platform];
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = t('portable.no_entry');
+    select.appendChild(empty);
+    for (const candidate of portableCandidates.filter((item) => item.platform === platform)) {
+      const option = document.createElement('option');
+      option.value = candidate.path;
+      const architectures = Array.isArray(candidate.architectures) ? candidate.architectures.join(' / ') : '';
+      option.textContent = [candidate.label || candidate.path, candidate.kind, architectures].filter(Boolean).join(' · ');
+      select.appendChild(option);
+    }
+    select.value = entries[platform] || '';
+    if (select.selectedIndex < 0) select.value = '';
+  }
+  ui.summary.textContent = portableScanStats
+    ? t('portable.scan_summary').replace('{files}', String(portableScanStats.files))
+      .replace('{size}', (portableScanStats.bytes / (1024 * 1024)).toLocaleString(I18N.lang, { maximumFractionDigits: 1 }))
+    : '';
+  if (portableStatus) setPortableStatus(portableStatus.key, portableStatus.kind, portableStatus.detail);
+  updatePortableActions();
+}
+
+function suggestPortableEntry(platform, candidates, sourceName) {
+  const stem = (name) => String(name || '').split(/[\\/]/).pop().replace(/\.(exe|app)$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const wanted = stem(sourceName);
+  const ranked = candidates.filter((item) => item.platform === platform && !/(^|[\\/_. -])(unins\w*|uninstall|setup|installer|updater|crashpad|helper)([\\/_. -]|$)/i.test(item.path))
+    .map((item) => ({ item, score: (wanted && stem(item.path) === wanted ? 4 : 0) + (item.kind === 'app' ? 1 : 0) }))
+    .sort((a, b) => b.score - a.score);
+  if (ranked.length === 1 || (ranked.length > 1 && ranked[0].score > ranked[1].score)) return ranked[0].item.path;
+  return null;
+}
+
+function portableDataForSave() {
+  const saved = portableSavedModule();
+  if (!pendingPortableSourcePath && !saved) throw new Error(t('portable.pick_first'));
+  const entries = portableEntries();
+  if (!entries.windows && !entries.mac) throw new Error(t('portable.entry_required'));
+  for (const platform of ['windows', 'mac']) {
+    if (entries[platform] && !portableCandidates.some((item) => item.platform === platform && item.path === entries[platform])) {
+      throw new Error(t('portable.entry_required'));
+    }
+  }
+  return {
+    ...(pendingPortableSourcePath ? { sourcePath: pendingPortableSourcePath } : saved.data),
+    entries,
+    allowWine: !!entries.windows && dyn.portable.allowWine.checked
+  };
 }
 
 /* Cartões de tipo: escolher um cartão preenche o <select> escondido e mostra
@@ -706,7 +893,7 @@ function syncTypeUI(type) {
   if (typePickHint) typePickHint.classList.toggle('hidden', chosen);
   if (typeChosenEl) typeChosenEl.classList.toggle('hidden', !chosen);
   if (typeChipEl) typeChipEl.textContent = chosen ? ((TYPE_ICON[type] || '') + ' ' + typeLabel(type)) : '';
-  if (contentEditorSave) contentEditorSave.disabled = !chosen;
+  if (contentEditorSave) contentEditorSave.disabled = !chosen || !!contentMutation || !!projectTransition || settingsWrites.size > 0;
 }
 
 const typeChangeBtn = document.getElementById('type-change');
@@ -730,10 +917,20 @@ function setFileCurrentText(type, text, hasFile) {
 
 function clearEditor() {
   editorGeneration++;
+  editorRevision++;
+  iptvRequest++;
+  pendingFilesByType.clear();
   editingId = null;
   pendingFileSourcePath = null;
   pendingFileName = null;
   pendingWebSourcePath = null;
+  pendingPortableSourcePath = null;
+  portableCandidates = [];
+  portableSourceName = '';
+  portableScanStats = null;
+  portableOperation = null;
+  setPortableStatus(null);
+  dyn.portable.allowWine.checked = false;
   dyn['local-web'].includeDirectory.checked = false;
   dyn['local-web'].includeDirectory.disabled = false;
   dyn['local-web'].name.textContent = t('common.no_file_chosen');
@@ -760,6 +957,7 @@ function clearEditor() {
   iptvManual = [];
   iptvM3uPath = null;
   if (dyn.iptv.source) dyn.iptv.source.value = 'xtream';
+  if (dyn.iptv.load) dyn.iptv.load.disabled = false;
   if (dyn.iptv.xtreamUrl) dyn.iptv.xtreamUrl.value = '';
   if (dyn.iptv.xtreamUser) dyn.iptv.xtreamUser.value = '';
   if (dyn.iptv.xtreamPass) dyn.iptv.xtreamPass.value = '';
@@ -778,6 +976,7 @@ function clearEditor() {
   });
   renderGalleryList();
   showDynamicGroup('');
+  renderPortableEditor({ windows: null, mac: null });
 }
 
 function hideEditor() {
@@ -820,6 +1019,13 @@ function openEditorForEdit(id) {
       // The stored copy is immutable until the author chooses a new source.
       dyn['local-web'].includeDirectory.disabled = true;
     }
+  }
+  else if (mod.type === 'portable') {
+    portableCandidates = (Array.isArray(d.candidates) ? d.candidates : [])
+      .filter((item) => item && typeof item.path === 'string' && ['windows', 'mac'].includes(item.platform));
+    portableSourceName = d.sourceName || '';
+    dyn.portable.allowWine.checked = !!d.allowWine;
+    renderPortableEditor(d.entries || { windows: null, mac: null });
   }
   else if (mod.type === 'webview') dyn.webview.url.value = d.url || '';
   else if (mod.type === 'external') dyn.external.url.value = d.url || '';
@@ -927,7 +1133,7 @@ function renderContentList() {
     delBtn.className = 'icon-btn danger';
     delBtn.title = t('content.btn_delete');
     delBtn.textContent = '✕';
-    delBtn.addEventListener('click', () => deleteModule(mod.id));
+    delBtn.addEventListener('click', () => askDeleteModule(li, mod));
 
     actions.append(upBtn, downBtn, editBtn, delBtn);
     li.append(info, actions);
@@ -935,55 +1141,90 @@ function renderContentList() {
   });
 }
 
-async function persistContent(successMessage) {
-  // Send the in-memory list to main; for the module being edited, pendingFileSourcePath
-  // (if any) is already attached inside its data.sourcePath.
+async function persistContent(successMessage, proposedModules = contentModules) {
+  if (contentMutation || projectTransition || settingsWrites.size > 0 || exportInProgress) return false;
+  const operation = { generation: projectGeneration };
+  contentMutation = operation;
+  updateBuilderBusyUI();
   const payload = {
-    modules: contentModules.map((m) => ({
-      id: m.id,
-      title: m.title,
-      type: m.type,
-      data: m.data || {},
-      password: m.password || ''
-    }))
+    modules: proposedModules.map((m) => ({ id: m.id, title: m.title, type: m.type,
+      data: m.data || {}, password: m.password || '' }))
   };
-  const updated = await window.icurator.saveContent(payload);
-  contentModules = Array.isArray(updated.content) ? updated.content : [];
-  // After persistence, sourcePath has been consumed — clear pending.
-  pendingFileSourcePath = null;
-  pendingFileName = null;
-  renderContentList();
-  // Keep the Export summary's module count in sync (it was stale at "0"
-  // after adding modules because only load/brand/banner saves refreshed it).
-  updateExportSummary(updated);
-  if (successMessage) showContentStatus(successMessage, 'success');
+  try {
+    const updated = await window.icurator.saveContent(payload);
+    if (operation.generation !== projectGeneration) return false;
+    contentModules = Array.isArray(updated.content) ? updated.content : [];
+    // A reorder/delete must not consume a file selected in a different draft.
+    renderContentList();
+    updateExportSummary(updated);
+    if (successMessage) showContentStatus(successMessage, 'success');
+    return true;
+  } finally {
+    if (contentMutation === operation) {
+      contentMutation = null;
+      updateBuilderBusyUI();
+      updatePortableActions();
+    }
+  }
 }
 
 async function moveModule(id, delta) {
+  if (contentMutation || projectTransition || settingsWrites.size > 0) return;
   const idx = contentModules.findIndex((m) => m.id === id);
-  if (idx < 0) return;
   const newIdx = idx + delta;
-  if (newIdx < 0 || newIdx >= contentModules.length) return;
-  const [item] = contentModules.splice(idx, 1);
-  contentModules.splice(newIdx, 0, item);
+  if (idx < 0 || newIdx < 0 || newIdx >= contentModules.length) return;
+  const proposed = contentModules.slice();
+  const [item] = proposed.splice(idx, 1);
+  proposed.splice(newIdx, 0, item);
+  const generation = projectGeneration;
   try {
-    await persistContent(t('content.order_updated'));
+    await persistContent(t('content.order_updated'), proposed);
   } catch (err) {
+    if (generation !== projectGeneration) return;
     console.error(err);
     showContentStatus(t('content.reorder_error_prefix') + err.message, 'error');
   }
 }
 
-async function deleteModule(id) {
-  const mod = contentModules.find((m) => m.id === id);
-  if (!mod) return;
-  if (!confirm(t('content.delete_confirm').replace('{title}', mod.title))) return;
+function askDeleteModule(li, mod) {
+  const actions = li.querySelector('.content-item-actions');
+  if (!actions || actions.querySelector('.content-delete-confirm')) return;
+  actions.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'content-delete-confirm';
+  const label = document.createElement('span');
+  label.textContent = t('content.delete_confirm').replace('{title}', mod.title);
+  const yes = document.createElement('button');
+  yes.type = 'button';
+  yes.className = 'btn btn-sm btn-danger';
+  yes.textContent = t('projects.delete_yes');
+  const no = document.createElement('button');
+  no.type = 'button';
+  no.className = 'btn btn-sm btn-ghost';
+  no.textContent = t('common.cancel');
+  no.addEventListener('click', renderContentList);
+  yes.addEventListener('click', async () => {
+    yes.disabled = true;
+    no.disabled = true;
+    await deleteModule(mod.id);
+  });
+  wrap.append(label, yes, no);
+  actions.appendChild(wrap);
+  no.focus();
+}
 
-  contentModules = contentModules.filter((m) => m.id !== id);
-  if (editingId === id) hideEditor();
+async function deleteModule(id) {
+  if (contentMutation || projectTransition || settingsWrites.size > 0) return;
+  if (!contentModules.some((mod) => mod.id === id)) return;
+  const generation = projectGeneration;
+  const proposed = contentModules.filter((mod) => mod.id !== id);
   try {
-    await persistContent(t('content.module_deleted'));
+    const applied = await persistContent(t('content.module_deleted'), proposed);
+    if (applied && editingId === id) hideEditor();
   } catch (err) {
+    if (generation !== projectGeneration) return;
+    // The saved list and the open draft stay intact until deletion succeeds.
+    renderContentList();
     console.error(err);
     showContentStatus(t('content.delete_error_prefix') + err.message, 'error');
   }
@@ -994,9 +1235,97 @@ async function deleteModule(id) {
 contentAddBtn.addEventListener('click', () => openEditorForNew());
 contentEditorClose.addEventListener('click', () => hideEditor());
 contentEditorCancel.addEventListener('click', () => hideEditor());
+contentForm.addEventListener('input', () => { editorRevision++; });
+contentForm.addEventListener('change', () => { editorRevision++; });
 
 moduleType.addEventListener('change', () => {
   showDynamicGroup(moduleType.value);
+});
+
+dyn.portable.pick.addEventListener('click', async () => {
+  if (portableOperation || moduleType.value !== 'portable') return;
+  const operation = { generation: editorGeneration };
+  portableOperation = operation;
+  setPortableStatus('scanning');
+  updatePortableActions();
+  try {
+    const picked = await window.icurator.pickPortableFolder();
+    if (operation.generation !== editorGeneration || moduleType.value !== 'portable') return;
+    if (!picked) { setPortableStatus(null); return; }
+    if (typeof picked.sourcePath !== 'string' || !Array.isArray(picked.candidates)) throw new Error(t('portable.pick_first'));
+    const candidates = picked.candidates.filter((item) => item && typeof item.path === 'string'
+      && ['windows', 'mac'].includes(item.platform));
+    if (!candidates.length) { setPortableStatus('no_candidates', 'error'); return; }
+    editorRevision++;
+    pendingPortableSourcePath = picked.sourcePath;
+    portableCandidates = candidates;
+    portableSourceName = picked.sourceName || '';
+    const files = Array.isArray(picked.files) ? picked.files.length : Number(picked.files);
+    const bytes = Number(picked.bytes);
+    portableScanStats = Number.isFinite(files) && Number.isFinite(bytes) ? { files, bytes } : null;
+    dyn.portable.allowWine.checked = false;
+    setPortableStatus(null);
+    renderPortableEditor({
+      windows: suggestPortableEntry('windows', candidates, portableSourceName),
+      mac: suggestPortableEntry('mac', candidates, portableSourceName)
+    });
+  } catch (err) {
+    if (operation.generation === editorGeneration) {
+      dyn.portable.status.textContent = t('common.error_prefix') + (err && err.message ? err.message : String(err));
+      dyn.portable.status.className = 'portable-status error';
+      portableStatus = null;
+    }
+  } finally {
+    if (portableOperation === operation) { portableOperation = null; updatePortableActions(); }
+  }
+});
+
+for (const input of [dyn.portable.windows, dyn.portable.mac, dyn.portable.allowWine]) {
+  input.addEventListener('change', () => {
+    if (!dyn.portable.windows.value) dyn.portable.allowWine.checked = false;
+    setPortableStatus(null);
+    updatePortableActions();
+  });
+}
+
+dyn.portable.test.addEventListener('click', async () => {
+  if (portableOperation || !portableHasSavedSelection() || moduleType.value !== 'portable') return;
+  const operation = { generation: editorGeneration };
+  const id = editingId;
+  portableOperation = operation;
+  setPortableStatus('viewer_launching');
+  updatePortableActions();
+  try {
+    const result = await window.icurator.launchPortable(id);
+    if (operation.generation !== editorGeneration || editingId !== id) return;
+    if (!result || result.ok !== true) throw new Error(t('portable.viewer_invalid_result'));
+    setPortableStatus(result.via === 'wine' ? 'viewer_started_wine' : 'viewer_started', 'success');
+  } catch (err) {
+    if (operation.generation === editorGeneration) {
+      setPortableStatus('viewer_launch_error', 'error', err && err.message ? err.message : String(err));
+    }
+  } finally {
+    if (portableOperation === operation) { portableOperation = null; updatePortableActions(); }
+  }
+});
+
+dyn.portable.configureWine.addEventListener('click', async () => {
+  if (portableOperation || portableHostPlatform !== 'darwin') return;
+  const operation = { generation: editorGeneration };
+  portableOperation = operation;
+  setPortableStatus('viewer_configuring_wine');
+  updatePortableActions();
+  try {
+    const result = await window.icurator.configurePortableWine();
+    if (operation.generation !== editorGeneration) return;
+    setPortableStatus(result && result.configured ? 'wine_ready' : null, result && result.configured ? 'success' : '');
+  } catch (err) {
+    if (operation.generation === editorGeneration) {
+      setPortableStatus('viewer_config_error', 'error', err && err.message ? err.message : String(err));
+    }
+  } finally {
+    if (portableOperation === operation) { portableOperation = null; updatePortableActions(); }
+  }
 });
 
 const FILE_PICK_CATEGORY = {
@@ -1007,16 +1336,30 @@ const FILE_PICK_CATEGORY = {
   'download-vault': 'download'
 };
 
+async function pickForCurrentEditor(pick, type) {
+  const generation = editorGeneration;
+  const project = projectGeneration;
+  try {
+    const result = await pick();
+    return generation === editorGeneration && project === projectGeneration && moduleType.value === type ? result : null;
+  } catch (err) {
+    if (generation === editorGeneration && project === projectGeneration) showContentStatus(t('common.error_prefix') + err.message, 'error');
+    return null;
+  }
+}
+
 function bindFilePicker(type) {
   const input = dyn[type].file;
   const label = document.querySelector('label[for="' + input.id + '"]');
   const category = FILE_PICK_CATEGORY[type] || 'launch';
   if (label) label.addEventListener('click', async (e) => {
     e.preventDefault();
-    const picked = await window.icurator.pickFile(category);
+    const picked = await pickForCurrentEditor(() => window.icurator.pickFile(category), type);
     if (!picked) return;
     pendingFileSourcePath = picked.path;
     pendingFileName = picked.name;
+    pendingFilesByType.set(type, { path: picked.path, name: picked.name });
+    editorRevision++;
     setFileNameForInput(input, picked.name);
     setFileCurrentText(type, t('content.file_new_prefix') + (pendingFileName || pendingFileSourcePath), true);
   });
@@ -1036,6 +1379,7 @@ dyn['local-web'].pick.addEventListener('click', async () => {
       showContentStatus(t('content.local_web.invalid_file'), 'error');
       return;
     }
+    editorRevision++;
     pendingWebSourcePath = picked.path;
     dyn['local-web'].name.textContent = picked.name;
     dyn['local-web'].name.removeAttribute('data-i18n');
@@ -1070,7 +1414,7 @@ function renderGalleryList() {
     rm.className = 'icon-btn danger';
     rm.textContent = '✕';
     rm.title = t('content.btn_delete');
-    rm.addEventListener('click', () => { galleryItems.splice(idx, 1); renderGalleryList(); });
+    rm.addEventListener('click', () => { editorRevision++; galleryItems.splice(idx, 1); renderGalleryList(); });
     li.append(name, rm);
     list.appendChild(li);
   });
@@ -1078,8 +1422,9 @@ function renderGalleryList() {
 
 if (dyn['image-gallery'].addBtn) {
   dyn['image-gallery'].addBtn.addEventListener('click', async () => {
-    const picked = await window.icurator.pickFiles('image');
+    const picked = await pickForCurrentEditor(() => window.icurator.pickFiles('image'), 'image-gallery');
     if (!Array.isArray(picked) || picked.length === 0) return;
+    editorRevision++;
     for (const p of picked) galleryItems.push({ kind: 'new', path: p.path, name: p.name });
     renderGalleryList();
   });
@@ -1135,25 +1480,38 @@ function renderIptvManualList() {
     rm.className = 'icon-btn danger';
     rm.textContent = '✕';
     rm.title = t('content.iptv.manual_remove', 'Remover');
-    rm.addEventListener('click', () => { iptvManual.splice(idx, 1); renderIptvManualList(); });
+    rm.addEventListener('click', () => { editorRevision++; iptvManual.splice(idx, 1); renderIptvManualList(); });
     li.append(nameIn, urlIn, rm);
     list.appendChild(li);
   });
 }
 
+function invalidateIptvChannels() {
+  iptvRequest++;
+  iptvChannels = [];
+  dyn.iptv.load.disabled = false;
+  setIptvStatus(t('content.iptv.no_channels'), '');
+}
+for (const input of [dyn.iptv.xtreamUrl, dyn.iptv.xtreamUser, dyn.iptv.xtreamPass, dyn.iptv.m3u8Url]) {
+  input.addEventListener('input', invalidateIptvChannels);
+}
+
 if (dyn.iptv.source) {
-  dyn.iptv.source.addEventListener('change', () => updateIptvSourceUI());
+  dyn.iptv.source.addEventListener('change', () => { invalidateIptvChannels(); updateIptvSourceUI(); });
 }
 if (dyn.iptv.manualAdd) {
   dyn.iptv.manualAdd.addEventListener('click', () => {
+    editorRevision++;
     iptvManual.push({ name: '', url: '' });
     renderIptvManualList();
   });
 }
 if (dyn.iptv.m3uPick) {
   dyn.iptv.m3uPick.addEventListener('click', async () => {
-    const picked = await window.icurator.pickFile('playlist');
+    const picked = await pickForCurrentEditor(() => window.icurator.pickFile('playlist'), 'iptv');
     if (!picked) return;
+    invalidateIptvChannels();
+    editorRevision++;
     iptvM3uPath = picked.path;
     if (dyn.iptv.m3uName) dyn.iptv.m3uName.textContent = picked.name;
   });
@@ -1187,10 +1545,14 @@ if (dyn.iptv.load) {
     } else {
       return;
     }
+    const generation = editorGeneration;
+    const request = ++iptvRequest;
     dyn.iptv.load.disabled = true;
     setIptvStatus(t('content.iptv.loading', 'A carregar canais…'), '');
     try {
       const res = await window.icurator.iptvLoad(payload);
+      if (generation !== editorGeneration || request !== iptvRequest) return;
+      editorRevision++;
       if (res && res.ok) {
         iptvChannels = Array.isArray(res.channels) ? res.channels : [];
         setIptvStatus(t('content.iptv.loaded_count').replace('{count}', String(res.count || iptvChannels.length)), 'success');
@@ -1199,10 +1561,11 @@ if (dyn.iptv.load) {
         setIptvStatus((res && res.error) ? res.error : t('content.iptv.load_error', 'Não foi possível carregar os canais.'), 'error');
       }
     } catch (err) {
+      if (generation !== editorGeneration || request !== iptvRequest) return;
       iptvChannels = [];
       setIptvStatus(t('content.iptv.load_error', 'Não foi possível carregar os canais.') + ' ' + (err && err.message ? err.message : ''), 'error');
     } finally {
-      dyn.iptv.load.disabled = false;
+      if (generation === editorGeneration && request === iptvRequest) dyn.iptv.load.disabled = false;
     }
   });
 }
@@ -1215,6 +1578,8 @@ contentForm.addEventListener('submit', async (e) => {
   const password = modulePassword ? modulePassword.value.trim() : '';
   if (!title) { moduleTitle.focus(); return; }
   if (!TYPE_KEYS.includes(type)) return;
+  if (contentMutation || projectTransition || settingsWrites.size > 0 || exportInProgress
+      || (type === 'portable' && portableOperation)) return;
 
   // Build the data object for this module
   let data = {};
@@ -1231,6 +1596,10 @@ contentForm.addEventListener('submit', async (e) => {
       }
       data = { ...existing.data };
     }
+  }
+  else if (type === 'portable') {
+    try { data = portableDataForSave(); }
+    catch (err) { showContentStatus(err.message, 'error'); return; }
   }
   else if (type === 'webview') data = { url: dyn.webview.url.value.trim() };
   else if (type === 'external') data = { url: dyn.external.url.value.trim() };
@@ -1273,35 +1642,24 @@ contentForm.addEventListener('submit', async (e) => {
     if (type === 'download-vault') data.buttonLabel = dyn['download-vault'].btn.value.trim();
   }
 
-  // Update or insert in the local list
-  if (editingId) {
-    const idx = contentModules.findIndex((m) => m.id === editingId);
-    if (idx >= 0) {
-      // If editing and changing type, drop the old file association so GC kicks in.
-      const old = contentModules[idx];
-      const typeChanged = old.type !== type;
-      contentModules[idx] = {
-        id: old.id,
-        title,
-        type,
-        data: typeChanged ? data : data,
-        password
-      };
-    }
-  } else {
-    const newMod = { id: uuid(), title, type, data, password };
-    contentModules.push(newMod);
-    editingId = newMod.id;
-  }
-
+  const generation = editorGeneration;
+  const revision = editorRevision;
+  const currentProject = projectGeneration;
+  const savedId = editingId || uuid();
+  const module = { id: savedId, title, type, data, password };
+  const proposed = contentModules.some((item) => item.id === savedId)
+    ? contentModules.map((item) => item.id === savedId ? module : item)
+    : [...contentModules, module];
   try {
-    await persistContent(t('content.module_saved'));
-    // After save, re-open the editor on the (now updated) module so the user
-    // sees the persisted state (e.g. the new file path).
-    const savedId = editingId;
+    const applied = await persistContent(t('content.module_saved'), proposed);
+    if (!applied || currentProject !== projectGeneration || generation !== editorGeneration) return;
+    // A newer password, title or other draft input must survive a slow save.
+    editingId = savedId;
+    if (revision !== editorRevision) { renderContentList(); updatePortableActions(); return; }
     hideEditor();
-    if (savedId) openEditorForEdit(savedId);
+    openEditorForEdit(savedId);
   } catch (err) {
+    if (currentProject !== projectGeneration) return;
     console.error(err);
     showContentStatus(t('common.error_prefix') + err.message, 'error');
   }
@@ -1311,6 +1669,9 @@ contentForm.addEventListener('submit', async (e) => {
  * Initial load
  * ========================================================= */
 async function applyConfig(config) {
+  editorGeneration++;
+  iptvRequest++;
+  portableOperation = null;
   {
     // --- Brand
     const brand = config.brand || {};
@@ -1376,6 +1737,7 @@ async function applyConfig(config) {
 }
 
 async function loadInitialConfig() {
+  if (!beginProjectTransition()) return;
   try {
     await loadExportTargets();
     const config = await window.icurator.loadConfig();
@@ -1383,7 +1745,7 @@ async function loadInitialConfig() {
     await refreshProjects();
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
-  }
+  } finally { endProjectTransition(); }
 }
 
 /* =========================================================
@@ -1400,6 +1762,23 @@ const activeProjectName = document.getElementById('active-project-name');
 const activeProjectCloseBtn = document.getElementById('active-project-close');
 
 let projectsCache = { activeId: null, projects: [] };
+
+function beginProjectTransition() {
+  if (projectTransition || contentMutation || settingsWrites.size > 0 || exportInProgress) return false;
+  projectTransition = {};
+  projectGeneration++;
+  editorGeneration++;
+  iptvRequest++;
+  portableOperation = null;
+  updateBuilderBusyUI();
+  return true;
+}
+
+function endProjectTransition() {
+  projectTransition = null;
+  updateBuilderBusyUI();
+  updatePortableActions();
+}
 
 function activeProjectLabel() {
   const p = projectsCache.projects.find((x) => x.id === projectsCache.activeId);
@@ -1471,8 +1850,11 @@ function renderProjectsList() {
 }
 
 async function refreshProjects() {
+  const generation = projectGeneration;
   try {
-    projectsCache = await window.icurator.projectsList();
+    const state = await window.icurator.projectsList();
+    if (generation !== projectGeneration) return;
+    projectsCache = state;
     renderProjectsList();
   } catch (err) {
     console.error('Falha a listar projetos:', err);
@@ -1480,7 +1862,9 @@ async function refreshProjects() {
 }
 
 async function openProject(id) {
+  if (projectTransition) return;
   if (id === projectsCache.activeId) { goToTab('content'); return; }
+  if (!beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsOpen(id);
     projectsCache = res.state;
@@ -1490,7 +1874,7 @@ async function openProject(id) {
   } catch (err) {
     console.error('Falha a abrir projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-  }
+  } finally { endProjectTransition(); }
 }
 
 function startRename(li, project) {
@@ -1519,6 +1903,7 @@ function startRename(li, project) {
   const commit = async () => {
     const newName = input.value.trim();
     if (!newName || newName === project.name) { renderProjectsList(); return; }
+    if (!beginProjectTransition()) return;
     try {
       projectsCache = await window.icurator.projectsRename(project.id, newName);
       renderProjectsList();
@@ -1528,7 +1913,7 @@ function startRename(li, project) {
       console.error('Falha a renomear projeto:', err);
       showProjectsStatus(t('common.error_prefix') + err.message, 'error');
       renderProjectsList();
-    }
+    } finally { endProjectTransition(); }
   };
   save.addEventListener('click', commit);
   cancel.addEventListener('click', () => renderProjectsList());
@@ -1566,6 +1951,7 @@ function askDeleteProject(li, project) {
 }
 
 async function performDeleteProject(project) {
+  if (!beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsDelete(project.id);
     projectsCache = res.state;
@@ -1580,10 +1966,11 @@ async function performDeleteProject(project) {
   } catch (err) {
     console.error('Falha a apagar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-  }
+  } finally { endProjectTransition(); }
 }
 
 async function duplicateProject(id) {
+  if (!beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsDuplicate(id);
     projectsCache = res.state;
@@ -1594,7 +1981,7 @@ async function duplicateProject(id) {
   } catch (err) {
     console.error('Falha a clonar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-  }
+  } finally { endProjectTransition(); }
 }
 
 if (projectNewForm) {
@@ -1602,6 +1989,7 @@ if (projectNewForm) {
     e.preventDefault();
     const name = (projectNewName.value || '').trim();
     if (!name) { showProjectsStatus(t('projects.name_required'), 'error'); return; }
+    if (!beginProjectTransition()) return;
     try {
       const res = await window.icurator.projectsCreate(name);
       projectsCache = res.state;
@@ -1613,7 +2001,7 @@ if (projectNewForm) {
     } catch (err) {
       console.error('Falha a criar projeto:', err);
       showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-    }
+    } finally { endProjectTransition(); }
   });
 }
 
@@ -1652,7 +2040,7 @@ function selectedExportTarget() {
 function updateExportButton() {
   const target = selectedExportTarget();
   const moduleCount = lastExportConfig && Array.isArray(lastExportConfig.content) ? lastExportConfig.content.length : 0;
-  exportBuildBtn.disabled = exportInProgress || moduleCount === 0 || !target || !target.available;
+  exportBuildBtn.disabled = exportInProgress || !!contentMutation || !!projectTransition || settingsWrites.size > 0 || moduleCount === 0 || !target || !target.available;
   exportTargetSelect.disabled = exportInProgress;
 }
 
@@ -1676,6 +2064,8 @@ async function loadExportTargets() {
     const result = await window.icurator.getExportTargets();
     if (!result || !Array.isArray(result.targets)) throw new Error(t('export.target_check_failed'));
     exportTargets = result.targets.filter((target) => target && ['windows', 'mac'].includes(target.id));
+    portableHostPlatform = result.hostPlatform || '';
+    updatePortableActions();
     exportTargetsError = '';
     exportTargetSelect.value = result.hostPlatform === 'darwin' ? 'mac' : 'windows';
   } catch (err) {
@@ -1780,7 +2170,7 @@ async function loadIconState(config) {
 }
 
 if (iconPickBtn) iconPickBtn.addEventListener('click', async () => {
-  const picked = await window.icurator.pickFile('icon');
+  const picked = await pickForCurrentProject(() => window.icurator.pickFile('icon'), showIconStatus);
   if (!picked) return;
   if (!/\.(ico|png|jpe?g)$/i.test(picked.name)) {
     alert(t('export.icon_must_be_image'));
@@ -1849,9 +2239,9 @@ let lastExportedPath = null;
 
 exportBuildBtn.addEventListener('click', async () => {
   const target = selectedExportTarget();
-  if (exportInProgress || !target || !target.available) return;
+  if (exportInProgress || contentMutation || projectTransition || settingsWrites.size > 0 || !target || !target.available) return;
   exportInProgress = true;
-  updateExportButton();
+  updateBuilderBusyUI();
   exportLogEl.innerHTML = '';
   appendExportLog(t('export.log.starting'));
   lastExportedPath = null;
@@ -1877,7 +2267,7 @@ exportBuildBtn.addEventListener('click', async () => {
     appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     exportInProgress = false;
-    updateExportButton();
+    updateBuilderBusyUI();
   }
 });
 
