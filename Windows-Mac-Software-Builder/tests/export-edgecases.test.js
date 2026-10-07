@@ -13,7 +13,7 @@ const engine = require('../src/shared/project-export');
 const { normalizePortableLink, importPortableProject } = require('../src/shared/portable-app');
 
 function fixture(t) {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'export-edge-')));
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'export-edge-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const assetsDir = path.join(root, 'dist-assets');
   fs.mkdirSync(assetsDir);
@@ -58,18 +58,22 @@ async function assertStreamingMutation(t, useAlias = false) {
   }
   const asset = path.join(f.assetsDir, 'large.bin');
   fs.writeFileSync(asset, Buffer.alloc(256 * 1024, 0x41));
-  const canonicalAsset = fs.realpathSync(asset);
+  const canonicalAsset = await fs.promises.realpath(asset);
   fs.writeFileSync(f.outputPath, 'PREVIOUS EXPORT');
   let intercepted = false;
   let changed = false;
+  const openedPaths = [];
   const promises = new Proxy(fs.promises, {
     get(target, property) {
       if (property !== 'open') return Reflect.get(target, property);
       return async (...args) => {
         const handle = await fs.promises.open(...args);
-        // inspectAssets deliberately canonicalises paths. /var aliases on Mac
-        // and Windows short temp paths must still address this same open file.
-        if (fs.realpathSync(args[0]) !== canonicalAsset) return handle;
+        // Use the same native realpath API on both sides. On Windows the JS
+        // realpathSync implementation can retain an 8.3 name such as RUNNER~1
+        // while promises.realpath expands it to the real long directory name.
+        const openedPath = await fs.promises.realpath(args[0]);
+        openedPaths.push(openedPath);
+        if (path.relative(canonicalAsset, openedPath) !== '') return handle;
         intercepted = true;
         return new Proxy(handle, {
           get(value, key) {
@@ -96,7 +100,7 @@ async function assertStreamingMutation(t, useAlias = false) {
   const outcome = await loadEngineWithFs(mockedFs).exportProject({ ...f, target: 'windows' }).then(
     value => ({ value }), error => ({ error })
   );
-  assert.equal(intercepted, true, 'The mutation hook must intercept the canonical asset descriptor.');
+  assert.equal(intercepted, true, `The mutation hook must intercept the canonical asset descriptor. Expected: ${canonicalAsset}; opened: ${JSON.stringify(openedPaths)}; outcome: ${outcome.error ? outcome.error.stack : 'export completed'}`);
   assert.equal(changed, true, 'The same-size write must occur after the first streamed chunk.');
   assert.ok(outcome.error, 'An asset changed during streaming must reject the export.');
   assert.match(outcome.error.message, /mudou durante a exportação/);
