@@ -146,7 +146,8 @@
       "article": "Artikel / catatan",
       "embed": "Formulir atau kuis",
       "iptv": "Saluran IPTV",
-      "local_web": "HTML / PHP file"
+      "local_web": "HTML / PHP file",
+      "portable": "Program portabel (Windows / Mac)"
     },
     "youtube_url_label": "URL atau ID video",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... atau hanya ID",
@@ -245,7 +246,8 @@
       "article": "Teks sederhana dengan judul dan daftar.",
       "embed": "Google Forms, Typeform, kuis…",
       "iptv": "Daftar saluran TV online.",
-      "local_web": "Import a page or website from your PC."
+      "local_web": "Import a page or website from your PC.",
+      "portable": "Sertakan folder program beserta berkas dan dependensinya."
     },
     "type_group": {
       "video": "Video",
@@ -425,5 +427,42 @@
     "export_hint": "Create a Windows or Mac application from this project.",
     "show": "Tampilkan",
     "hide": "Sembunyikan"
+  },
+  "portable": {
+    "folder_label": "Folder program",
+    "choose_folder": "Pilih folder",
+    "no_folder": "Belum ada folder yang dipilih.",
+    "folder_help": "Salinan folder beserta berkas dan dependensinya akan disimpan. Pilih folder yang sudah siap didistribusikan.",
+    "snapshot_help": "Untuk memperbarui program, pilih kembali foldernya lalu simpan modul.",
+    "windows_entry": "Program Windows",
+    "mac_entry": "Program Mac",
+    "no_entry": "Belum ada versi yang dipilih",
+    "selection_help": "Tinjau program yang disarankan lalu simpan untuk mengonfirmasi pilihan. Deteksi format dan arsitektur tidak membuktikan kompatibilitas.",
+    "wine_allow": "Izinkan versi Windows dibuka di Mac menggunakan Wine eksternal (kompatibilitas belum diuji)",
+    "native_help": "Versi asli untuk sistem yang digunakan akan diprioritaskan. Impor tidak mengonversi program; Windows memerlukan versi Windows.",
+    "wine_local_help": "Pilih runtime Wine yang sudah tersedia dan prefix yang sudah disiapkan di Mac ini. Konfigurasi hanya disimpan di komputer ini dan tidak diekspor.",
+    "scan_summary": "{files} berkas · {size} MB",
+    "scanning": "Memindai folder…",
+    "no_candidates": "Tidak ditemukan program Windows EXE atau Mac dengan format yang didukung.",
+    "pick_first": "Pilih folder program terlebih dahulu.",
+    "entry_required": "Pilih setidaknya satu program Windows atau Mac.",
+    "test_program": "Uji program",
+    "test_help": "Simpan perubahan sebelum menguji. Pengujian membuka versi tersimpan di jendelanya sendiri; proses yang berhasil dimulai tidak mengonfirmasi kompatibilitas.",
+    "viewer_title": "Program portabel",
+    "viewer_launch": "Buka program",
+    "viewer_launching": "Memulai proses…",
+    "viewer_started": "Proses dimulai.",
+    "viewer_started_wine": "Proses dimulai melalui Wine.",
+    "viewer_description": "Terbuka di jendela sistem tersendiri. Program tidak disematkan di penampil.",
+    "viewer_compatibility": "Tidak mengonversi program antar-sistem operasi. Windows memerlukan versi Windows.",
+    "viewer_configure_wine": "Konfigurasi Wine di Mac ini",
+    "viewer_configuring_wine": "Mengonfigurasi Wine…",
+    "viewer_wine_ready": "Wine sudah dikonfigurasi. Klik Buka program untuk mencoba menjalankannya.",
+    "viewer_wine_help": "Untuk mencoba versi Windows di Mac ini, konfigurasikan runtime Wine dan prefix yang sudah disiapkan. Kompatibilitas bergantung pada program.",
+    "viewer_launch_error": "Program tidak dapat dimulai: ",
+    "viewer_config_error": "Wine tidak dapat dikonfigurasi: ",
+    "viewer_unavailable": "Versi penampil ini tidak mendukung program portabel.",
+    "viewer_invalid_result": "Sistem tidak mengonfirmasi bahwa proses telah dimulai.",
+    "wine_ready": "Wine sudah dikonfigurasi. Simpan modul jika perlu, lalu klik Uji program."
   }
 }

@@ -49,6 +49,7 @@ async function setLanguage(lang, { persist = true } = {}) {
     I18N.ready = true;
     applyI18n();
     renderExportTarget();
+    renderPortableEditor();
     if (lastExportConfig) updateExportSummary(lastExportConfig);
     // Os cartões de tipo de módulo são gerados por JS: refazê-los no novo idioma.
     if (typeof renderTypeCards === 'function' && typeof moduleType !== 'undefined') {
@@ -531,25 +532,25 @@ bannerForm.addEventListener('submit', async (e) => {
 // Module type labels are now resolved from the active locale via
 // `content.type.<key>` so the list stays in the user's chosen language
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
-const TYPE_KEYS = ['youtube', 'html', 'local-web', 'pdf', 'webview', 'external', 'launch',
+const TYPE_KEYS = ['youtube', 'html', 'local-web', 'portable', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv'];
 // Chaves de tradução por tipo (o id do tipo usa '-', a chave usa '_').
 const TYPE_I18N = {
-  youtube: 'youtube', html: 'html', 'local-web': 'local_web', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
+  youtube: 'youtube', html: 'html', 'local-web': 'local_web', portable: 'portable', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
   'local-video': 'local_video', 'local-audio': 'local_audio', 'download-vault': 'download',
   'image-gallery': 'gallery', 'article-reader': 'article', 'smart-embed': 'embed', iptv: 'iptv'
 };
 const TYPE_ICON = {
   youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
-  'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'download-vault': '⬇️', launch: '🚀', portable: '💼', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
 // Cartões agrupados por intenção (o que o aluno vai fazer), não por tecnologia.
 const TYPE_GROUPS = [
   { key: 'video', types: ['youtube', 'local-video'] },
   { key: 'read',  types: ['pdf', 'article-reader', 'html'] },
-  { key: 'files', types: ['download-vault', 'launch'] },
+  { key: 'files', types: ['download-vault', 'launch', 'portable'] },
   { key: 'web',   types: ['local-web', 'webview', 'external', 'smart-embed'] },
   { key: 'media', types: ['image-gallery', 'local-audio', 'iptv'] }
 ];
@@ -588,6 +589,18 @@ const dyn = {
     name: document.getElementById('dyn-local-web-name'),
     current: document.getElementById('dyn-local-web-current'),
     includeDirectory: document.getElementById('dyn-local-web-directory')
+  },
+  portable: {
+    pick: document.getElementById('dyn-portable-pick'),
+    name: document.getElementById('dyn-portable-name'),
+    summary: document.getElementById('dyn-portable-summary'),
+    windows: document.getElementById('dyn-portable-windows'),
+    mac: document.getElementById('dyn-portable-mac'),
+    allowWine: document.getElementById('dyn-portable-wine'),
+    test: document.getElementById('dyn-portable-test'),
+    configureWine: document.getElementById('dyn-portable-configure-wine'),
+    wineHelp: document.getElementById('dyn-portable-wine-help'),
+    status: document.getElementById('dyn-portable-status')
   },
   pdf: {
     file: document.getElementById('dyn-pdf-file'),
@@ -646,14 +659,122 @@ let pendingFileSourcePath = null;  // absolute path picked in <input type=file> 
 let pendingFileName = null;
 let pendingWebSourcePath = null;
 let editorGeneration = 0;   // ignore a file dialog result after switching projects/editors
+let pendingPortableSourcePath = null;
+let portableCandidates = [];
+let portableSourceName = '';
+let portableScanStats = null;
+let portableOperation = null;
+let portableStatus = null;
+let portableHostPlatform = '';
+let activeDynamicType = '';
 let galleryItems = [];       // current gallery editor items ({kind:'existing'|'new', ...})
 let iptvChannels = [];       // resolved channels for the module being edited (non-manual sources)
 let iptvManual = [];         // manual channel rows [{name,url}]
 let iptvM3uPath = null;      // absolute path of a picked .m3u file
 
 function showDynamicGroup(type) {
+  if (activeDynamicType !== type) {
+    editorGeneration++;
+    portableOperation = null;
+    activeDynamicType = type;
+  }
   dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
   syncTypeUI(type);
+  updatePortableActions();
+}
+
+function portableEntries() {
+  return { windows: dyn.portable.windows.value || null, mac: dyn.portable.mac.value || null };
+}
+
+function portableSavedModule() {
+  return contentModules.find((mod) => mod.id === editingId && mod.type === 'portable'
+    && mod.data && mod.data.root && !mod.data.sourcePath);
+}
+
+function portableHasSavedSelection() {
+  const saved = portableSavedModule();
+  if (!saved || pendingPortableSourcePath) return false;
+  const entries = portableEntries();
+  const previous = saved.data.entries || {};
+  return entries.windows === (previous.windows || null) && entries.mac === (previous.mac || null)
+    && dyn.portable.allowWine.checked === !!saved.data.allowWine;
+}
+
+function updatePortableActions() {
+  const busy = !!portableOperation;
+  dyn.portable.pick.disabled = busy;
+  dyn.portable.windows.disabled = busy || !portableCandidates.some((item) => item.platform === 'windows');
+  dyn.portable.mac.disabled = busy || !portableCandidates.some((item) => item.platform === 'mac');
+  dyn.portable.allowWine.disabled = busy || !dyn.portable.windows.value;
+  dyn.portable.test.disabled = busy || !portableHasSavedSelection();
+  dyn.portable.configureWine.disabled = busy;
+  dyn.portable.configureWine.classList.toggle('hidden', portableHostPlatform !== 'darwin');
+  dyn.portable.wineHelp.classList.toggle('hidden', portableHostPlatform !== 'darwin');
+  if (moduleType.value === 'portable') contentEditorSave.disabled = busy;
+}
+
+function setPortableStatus(key, kind = '', detail = '') {
+  portableStatus = key ? { key, kind, detail } : null;
+  dyn.portable.status.textContent = portableStatus ? t('portable.' + key) + detail : '';
+  dyn.portable.status.className = 'portable-status' + (kind ? ' ' + kind : '');
+}
+
+function renderPortableEditor(entries = portableEntries()) {
+  const ui = dyn.portable;
+  ui.name.textContent = portableSourceName || t('portable.no_folder');
+  ui.name.classList.toggle('has-file', !!portableSourceName);
+  ui.name.removeAttribute('data-i18n');
+  for (const platform of ['windows', 'mac']) {
+    const select = ui[platform];
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = t('portable.no_entry');
+    select.appendChild(empty);
+    for (const candidate of portableCandidates.filter((item) => item.platform === platform)) {
+      const option = document.createElement('option');
+      option.value = candidate.path;
+      const architectures = Array.isArray(candidate.architectures) ? candidate.architectures.join(' / ') : '';
+      option.textContent = [candidate.label || candidate.path, candidate.kind, architectures].filter(Boolean).join(' · ');
+      select.appendChild(option);
+    }
+    select.value = entries[platform] || '';
+    if (select.selectedIndex < 0) select.value = '';
+  }
+  ui.summary.textContent = portableScanStats
+    ? t('portable.scan_summary').replace('{files}', String(portableScanStats.files))
+      .replace('{size}', (portableScanStats.bytes / (1024 * 1024)).toLocaleString(I18N.lang, { maximumFractionDigits: 1 }))
+    : '';
+  if (portableStatus) setPortableStatus(portableStatus.key, portableStatus.kind, portableStatus.detail);
+  updatePortableActions();
+}
+
+function suggestPortableEntry(platform, candidates, sourceName) {
+  const stem = (name) => String(name || '').split(/[\\/]/).pop().replace(/\.(exe|app)$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const wanted = stem(sourceName);
+  const ranked = candidates.filter((item) => item.platform === platform && !/(^|[\\/_. -])(unins\w*|uninstall|setup|installer|updater|crashpad|helper)([\\/_. -]|$)/i.test(item.path))
+    .map((item) => ({ item, score: (wanted && stem(item.path) === wanted ? 4 : 0) + (item.kind === 'app' ? 1 : 0) }))
+    .sort((a, b) => b.score - a.score);
+  if (ranked.length === 1 || (ranked.length > 1 && ranked[0].score > ranked[1].score)) return ranked[0].item.path;
+  return null;
+}
+
+function portableDataForSave() {
+  const saved = portableSavedModule();
+  if (!pendingPortableSourcePath && !saved) throw new Error(t('portable.pick_first'));
+  const entries = portableEntries();
+  if (!entries.windows && !entries.mac) throw new Error(t('portable.entry_required'));
+  for (const platform of ['windows', 'mac']) {
+    if (entries[platform] && !portableCandidates.some((item) => item.platform === platform && item.path === entries[platform])) {
+      throw new Error(t('portable.entry_required'));
+    }
+  }
+  return {
+    ...(pendingPortableSourcePath ? { sourcePath: pendingPortableSourcePath } : saved.data),
+    entries,
+    allowWine: !!entries.windows && dyn.portable.allowWine.checked
+  };
 }
 
 /* Cartões de tipo: escolher um cartão preenche o <select> escondido e mostra
@@ -734,6 +855,13 @@ function clearEditor() {
   pendingFileSourcePath = null;
   pendingFileName = null;
   pendingWebSourcePath = null;
+  pendingPortableSourcePath = null;
+  portableCandidates = [];
+  portableSourceName = '';
+  portableScanStats = null;
+  portableOperation = null;
+  setPortableStatus(null);
+  dyn.portable.allowWine.checked = false;
   dyn['local-web'].includeDirectory.checked = false;
   dyn['local-web'].includeDirectory.disabled = false;
   dyn['local-web'].name.textContent = t('common.no_file_chosen');
@@ -778,6 +906,7 @@ function clearEditor() {
   });
   renderGalleryList();
   showDynamicGroup('');
+  renderPortableEditor({ windows: null, mac: null });
 }
 
 function hideEditor() {
@@ -820,6 +949,13 @@ function openEditorForEdit(id) {
       // The stored copy is immutable until the author chooses a new source.
       dyn['local-web'].includeDirectory.disabled = true;
     }
+  }
+  else if (mod.type === 'portable') {
+    portableCandidates = (Array.isArray(d.candidates) ? d.candidates : [])
+      .filter((item) => item && typeof item.path === 'string' && ['windows', 'mac'].includes(item.platform));
+    portableSourceName = d.sourceName || '';
+    dyn.portable.allowWine.checked = !!d.allowWine;
+    renderPortableEditor(d.entries || { windows: null, mac: null });
   }
   else if (mod.type === 'webview') dyn.webview.url.value = d.url || '';
   else if (mod.type === 'external') dyn.external.url.value = d.url || '';
@@ -927,7 +1063,7 @@ function renderContentList() {
     delBtn.className = 'icon-btn danger';
     delBtn.title = t('content.btn_delete');
     delBtn.textContent = '✕';
-    delBtn.addEventListener('click', () => deleteModule(mod.id));
+    delBtn.addEventListener('click', () => askDeleteModule(li, mod));
 
     actions.append(upBtn, downBtn, editBtn, delBtn);
     li.append(info, actions);
@@ -935,7 +1071,7 @@ function renderContentList() {
   });
 }
 
-async function persistContent(successMessage) {
+async function persistContent(successMessage, expectedEditorGeneration = null) {
   // Send the in-memory list to main; for the module being edited, pendingFileSourcePath
   // (if any) is already attached inside its data.sourcePath.
   const payload = {
@@ -948,6 +1084,7 @@ async function persistContent(successMessage) {
     }))
   };
   const updated = await window.icurator.saveContent(payload);
+  if (expectedEditorGeneration !== null && expectedEditorGeneration !== editorGeneration) return false;
   contentModules = Array.isArray(updated.content) ? updated.content : [];
   // After persistence, sourcePath has been consumed — clear pending.
   pendingFileSourcePath = null;
@@ -974,16 +1111,46 @@ async function moveModule(id, delta) {
   }
 }
 
+function askDeleteModule(li, mod) {
+  const actions = li.querySelector('.content-item-actions');
+  if (!actions || actions.querySelector('.content-delete-confirm')) return;
+  actions.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'content-delete-confirm';
+  const label = document.createElement('span');
+  label.textContent = t('content.delete_confirm').replace('{title}', mod.title);
+  const yes = document.createElement('button');
+  yes.type = 'button';
+  yes.className = 'btn btn-sm btn-danger';
+  yes.textContent = t('projects.delete_yes');
+  const no = document.createElement('button');
+  no.type = 'button';
+  no.className = 'btn btn-sm btn-ghost';
+  no.textContent = t('common.cancel');
+  no.addEventListener('click', renderContentList);
+  yes.addEventListener('click', async () => {
+    yes.disabled = true;
+    no.disabled = true;
+    await deleteModule(mod.id);
+  });
+  wrap.append(label, yes, no);
+  actions.appendChild(wrap);
+  no.focus();
+}
+
 async function deleteModule(id) {
   const mod = contentModules.find((m) => m.id === id);
   if (!mod) return;
-  if (!confirm(t('content.delete_confirm').replace('{title}', mod.title))) return;
-
+  const previousModules = contentModules.slice();
   contentModules = contentModules.filter((m) => m.id !== id);
   if (editingId === id) hideEditor();
+  const generation = editorGeneration;
   try {
-    await persistContent(t('content.module_deleted'));
+    await persistContent(t('content.module_deleted'), generation);
   } catch (err) {
+    if (generation !== editorGeneration) return;
+    contentModules = previousModules;
+    renderContentList();
     console.error(err);
     showContentStatus(t('content.delete_error_prefix') + err.message, 'error');
   }
@@ -997,6 +1164,91 @@ contentEditorCancel.addEventListener('click', () => hideEditor());
 
 moduleType.addEventListener('change', () => {
   showDynamicGroup(moduleType.value);
+});
+
+dyn.portable.pick.addEventListener('click', async () => {
+  if (portableOperation || moduleType.value !== 'portable') return;
+  const operation = { generation: editorGeneration };
+  portableOperation = operation;
+  setPortableStatus('scanning');
+  updatePortableActions();
+  try {
+    const picked = await window.icurator.pickPortableFolder();
+    if (operation.generation !== editorGeneration || moduleType.value !== 'portable') return;
+    if (!picked) { setPortableStatus(null); return; }
+    if (typeof picked.sourcePath !== 'string' || !Array.isArray(picked.candidates)) throw new Error(t('portable.pick_first'));
+    const candidates = picked.candidates.filter((item) => item && typeof item.path === 'string'
+      && ['windows', 'mac'].includes(item.platform));
+    if (!candidates.length) { setPortableStatus('no_candidates', 'error'); return; }
+    pendingPortableSourcePath = picked.sourcePath;
+    portableCandidates = candidates;
+    portableSourceName = picked.sourceName || '';
+    const files = Array.isArray(picked.files) ? picked.files.length : Number(picked.files);
+    const bytes = Number(picked.bytes);
+    portableScanStats = Number.isFinite(files) && Number.isFinite(bytes) ? { files, bytes } : null;
+    dyn.portable.allowWine.checked = false;
+    setPortableStatus(null);
+    renderPortableEditor({
+      windows: suggestPortableEntry('windows', candidates, portableSourceName),
+      mac: suggestPortableEntry('mac', candidates, portableSourceName)
+    });
+  } catch (err) {
+    if (operation.generation === editorGeneration) {
+      dyn.portable.status.textContent = t('common.error_prefix') + (err && err.message ? err.message : String(err));
+      dyn.portable.status.className = 'portable-status error';
+      portableStatus = null;
+    }
+  } finally {
+    if (portableOperation === operation) { portableOperation = null; updatePortableActions(); }
+  }
+});
+
+for (const input of [dyn.portable.windows, dyn.portable.mac, dyn.portable.allowWine]) {
+  input.addEventListener('change', () => {
+    if (!dyn.portable.windows.value) dyn.portable.allowWine.checked = false;
+    setPortableStatus(null);
+    updatePortableActions();
+  });
+}
+
+dyn.portable.test.addEventListener('click', async () => {
+  if (portableOperation || !portableHasSavedSelection() || moduleType.value !== 'portable') return;
+  const operation = { generation: editorGeneration };
+  const id = editingId;
+  portableOperation = operation;
+  setPortableStatus('viewer_launching');
+  updatePortableActions();
+  try {
+    const result = await window.icurator.launchPortable(id);
+    if (operation.generation !== editorGeneration || editingId !== id) return;
+    if (!result || result.ok !== true) throw new Error(t('portable.viewer_invalid_result'));
+    setPortableStatus(result.via === 'wine' ? 'viewer_started_wine' : 'viewer_started', 'success');
+  } catch (err) {
+    if (operation.generation === editorGeneration) {
+      setPortableStatus('viewer_launch_error', 'error', err && err.message ? err.message : String(err));
+    }
+  } finally {
+    if (portableOperation === operation) { portableOperation = null; updatePortableActions(); }
+  }
+});
+
+dyn.portable.configureWine.addEventListener('click', async () => {
+  if (portableOperation || portableHostPlatform !== 'darwin') return;
+  const operation = { generation: editorGeneration };
+  portableOperation = operation;
+  setPortableStatus('viewer_configuring_wine');
+  updatePortableActions();
+  try {
+    const result = await window.icurator.configurePortableWine();
+    if (operation.generation !== editorGeneration) return;
+    setPortableStatus(result && result.configured ? 'wine_ready' : null, result && result.configured ? 'success' : '');
+  } catch (err) {
+    if (operation.generation === editorGeneration) {
+      setPortableStatus('viewer_config_error', 'error', err && err.message ? err.message : String(err));
+    }
+  } finally {
+    if (portableOperation === operation) { portableOperation = null; updatePortableActions(); }
+  }
 });
 
 const FILE_PICK_CATEGORY = {
@@ -1215,6 +1467,7 @@ contentForm.addEventListener('submit', async (e) => {
   const password = modulePassword ? modulePassword.value.trim() : '';
   if (!title) { moduleTitle.focus(); return; }
   if (!TYPE_KEYS.includes(type)) return;
+  if (type === 'portable' && portableOperation) return;
 
   // Build the data object for this module
   let data = {};
@@ -1231,6 +1484,10 @@ contentForm.addEventListener('submit', async (e) => {
       }
       data = { ...existing.data };
     }
+  }
+  else if (type === 'portable') {
+    try { data = portableDataForSave(); }
+    catch (err) { showContentStatus(err.message, 'error'); return; }
   }
   else if (type === 'webview') data = { url: dyn.webview.url.value.trim() };
   else if (type === 'external') data = { url: dyn.external.url.value.trim() };
@@ -1273,6 +1530,10 @@ contentForm.addEventListener('submit', async (e) => {
     if (type === 'download-vault') data.buttonLabel = dyn['download-vault'].btn.value.trim();
   }
 
+  // Keep a saved snapshot for portable test actions if persistence fails.
+  const previousPortableModules = type === 'portable' ? contentModules.slice() : null;
+  const previousEditingId = editingId;
+  const portableSaveOperation = type === 'portable' ? { generation: editorGeneration } : null;
   // Update or insert in the local list
   if (editingId) {
     const idx = contentModules.findIndex((m) => m.id === editingId);
@@ -1294,16 +1555,30 @@ contentForm.addEventListener('submit', async (e) => {
     editingId = newMod.id;
   }
 
+  if (portableSaveOperation) { portableOperation = portableSaveOperation; updatePortableActions(); }
   try {
-    await persistContent(t('content.module_saved'));
+    const applied = await persistContent(t('content.module_saved'), portableSaveOperation ? portableSaveOperation.generation : null);
+    if (applied === false) return;
     // After save, re-open the editor on the (now updated) module so the user
     // sees the persisted state (e.g. the new file path).
     const savedId = editingId;
     hideEditor();
     if (savedId) openEditorForEdit(savedId);
   } catch (err) {
+    if (portableSaveOperation && portableSaveOperation.generation !== editorGeneration) return;
+    if (previousPortableModules) {
+      contentModules = previousPortableModules;
+      editingId = previousEditingId;
+      renderContentList();
+      updatePortableActions();
+    }
     console.error(err);
     showContentStatus(t('common.error_prefix') + err.message, 'error');
+  } finally {
+    if (portableSaveOperation && portableOperation === portableSaveOperation) {
+      portableOperation = null;
+      updatePortableActions();
+    }
   }
 });
 
@@ -1676,6 +1951,8 @@ async function loadExportTargets() {
     const result = await window.icurator.getExportTargets();
     if (!result || !Array.isArray(result.targets)) throw new Error(t('export.target_check_failed'));
     exportTargets = result.targets.filter((target) => target && ['windows', 'mac'].includes(target.id));
+    portableHostPlatform = result.hostPlatform || '';
+    updatePortableActions();
     exportTargetsError = '';
     exportTargetSelect.value = result.hostPlatform === 'darwin' ? 'mac' : 'windows';
   } catch (err) {

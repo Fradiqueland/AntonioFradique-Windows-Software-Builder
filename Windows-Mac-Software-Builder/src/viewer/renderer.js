@@ -550,6 +550,123 @@ function renderDownloadVault(data) {
   stageEl.appendChild(host);
 }
 
+function renderPortable(mod) {
+  // Restoring the last module or changing language must never launch a process.
+  // The only launch/configuration calls below are inside explicit button clicks.
+  clearStage();
+  const generation = stageGeneration;
+  const data = (mod && mod.data) || {};
+  const api = window.viewer || {};
+  let busy = false;
+  stageEl.classList.add('html-mode');
+
+  const card = document.createElement('div');
+  card.className = 'html-host dl-card';
+  const icon = document.createElement('div');
+  icon.className = 'dl-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = '🧳';
+  const heading = document.createElement('h2');
+  heading.textContent = (mod && mod.title) || tr('portable.viewer_title', 'Programa portátil');
+  card.append(icon, heading);
+
+  const addParagraph = (text) => {
+    const p = document.createElement('p');
+    p.className = 'dl-name';
+    p.textContent = text;
+    card.appendChild(p);
+    return p;
+  };
+  if (data.sourceName) addParagraph(data.sourceName);
+  addParagraph(tr('portable.viewer_description', 'Abre numa janela própria do sistema. O programa não fica incorporado no visualizador.'));
+  addParagraph(tr('portable.viewer_compatibility', 'Não converte programas entre sistemas. No Windows, é necessária uma versão Windows.'));
+
+  const launchRow = addParagraph('');
+  const launchButton = document.createElement('button');
+  launchButton.type = 'button';
+  launchButton.className = 'dl-btn';
+  launchButton.textContent = tr('portable.viewer_launch', 'Abrir programa');
+  launchRow.appendChild(launchButton);
+
+  let wineButton = null;
+  const canConfigureWine = api.platform === 'darwin' && data.allowWine === true
+    && data.entries && typeof data.entries.windows === 'string' && data.entries.windows
+    && typeof api.configurePortableWine === 'function';
+  if (canConfigureWine) {
+    addParagraph(tr('portable.viewer_wine_help', 'Para tentar abrir uma versão Windows neste Mac, configure um runtime Wine e um prefixo já preparados. A compatibilidade depende do programa.'));
+    const wineRow = addParagraph('');
+    wineButton = document.createElement('button');
+    wineButton.type = 'button';
+    wineButton.className = 'yt-open-btn';
+    wineButton.textContent = tr('portable.viewer_configure_wine', 'Configurar Wine neste Mac');
+    wineRow.appendChild(wineButton);
+  }
+
+  const status = addParagraph('');
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  status.setAttribute('aria-atomic', 'true');
+  const showStatus = (message, error = false) => {
+    status.className = error ? 'pw-gate-error' : 'dl-name';
+    status.textContent = message;
+  };
+  const setBusy = (value) => {
+    busy = value;
+    launchButton.disabled = value || typeof api.launchPortable !== 'function';
+    if (wineButton) wineButton.disabled = value;
+    card.setAttribute('aria-busy', String(value));
+  };
+  setBusy(false);
+  if (typeof api.launchPortable !== 'function') {
+    showStatus(tr('portable.viewer_unavailable', 'Esta versão do visualizador não suporta programas portáteis.'), true);
+  }
+
+  launchButton.addEventListener('click', async () => {
+    if (busy || generation !== stageGeneration || typeof api.launchPortable !== 'function') return;
+    setBusy(true);
+    showStatus(tr('portable.viewer_launching', 'A iniciar o processo…'));
+    try {
+      const result = await api.launchPortable(mod.id);
+      if (generation !== stageGeneration) return;
+      if (!result || result.ok !== true) {
+        throw new Error(tr('portable.viewer_invalid_result', 'O sistema não confirmou o início do processo.'));
+      }
+      showStatus(result.via === 'wine'
+        ? tr('portable.viewer_started_wine', 'Processo iniciado através do Wine.')
+        : tr('portable.viewer_started', 'Processo iniciado.'));
+    } catch (err) {
+      if (generation === stageGeneration) {
+        const detail = err && err.message ? err.message : String(err);
+        showStatus(tr('portable.viewer_launch_error', 'Não foi possível iniciar o programa: ') + detail, true);
+      }
+    } finally {
+      if (generation === stageGeneration) setBusy(false);
+    }
+  });
+
+  if (wineButton) wineButton.addEventListener('click', async () => {
+    if (busy || generation !== stageGeneration) return;
+    setBusy(true);
+    showStatus(tr('portable.viewer_configuring_wine', 'A configurar o Wine…'));
+    try {
+      const result = await api.configurePortableWine();
+      if (generation !== stageGeneration) return;
+      showStatus(result && result.configured === true
+        ? tr('portable.viewer_wine_ready', 'Wine configurado. Clique em Abrir programa para tentar iniciar.')
+        : '');
+    } catch (err) {
+      if (generation === stageGeneration) {
+        const detail = err && err.message ? err.message : String(err);
+        showStatus(tr('portable.viewer_config_error', 'Não foi possível configurar o Wine: ') + detail, true);
+      }
+    } finally {
+      if (generation === stageGeneration) setBusy(false);
+    }
+  });
+
+  stageEl.appendChild(card);
+}
+
 /* Conversor Markdown minimalista e seguro: escapa HTML primeiro e só depois
  * aplica títulos, listas, negrito/itálico, código e links. */
 function miniMarkdown(src) {
@@ -598,7 +715,7 @@ function miniMarkdown(src) {
 
 const MODULE_ICON = {
   youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
-  'download-vault': '⬇️', launch: '🚀', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'download-vault': '⬇️', launch: '🚀', portable: '🧳', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
 
@@ -1591,6 +1708,7 @@ async function dispatchModule(mod, btn) {
     case 'image-gallery':  setActiveMenuBtn(btn); await renderGallery(mod.data); break;
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
+    case 'portable': setActiveMenuBtn(btn); renderPortable(mod); break;
     case 'iptv':     setActiveMenuBtn(btn); await renderIptv(mod.data, mod.id); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;

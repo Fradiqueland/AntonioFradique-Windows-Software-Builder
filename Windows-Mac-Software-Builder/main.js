@@ -10,12 +10,15 @@ const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
+const portableApps = require('./src/shared/portable-app');
+const portableRuntime = require('./src/shared/portable-runtime');
 const { isTrustedFrame, lockGuestPreferences, configureGuestNavigation } = require('./src/shared/electron-security');
 const { fileURLToPath } = require('url');
 
 // Only our own top-level UI may call privileged IPC. Embedded pages have no bridge.
 const VIEWER_CHANNELS = new Set([
   'config:load', 'asset:resolve', 'shell:openExternal', 'shell:launchFile',
+  'portable:launch', 'portable:configureWine',
   'dialog:saveFileAs', 'i18n:loadLocale', 'youtube:hostUrl', 'iptv:hosts',
   'iptv:hasFfmpeg', 'iptv:proxyUrl', 'iptv:proxyStatus', 'iptv:proxyStop',
   'favs:load', 'favs:save', 'state:load', 'state:save', 'web:open', 'web:close'
@@ -249,7 +252,7 @@ const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
   'local-video', 'local-audio', 'download-vault', 'image-gallery',
-  'article-reader', 'smart-embed', 'iptv', 'local-web'
+  'article-reader', 'smart-embed', 'iptv', 'local-web', 'portable'
 ]);
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
@@ -275,9 +278,16 @@ function exportTargets() {
   const legacy = fs.existsSync(path.join(getViewerTemplateDir(), 'LaunchBox Viewer.exe'));
   const sfx = process.platform === 'win32' && fs.existsSync(path.join(getSfxBinDir(), '7za.exe'))
     && fs.existsSync(path.join(getSfxBinDir(), '7zsd_All_x64.sfx'));
+  // A mixed portable folder may contain Mac framework symlinks. ZIP preserves
+  // them; the Windows SFX extractor cannot reliably recreate those links.
+  let portableLinks = false;
+  try {
+    portableLinks = (readConfig().content || []).some((mod) => mod.type === 'portable'
+      && portableApps.validatePortableProject({ data: mod.data, assetsDir: ASSETS_DIR }).hasSymlinks);
+  } catch (_) { /* The export itself reports the invalid project precisely. */ }
   return { hostPlatform: process.platform, targets: [
-    { id: 'windows', available: windowsTemplate || (sfx && legacy), format: sfx ? 'exe' : 'zip',
-      reason: windowsTemplate || (sfx && legacy) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
+    { id: 'windows', available: windowsTemplate || (sfx && legacy && !portableLinks), format: sfx && !portableLinks ? 'exe' : 'zip',
+      reason: windowsTemplate || (sfx && legacy && !portableLinks) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
     { id: 'mac', available: fs.existsSync(getExportTemplatePath('mac')), format: 'zip',
       reason: fs.existsSync(getExportTemplatePath('mac')) ? '' : 'Template Mac em falta. Reinstale o construtor ou prepare export-templates/mac-universal.zip.' }
   ] };
@@ -611,6 +621,24 @@ function copyDirRecursive(src, dest) {
     if (entry.isDirectory()) copyDirRecursive(s, d);
     else if (entry.isFile()) fs.copyFileSync(s, d);
     else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): ' + s);
+  }
+}
+
+function copyProjectAssets(src, dest, config) {
+  const portableRoots = new Map();
+  for (const mod of config.content || []) {
+    if (mod.type !== 'portable') continue;
+    const validated = portableApps.validatePortableProject({ data: mod.data, assetsDir: src });
+    portableRoots.set(path.basename(validated.rootPath), validated.rootPath);
+  }
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const from = path.join(src, entry.name);
+    const to = path.join(dest, entry.name);
+    if (portableRoots.has(entry.name)) portableApps.copyPortableTree(from, to);
+    else if (entry.isDirectory()) copyDirRecursive(from, to);
+    else if (entry.isFile()) fs.copyFileSync(from, to);
+    else throw new Error('Recurso não suportado: ' + from);
   }
 }
 
@@ -1160,9 +1188,18 @@ handleTrustedIpc('projects:duplicate', (_event, payload) => {
   // projeto de origem para a nova pasta, de forma independente.
   const srcRoot = projectDir(srcId);
   const dstRoot = projectDir(newId);
-  for (const sub of ['data', 'dist-assets']) {
-    const from = path.join(srcRoot, sub);
-    if (fs.existsSync(from)) copyDirRecursive(from, path.join(dstRoot, sub));
+  try {
+    const sourceConfig = JSON.parse(fs.readFileSync(path.join(srcRoot, 'data', 'project-config.json'), 'utf8'));
+    copyDirRecursive(path.join(srcRoot, 'data'), path.join(dstRoot, 'data'));
+    const sourceAssets = path.join(srcRoot, 'dist-assets');
+    if (fs.existsSync(sourceAssets)) copyProjectAssets(sourceAssets, path.join(dstRoot, 'dist-assets'), sourceConfig);
+    // A duplicate gets its own persistent program settings at runtime.
+    const duplicateConfig = { ...sourceConfig, content: (sourceConfig.content || []).map((mod) => mod.type === 'portable'
+      ? { ...mod, data: { ...mod.data, revision: crypto.randomUUID() } } : mod) };
+    fs.writeFileSync(path.join(dstRoot, 'data', 'project-config.json'), JSON.stringify(duplicateConfig, null, 2), 'utf8');
+  } catch (error) {
+    fs.rmSync(dstRoot, { recursive: true, force: true });
+    throw error;
   }
   const now = Date.now();
   const name = sanitizeProjectName(src.name + ' (cópia)');
@@ -1321,6 +1358,7 @@ handleTrustedIpc('content:save', (_event, payload) => {
   const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
   const nextModules = [];
   const importedWeb = [];
+  const importedPortable = [];
   try {
   for (const raw of incoming) {
     const mod = sanitizeModule(raw);
@@ -1335,6 +1373,17 @@ handleTrustedIpc('content:save', (_event, payload) => {
         if (!prev || prev.type !== 'local-web') throw new Error('Selecione um ficheiro HTML ou PHP.');
         localWeb.validateWebProject({ data: prev.data, assetsDir: ASSETS_DIR });
         mod.data = { ...prev.data };
+      }
+    } else if (mod.type === 'portable') {
+      if (typeof d.sourcePath === 'string' && d.sourcePath) {
+        mod.data = portableApps.importPortableProject({ sourcePath: d.sourcePath,
+          assetsDir: ASSETS_DIR, entries: d.entries, allowWine: d.allowWine === true });
+        importedPortable.push(mod.data);
+      } else {
+        if (!prev || prev.type !== 'portable') throw new Error('Selecione uma pasta de software portable.');
+        mod.data = portableApps.updatePortableProject({ data: prev.data,
+          assetsDir: ASSETS_DIR, entries: d.entries === undefined ? prev.data.entries : d.entries,
+          allowWine: d.allowWine === undefined ? prev.data.allowWine : d.allowWine === true });
       }
     } else if (SINGLE_FILE_TYPES.has(mod.type)) {
       const sourcePath = typeof d.sourcePath === 'string' ? d.sourcePath : null;
@@ -1420,18 +1469,26 @@ handleTrustedIpc('content:save', (_event, payload) => {
     for (const data of importedWeb) {
       try { localWeb.removeWebProject({ data, assetsDir: ASSETS_DIR }); } catch (_) {}
     }
+    for (const data of importedPortable) {
+      try { portableApps.removePortableProject({ data, assetsDir: ASSETS_DIR }); } catch (_) {}
+    }
     throw err;
   }
   // Delete retired assets only after the new configuration was saved.
   const kept = new Set();
   for (const m of nextModules) for (const f of moduleAssetFiles(m)) kept.add(f);
   const keptRoots = new Set(nextModules.filter((m) => m.type === 'local-web').map((m) => m.data.root));
+  const keptPortableRoots = new Set(nextModules.filter((m) => m.type === 'portable').map((m) => m.data.root));
   for (const prev of previous) {
     for (const f of moduleAssetFiles(prev)) { if (!kept.has(f)) deleteAssetIfInside(f); }
     if (prev.type === 'local-web' && !keptRoots.has(prev.data.root)) {
       stopWebModules();
       try { localWeb.removeWebProject({ data: prev.data, assetsDir: ASSETS_DIR }); }
       catch (err) { console.warn('Web asset cleanup:', err.message); }
+    }
+    if (prev.type === 'portable' && !keptPortableRoots.has(prev.data.root)) {
+      try { portableApps.removePortableProject({ data: prev.data, assetsDir: ASSETS_DIR }); }
+      catch (err) { console.warn('Portable asset cleanup:', err.message); }
     }
   }
   return { ...current, content: nextModules };
@@ -1646,6 +1703,65 @@ handleTrustedIpc('dialog:pickFiles', async (_event, category) => {
   return result.filePaths.map((p) => ({ path: p, name: path.basename(p) }));
 });
 
+/* Portable imports keep the entire folder. Scanning identifies candidates;
+ * it never executes a program. Runtime paths belong to this computer only. */
+const PORTABLE_LOCAL_DIR = path.join(app.getPath('appData'), 'LaunchBox Portable Apps');
+const WINE_SETTINGS_PATH = path.join(PORTABLE_LOCAL_DIR, 'wine.json');
+
+handleTrustedIpc('portable:pickFolder', async () => {
+  assertBuilder();
+  const result = await dialog.showOpenDialog(builderWindow, {
+    title: 'Selecionar pasta do software portable',
+    properties: ['openDirectory', 'treatPackageAsDirectory']
+  });
+  if (result.canceled || !result.filePaths?.[0]) return null;
+  const sourcePath = result.filePaths[0];
+  return { sourcePath, ...portableApps.scanPortableFolder(sourcePath) };
+});
+
+function readPortableWineSettings() {
+  try {
+    const settings = JSON.parse(fs.readFileSync(WINE_SETTINGS_PATH, 'utf8'));
+    return { executable: settings.executable, prefix: settings.prefix };
+  } catch (_) { return null; }
+}
+
+handleTrustedIpc('portable:configureWine', async () => {
+  if (process.platform !== 'darwin') throw new Error('A opção Wine deste módulo está disponível apenas no Mac.');
+  const parent = BrowserWindow.getFocusedWindow() || viewerWindow || builderWindow;
+  const previous = readPortableWineSettings();
+  const executable = await dialog.showOpenDialog(parent, {
+    title: 'Selecionar executável Wine já instalado (wine)',
+    ...(previous?.executable ? { defaultPath: previous.executable } : {}),
+    properties: ['openFile', 'showHiddenFiles']
+  });
+  if (executable.canceled || !executable.filePaths?.[0]) return { configured: false, cancelled: true };
+  const prefix = await dialog.showOpenDialog(parent, {
+    title: 'Selecionar prefixo Wine já preparado (contém system.reg e user.reg)',
+    ...(previous?.prefix ? { defaultPath: previous.prefix } : {}),
+    properties: ['openDirectory', 'showHiddenFiles']
+  });
+  if (prefix.canceled || !prefix.filePaths?.[0]) return { configured: false, cancelled: true };
+  const settings = portableRuntime.validateWineConfiguration({ executable: executable.filePaths[0], prefix: prefix.filePaths[0] });
+  fs.mkdirSync(PORTABLE_LOCAL_DIR, { recursive: true });
+  const temporary = WINE_SETTINGS_PATH + '.' + crypto.randomUUID() + '.tmp';
+  try {
+    fs.writeFileSync(temporary, JSON.stringify(settings, null, 2), { mode: 0o600, flag: 'wx' });
+    fs.renameSync(temporary, WINE_SETTINGS_PATH);
+  } finally { fs.rmSync(temporary, { force: true }); }
+  return { configured: true };
+});
+
+handleTrustedIpc('portable:launch', async (_event, moduleId) => {
+  if (exportBusy) throw new Error('Aguarde a conclusão da exportação antes de abrir o programa.');
+  if (typeof moduleId !== 'string' || !moduleId || moduleId.length > 256) throw new Error('Módulo portable inválido.');
+  const module = findModuleById(readConfig().content || [], moduleId);
+  if (!module || module.type !== 'portable') throw new Error('Módulo portable não encontrado.');
+  return portableRuntime.launchPortableProject({ data: module.data, assetsDir: ASSETS_DIR,
+    storageDir: path.join(PORTABLE_LOCAL_DIR, 'projects'), wine: readPortableWineSettings(),
+    arch: app.runningUnderARM64Translation ? 'arm64' : process.arch });
+});
+
 /* Viewer: "Guardar como" para o módulo Cofre de Downloads. Copia o ficheiro
  * (que vive em dist-assets/) para o local escolhido pelo aluno. */
 handleTrustedIpc('dialog:saveFileAs', async (_event, payload) => {
@@ -1767,6 +1883,12 @@ async function buildWindowsExe(event, payload) {
       throw new Error('Sem projeto para exportar. Guarde primeiro pelo menos uma definição no Construtor.');
     }
 
+    for (const mod of readConfig().content || []) {
+      if (mod.type !== 'portable') continue;
+      const portable = portableApps.assertPortableTarget({ data: mod.data, assetsDir: ASSETS_DIR, target: 'windows' });
+      if (portable.hasSymlinks) throw new Error('Esta pasta portable contém ligações simbólicas Mac. Utilize a exportação Windows ZIP.');
+    }
+
     const sfxBinDir = getSfxBinDir();
     const sevenZipExe = path.join(sfxBinDir, '7za.exe');
     const sfxStub = path.join(sfxBinDir, '7zsd_All_x64.sfx');
@@ -1837,7 +1959,7 @@ async function buildWindowsExe(event, payload) {
         throw new Error('O curso contém PHP, mas o template não inclui php.exe. Prepare vendor/php e reconstrua o Viewer e o Construtor.');
       }
     }
-    if (fs.existsSync(ASSETS_DIR)) copyDirRecursive(ASSETS_DIR, stageAssets);
+    if (fs.existsSync(ASSETS_DIR)) copyProjectAssets(ASSETS_DIR, stageAssets, courseConfig);
 
     /* 3. Compress the staging tree into a .7z payload. Compressão ultra
      *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
@@ -1923,6 +2045,10 @@ async function exportProject(event, payload = {}) {
     const name = projectExport.safeProjectName(payload.defaultName || config.brand?.title || 'Meu Software');
     for (const mod of config.content || []) {
       if (mod.type === 'local-web') localWeb.validateWebProject({ data: mod.data, assetsDir: ASSETS_DIR });
+      if (mod.type === 'portable') {
+        const portable = portableApps.assertPortableTarget({ data: mod.data, assetsDir: ASSETS_DIR, target });
+        for (const warning of portable.warnings || []) send(warning, 'warning');
+      }
     }
     const choice = await dialog.showSaveDialog(builderWindow, {
       title: target === 'mac' ? 'Guardar aplicação Mac (.zip)' : 'Guardar aplicação Windows portátil (.zip)',
@@ -2027,4 +2153,3 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-

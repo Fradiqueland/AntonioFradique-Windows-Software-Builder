@@ -79,7 +79,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v2.0.1</div>
+          <div class="version">v2.1.0</div>
         </div>
       </aside>
 
@@ -166,7 +166,7 @@
                     <option value="webview"></option><option value="external"></option><option value="launch"></option>
                     <option value="local-video"></option><option value="local-audio"></option><option value="download-vault"></option>
                     <option value="image-gallery"></option><option value="article-reader"></option><option value="smart-embed"></option>
-                    <option value="iptv"></option><option value="local-web"></option>
+                    <option value="iptv"></option><option value="local-web"></option><option value="portable"></option>
                   </select>
                 </div>
 
@@ -227,6 +227,40 @@
                          data-i18n-placeholder="content.external_url_placeholder"
                          placeholder="https://exemplo.com/afiliado" />
                   <small data-i18n="content.external_help">Ideal para links de afiliado — abre no Chrome/Edge padrão.</small>
+                </div>
+
+                <div class="form-group hidden portable-editor" id="dyn-portable" data-dyn="portable">
+                  <label data-i18n="portable.folder_label">Pasta do programa</label>
+                  <div class="file-row">
+                    <button type="button" class="file-btn" id="dyn-portable-pick" data-i18n="portable.choose_folder">Escolher pasta</button>
+                    <span class="file-name" id="dyn-portable-name" data-i18n="portable.no_folder">Nenhuma pasta selecionada.</span>
+                  </div>
+                  <small data-i18n="portable.folder_help">É guardada uma cópia da pasta, com os ficheiros e dependências incluídos. Escolha apenas uma pasta preparada para distribuição.</small>
+                  <small data-i18n="portable.snapshot_help">Para atualizar o programa, escolha novamente a pasta e guarde o módulo.</small>
+                  <div class="portable-scan-summary" id="dyn-portable-summary"></div>
+                  <div class="portable-entry-grid">
+                    <div>
+                      <label for="dyn-portable-windows" data-i18n="portable.windows_entry">Programa para Windows</label>
+                      <select id="dyn-portable-windows" aria-describedby="dyn-portable-selection-help"></select>
+                    </div>
+                    <div>
+                      <label for="dyn-portable-mac" data-i18n="portable.mac_entry">Programa para Mac</label>
+                      <select id="dyn-portable-mac" aria-describedby="dyn-portable-selection-help"></select>
+                    </div>
+                  </div>
+                  <small id="dyn-portable-selection-help" data-i18n="portable.selection_help">Reveja os programas sugeridos e guarde para confirmar a seleção. A deteção do formato e arquitetura não comprova compatibilidade.</small>
+                  <small data-i18n="portable.native_help">A versão nativa é preferida. A importação não converte programas; para executar no Windows é necessária uma versão Windows.</small>
+                  <label class="portable-wine-option" for="dyn-portable-wine">
+                    <input type="checkbox" id="dyn-portable-wine" />
+                    <span data-i18n="portable.wine_allow">Permitir abrir a versão Windows no Mac com Wine externo (compatibilidade por testar)</span>
+                  </label>
+                  <div class="portable-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" id="dyn-portable-test" disabled data-i18n="portable.test_program">Testar programa</button>
+                    <button type="button" class="btn btn-ghost btn-sm hidden" id="dyn-portable-configure-wine" data-i18n="portable.viewer_configure_wine">Configurar Wine neste Mac</button>
+                  </div>
+                  <small data-i18n="portable.test_help">Guarde as alterações antes de testar. O teste abre a versão guardada numa janela própria; processo iniciado não significa compatibilidade confirmada.</small>
+                  <small class="hidden" id="dyn-portable-wine-help" data-i18n="portable.wine_local_help">O runtime Wine e o prefixo já preparados são escolhidos neste Mac. A configuração fica apenas neste computador e não é exportada.</small>
+                  <div id="dyn-portable-status" class="portable-status" role="status" aria-live="polite"></div>
                 </div>
 
                 <div class="form-group hidden" id="dyn-launch" data-dyn="launch">

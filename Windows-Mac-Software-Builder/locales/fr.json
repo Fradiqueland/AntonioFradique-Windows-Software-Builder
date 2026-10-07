@@ -146,7 +146,8 @@
       "article": "Article / notes",
       "embed": "Formulaire ou quiz",
       "iptv": "Chaînes IPTV",
-      "local_web": "HTML / PHP file"
+      "local_web": "HTML / PHP file",
+      "portable": "Programme portable (Windows / Mac)"
     },
     "youtube_url_label": "URL ou ID de la vidéo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou seulement l'ID",
@@ -245,7 +246,8 @@
       "article": "Texte simple avec titres et listes.",
       "embed": "Google Forms, Typeform, quiz…",
       "iptv": "Liste de chaînes TV en ligne.",
-      "local_web": "Import a page or website from your PC."
+      "local_web": "Import a page or website from your PC.",
+      "portable": "Incluez le dossier d’un programme avec ses fichiers et dépendances."
     },
     "type_group": {
       "video": "Vidéo",
@@ -425,5 +427,42 @@
     "export_hint": "Create a Windows or Mac application from this project.",
     "show": "Afficher",
     "hide": "Masquer"
+  },
+  "portable": {
+    "folder_label": "Dossier du programme",
+    "choose_folder": "Choisir un dossier",
+    "no_folder": "Aucun dossier sélectionné.",
+    "folder_help": "Une copie du dossier, avec ses fichiers et dépendances, est enregistrée. Choisissez un dossier prêt à être distribué.",
+    "snapshot_help": "Pour mettre à jour le programme, sélectionnez à nouveau le dossier et enregistrez le module.",
+    "windows_entry": "Programme Windows",
+    "mac_entry": "Programme Mac",
+    "no_entry": "Aucune version sélectionnée",
+    "selection_help": "Vérifiez les programmes proposés et enregistrez pour confirmer la sélection. La détection du format et de l’architecture ne garantit pas la compatibilité.",
+    "wine_allow": "Autoriser l’ouverture de la version Windows sur Mac avec un Wine externe (compatibilité non testée)",
+    "native_help": "La version native est privilégiée. L’importation ne convertit pas les programmes ; Windows nécessite une version Windows.",
+    "wine_local_help": "Choisissez un environnement d’exécution Wine existant et un préfixe déjà préparé sur ce Mac. La configuration reste sur cet ordinateur et n’est pas exportée.",
+    "scan_summary": "{files} fichiers · {size} Mo",
+    "scanning": "Analyse du dossier…",
+    "no_candidates": "Aucun programme Windows EXE ou Mac au format pris en charge n’a été détecté.",
+    "pick_first": "Choisissez d’abord le dossier du programme.",
+    "entry_required": "Sélectionnez au moins un programme Windows ou Mac.",
+    "test_program": "Tester le programme",
+    "test_help": "Enregistrez les modifications avant le test. Le test ouvre la version enregistrée dans sa propre fenêtre ; le démarrage du processus ne confirme pas la compatibilité.",
+    "viewer_title": "Programme portable",
+    "viewer_launch": "Ouvrir le programme",
+    "viewer_launching": "Démarrage du processus…",
+    "viewer_started": "Processus démarré.",
+    "viewer_started_wine": "Processus démarré via Wine.",
+    "viewer_description": "S’ouvre dans sa propre fenêtre système. Le programme n’est pas intégré au visualiseur.",
+    "viewer_compatibility": "Ne convertit pas les programmes entre systèmes d’exploitation. Windows nécessite une version Windows.",
+    "viewer_configure_wine": "Configurer Wine sur ce Mac",
+    "viewer_configuring_wine": "Configuration de Wine…",
+    "viewer_wine_ready": "Wine configuré. Cliquez sur Ouvrir le programme pour essayer de le lancer.",
+    "viewer_wine_help": "Pour essayer une version Windows sur ce Mac, configurez un environnement d’exécution Wine et un préfixe déjà préparé. La compatibilité dépend du programme.",
+    "viewer_launch_error": "Impossible de démarrer le programme : ",
+    "viewer_config_error": "Impossible de configurer Wine : ",
+    "viewer_unavailable": "Cette version du visualiseur ne prend pas en charge les programmes portables.",
+    "viewer_invalid_result": "Le système n’a pas confirmé le démarrage du processus.",
+    "wine_ready": "Wine configuré. Enregistrez le module si nécessaire, puis cliquez sur Tester le programme."
   }
 }

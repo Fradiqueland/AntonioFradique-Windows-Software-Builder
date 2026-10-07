@@ -1,4 +1,4 @@
-# Windows & Mac Software Builder — v2.0.1
+# Windows & Mac Software Builder — v2.1
 
 Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Builder permite gerir projetos, personalizar a apresentação e exportar produtos independentes para os dois sistemas.
 
@@ -12,14 +12,14 @@ Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Buil
 
 Os dois instaladores incluem os dois modelos de exportação. O destinatário de um produto não precisa de instalar o Builder. Num ZIP Windows, deve extrair e manter todos os ficheiros; num ZIP Mac, deve manter a aplicação e a pasta `.data` juntas.
 
-O ícone personalizado aplica-se ao EXE auto-extraível gerado no Windows. Os ZIPs mantêm o ícone do modelo. A exportação Mac rejeita módulos que tentam executar programas Windows; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
+O ícone personalizado aplica-se ao EXE auto-extraível gerado no Windows. Os ZIPs mantêm o ícone do modelo. O novo módulo **Software portable** permite incluir a pasta completa e selecionar entradas Windows e Mac. Pode autorizar Wine externo para tentar programas Windows no Mac. A exportação Mac rejeita programas Windows do módulo antigo **Lançar ficheiro**; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
 
-Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e a [execução v2.0.1](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/runs/37231782985) estão disponíveis no GitHub Actions. Cada pacote contém o instalador e um ficheiro de checksums. Os artefactos requerem sessão GitHub e têm retenção de 30 dias.
+Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e as [compilações v2.1](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) estão disponíveis no GitHub Actions. Cada pacote contém o instalador e um ficheiro de checksums. Os artefactos requerem sessão GitHub e têm retenção de 30 dias.
 
 ## Criar um produto
 
 1. Crie ou abra um projeto em **Projetos**.
-2. Adicione módulos em **Conteúdo**: texto/HTML, ficheiros HTML/PHP, PDF, vídeo, áudio, galeria, downloads, artigos, YouTube, sites, links ou IPTV.
+2. Adicione módulos em **Conteúdo**: texto/HTML, ficheiros HTML/PHP, PDF, vídeo, áudio, galeria, downloads, artigos, YouTube, sites, links, IPTV ou software portable.
 3. Defina título, cores e logótipo em **Aparência**; configure os extras de que precisa.
 4. Utilize a pré-visualização para verificar o conteúdo.
 5. Em **Publicar → Exportar**, escolha **Windows** ou **Mac**, confirme o formato apresentado e exporte.
@@ -38,6 +38,7 @@ A navegação interna entre páginas da mesma origem local continua no módulo i
 ## Documentação
 
 - [Compilação, instalação e exportação](BUILD-V2.md)
+- [Software portable: importação, execução e limites de compatibilidade](PORTABLE.md)
 - [Importação HTML/PHP e persistência](IMPORTAR-HTML-PHP.md)
 - [Runtime PHP opcional](vendor/php/README.md)
 - [Auditoria e limitações conhecidas](AUDITORIA-2026-10-04.md)

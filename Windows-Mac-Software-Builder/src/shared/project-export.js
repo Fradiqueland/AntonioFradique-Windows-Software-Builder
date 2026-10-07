@@ -13,6 +13,7 @@ const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
 const yazl = require('yazl');
 const { validateWebProject } = require('./local-web');
+const { assertPortableTarget } = require('./portable-app');
 
 const MAC_BUNDLE = 'LaunchBox Viewer.app';
 const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, depth: 64 });
@@ -44,6 +45,7 @@ function key(name) { return name.replace(/\/$/, '').normalize('NFD').toLowerCase
 
 function registerPath(paths, name, kind) {
   const parts = validPath(name);
+  if (!['directory', 'file', 'symlink'].includes(kind) || (name.endsWith('/') && kind !== 'directory')) throw new Error(`Tipo de caminho ZIP inválido: ${name}`);
   const normalized = key(name);
   const previous = paths.get(normalized);
   if (previous && !(previous === 'implicit-directory' && kind === 'directory')) throw new Error(`Caminhos ZIP duplicados: ${name}`);
@@ -174,12 +176,17 @@ async function inspectTemplate(templatePath, target) {
   } catch (error) { zip.close(); throw error; }
 }
 
-async function inspectAssets(assetsDir) {
+function inside(root, filename) {
+  const relative = path.relative(root, filename);
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
+async function inspectAssets(assetsDir, portableRoots = []) {
   if (!path.isAbsolute(assetsDir)) throw new Error('A pasta de recursos deve ser absoluta.');
   const rootStat = await fs.promises.lstat(assetsDir);
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error('Pasta de recursos inválida.');
   const root = await fs.promises.realpath(assetsDir);
-  const files = [];
+  const entries = [];
   const paths = new Map();
   let bytes = 0;
   async function walk(directory, prefix = '', depth = 0) {
@@ -188,23 +195,107 @@ async function inspectAssets(assetsDir) {
       const relative = prefix ? `${prefix}/${name}` : name;
       const absolute = path.join(directory, name);
       const stat = await fs.promises.lstat(absolute);
-      if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) throw new Error(`Recurso não permitido: ${relative}`);
-      registerPath(paths, relative, stat.isDirectory() ? 'directory' : 'file');
+      const portable = portableRoots.find(item => inside(item.rootPath, absolute));
+      const kind = stat.isSymbolicLink() ? 'symlink' : stat.isDirectory() ? 'directory' : stat.isFile() ? 'file' : null;
+      if (!kind || (kind === 'symlink' && !portable)) throw new Error(`Recurso não permitido: ${relative}`);
+      registerPath(paths, relative, kind);
       if (paths.size > LIMITS.entries) throw new Error('Demasiados recursos.');
-      if (stat.isDirectory()) await walk(absolute, relative, depth + 1);
-      else {
+      const type = kind === 'directory' ? 0o040000 : kind === 'symlink' ? 0o120000 : 0o100000;
+      // Preserve imported executable/read permissions, never setuid/setgid or
+      // blanket executable bits. Ordinary content keeps the previous defaults.
+      const mode = type | (portable ? stat.mode & 0o777 : kind === 'directory' ? 0o755 : 0o644);
+      const item = { absolute, relative, stat, kind, mode, portable };
+      entries.push(item);
+      if (kind === 'directory') await walk(absolute, relative, depth + 1);
+      else if (kind === 'symlink') {
+        item.link = await fs.promises.readlink(absolute, { encoding: 'buffer' });
+        item.linkTarget = item.link.toString('utf8');
+        if (!item.link.length || item.link.length > 4096 || !Buffer.from(item.linkTarget, 'utf8').equals(item.link) ||
+            /[\\:\x00-\x1f\x7f]/.test(item.linkTarget) || item.linkTarget.startsWith('/')) throw new Error(`Destino de ligação simbólica inválido: ${relative}`);
+        if ((bytes += item.link.length) > LIMITS.totalBytes) throw new Error('Os recursos excedem os limites de tamanho.');
+      } else {
         if (stat.size > LIMITS.fileBytes || (bytes += stat.size) > LIMITS.totalBytes) throw new Error('Os recursos excedem os limites de tamanho.');
-        files.push({ absolute, relative, stat });
       }
     }
   }
   await walk(root);
-  return { root, files, paths };
+  const indexed = new Map(entries.map(item => [key(item.relative), item]));
+  const links = entries.filter(item => item.kind === 'symlink');
+  // Resolve against the exact tree that will enter the ZIP, not just a lexical
+  // normalisation of link text. This rejects chained escapes and dangling links.
+  for (const link of links) {
+    const rootParts = link.portable.relative.split('/');
+    const resolved = [...rootParts];
+    let pending = link.relative.split('/').slice(rootParts.length);
+    let followed = 0;
+    while (pending.length) {
+      const part = pending.shift();
+      if (!part || part === '.') continue;
+      if (part === '..') {
+        if (resolved.length <= rootParts.length) throw new Error(`Ligação simbólica fora do programa portátil: ${link.relative}`);
+        resolved.pop();
+        continue;
+      }
+      const candidate = [...resolved, part].join('/');
+      const item = indexed.get(key(candidate));
+      if (!item) throw new Error(`Ligação simbólica com destino inexistente: ${link.relative}`);
+      if (item.kind === 'symlink') {
+        if (++followed > 40) throw new Error(`Ciclo de ligações simbólicas: ${link.relative}`);
+        pending = [...item.linkTarget.split('/'), ...pending];
+      } else {
+        if (pending.length && item.kind !== 'directory') throw new Error(`Ligação simbólica atravessa um ficheiro: ${link.relative}`);
+        resolved.push(part);
+      }
+    }
+    link.resolvedRelative = resolved.join('/');
+    const canonical = await fs.promises.realpath(link.absolute);
+    if (!inside(link.portable.rootPath, canonical)) throw new Error(`Ligação simbólica fora do programa portátil: ${link.relative}`);
+  }
+  // Directory links can form a recursive graph without a direct symlink chain
+  // (A/link -> B and B/link -> A). Do not ship those recursive bundles either.
+  const directoryEdges = new Map(entries.filter(item => item.kind === 'directory' && item.portable).map(item => [key(item.relative), []]));
+  for (const item of entries.filter(item => item.portable)) {
+    const parent = directoryEdges.get(key(path.posix.dirname(item.relative)));
+    if (!parent) continue;
+    if (item.kind === 'directory') parent.push(key(item.relative));
+    else if (item.kind === 'symlink' && directoryEdges.has(key(item.resolvedRelative))) parent.push(key(item.resolvedRelative));
+  }
+  const visiting = new Set();
+  const visited = new Set();
+  function checkDirectory(name) {
+    if (visiting.has(name)) throw new Error('Ciclo de diretórios e ligações no programa portátil.');
+    if (visited.has(name)) return;
+    visiting.add(name);
+    for (const child of directoryEdges.get(name) || []) checkDirectory(child);
+    visiting.delete(name);
+    visited.add(name);
+  }
+  for (const name of directoryEdges.keys()) checkDirectory(name);
+  return { root, entries, files: entries.filter(item => item.kind === 'file'), links, paths, portableRoots };
+}
+
+// Shared with the SFX route: callers can inspect links before choosing a format.
+// Only validated portable modules grant permission to archive asset symlinks.
+async function inspectProjectAssets({ config, assetsDir, target }) {
+  if (!['windows', 'mac'].includes(target)) throw new Error('Selecione Windows ou Mac.');
+  const assetRoot = await fs.promises.realpath(assetsDir);
+  const portableRoots = [];
+  for (const module of config.content || []) {
+    if (module.type !== 'portable') continue;
+    const validated = assertPortableTarget({ data: module.data, assetsDir, target });
+    const rootPath = await fs.promises.realpath(validated.rootPath);
+    if (rootPath === assetRoot || !inside(assetRoot, rootPath)) throw new Error('Pasta de programa portátil fora dos recursos.');
+    const relative = path.relative(assetRoot, rootPath).split(path.sep).join('/');
+    if (portableRoots.some(item => item.rootPath === rootPath)) continue;
+    if (portableRoots.some(item => inside(item.rootPath, rootPath) || inside(rootPath, item.rootPath))) throw new Error('Pastas de programas portáteis sobrepostas.');
+    portableRoots.push({ rootPath, relative });
+  }
+  return inspectAssets(assetsDir, portableRoots);
 }
 
 async function assetStream(asset, root) {
   const real = await fs.promises.realpath(asset.absolute);
-  const relative = path.relative(root, real);
+  const relative = path.relative(asset.portable ? asset.portable.rootPath : root, real);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error('O recurso saiu da pasta do projeto.');
   const handle = await fs.promises.open(asset.absolute, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
   try {
@@ -224,7 +315,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
   const name = safeProjectName(projectName);
   const configBytes = Buffer.from(JSON.stringify(config, null, 2));
   if (configBytes.length > 16 * 1024 ** 2) throw new Error('A configuração do projeto é demasiado grande.');
-  const assets = await inspectAssets(assetsDir);
+  const assets = await inspectProjectAssets({ config, assetsDir, target });
   function validateReferences(value) {
     if (typeof value === 'string' && value.startsWith('dist-assets/')) {
       const relative = value.slice('dist-assets/'.length);
@@ -259,7 +350,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     completion.catch(() => {});
     archive.on('error', error => archive.outputStream.destroy(error));
     let completed = 0;
-    const total = template.entries.length + assets.files.length + 1;
+    const total = template.entries.length + assets.entries.length + 1;
     function progress() { if (onProgress) { try { onProgress({ completed, total }); } catch (_) { /* UI observers do not invalidate an export. */ } } }
     function addLazy(destination, options, getter) {
       archive.addReadStreamLazy(destination, options, callback => {
@@ -286,7 +377,13 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
       archive.addEmptyDirectory(`${base}/dist-assets/`, { mode: 0o040755 });
       archive.addBuffer(configBytes, `${base}/data/project-config.json`, { mode: 0o100644 });
       completed++;
-      for (const asset of assets.files) addLazy(`${base}/dist-assets/${asset.relative}`, { mode: 0o100644, mtime: asset.stat.mtime, size: asset.stat.size }, () => assetStream(asset, assets.root));
+      for (const asset of assets.entries) {
+        const destination = `${base}/dist-assets/${asset.relative}`;
+        const options = { mode: asset.mode, mtime: asset.stat.mtime };
+        if (asset.kind === 'directory') { archive.addEmptyDirectory(destination + '/', options); completed++; }
+        else if (asset.kind === 'symlink') { archive.addBuffer(asset.link, destination, options); completed++; }
+        else addLazy(destination, { ...options, size: asset.stat.size }, () => assetStream(asset, assets.root));
+      }
       archive.end();
       await completion;
       template.checkError();
@@ -332,4 +429,4 @@ async function extractWindowsTemplate(templatePath, destination) {
   } finally { template.zip.close(); }
 }
 
-module.exports = { exportProject, extractWindowsTemplate, safeProjectName };
+module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, safeProjectName };

@@ -146,7 +146,8 @@
       "article": "مقال / ملاحظات",
       "embed": "نموذج أو اختبار",
       "iptv": "قنوات IPTV",
-      "local_web": "HTML / PHP file"
+      "local_web": "HTML / PHP file",
+      "portable": "برنامج محمول (Windows / Mac)"
     },
     "youtube_url_label": "رابط أو معرّف الفيديو",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... أو المعرّف فقط",
@@ -245,7 +246,8 @@
       "article": "نص بسيط بعناوين وقوائم.",
       "embed": "Google Forms وTypeform واختبارات…",
       "iptv": "قائمة قنوات تلفزيونية عبر الإنترنت.",
-      "local_web": "Import a page or website from your PC."
+      "local_web": "Import a page or website from your PC.",
+      "portable": "أضف مجلد البرنامج مع ملفاته واعتمادياته."
     },
     "type_group": {
       "video": "فيديو",
@@ -425,5 +427,42 @@
     "export_hint": "Create a Windows or Mac application from this project.",
     "show": "إظهار",
     "hide": "إخفاء"
+  },
+  "portable": {
+    "folder_label": "مجلد البرنامج",
+    "choose_folder": "اختيار مجلد",
+    "no_folder": "لم يتم اختيار أي مجلد.",
+    "folder_help": "تُحفظ نسخة من المجلد مع ملفاته واعتمادياته. اختر مجلدًا جاهزًا للتوزيع.",
+    "snapshot_help": "لتحديث البرنامج، اختر المجلد من جديد واحفظ الوحدة.",
+    "windows_entry": "برنامج Windows",
+    "mac_entry": "برنامج Mac",
+    "no_entry": "لم يتم اختيار أي إصدار",
+    "selection_help": "راجع البرامج المقترحة واحفظ لتأكيد الاختيار. اكتشاف التنسيق والمعمارية لا يثبت التوافق.",
+    "wine_allow": "السماح بفتح إصدار Windows على Mac باستخدام Wine خارجي (لم يُختبر التوافق)",
+    "native_help": "يُفضَّل الإصدار الأصلي لنظام التشغيل. لا يحوّل الاستيراد البرامج؛ يتطلب Windows إصدارًا خاصًا به.",
+    "wine_local_help": "اختر بيئة تشغيل Wine موجودة ومجلد بادئة مجهّزًا مسبقًا على هذا Mac. تبقى الإعدادات على هذا الكمبيوتر فقط ولا تُصدَّر.",
+    "scan_summary": "{files} ملفات · {size} ميغابايت",
+    "scanning": "جارٍ فحص المجلد…",
+    "no_candidates": "لم يُعثر على برامج Windows EXE أو Mac بتنسيق تدعمه آلية الاكتشاف.",
+    "pick_first": "اختر مجلد البرنامج أولًا.",
+    "entry_required": "اختر برنامج Windows أو Mac واحدًا على الأقل.",
+    "test_program": "اختبار البرنامج",
+    "test_help": "احفظ التغييرات قبل الاختبار. يفتح الاختبار الإصدار المحفوظ في نافذته الخاصة؛ بدء العملية لا يؤكد التوافق.",
+    "viewer_title": "برنامج محمول",
+    "viewer_launch": "فتح البرنامج",
+    "viewer_launching": "جارٍ بدء العملية…",
+    "viewer_started": "بدأت العملية.",
+    "viewer_started_wine": "بدأت العملية عبر Wine.",
+    "viewer_description": "يفتح في نافذة مستقلة للنظام. لا يُضمَّن البرنامج داخل العارض.",
+    "viewer_compatibility": "لا يحوّل البرامج بين أنظمة التشغيل. يتطلب Windows إصدارًا خاصًا به.",
+    "viewer_configure_wine": "إعداد Wine على هذا Mac",
+    "viewer_configuring_wine": "جارٍ إعداد Wine…",
+    "viewer_wine_ready": "تم إعداد Wine. انقر على فتح البرنامج لمحاولة تشغيله.",
+    "viewer_wine_help": "لتجربة إصدار Windows على هذا Mac، اضبط بيئة تشغيل Wine ومجلد بادئة مجهّزًا مسبقًا. يعتمد التوافق على البرنامج.",
+    "viewer_launch_error": "تعذّر بدء البرنامج: ",
+    "viewer_config_error": "تعذّر إعداد Wine: ",
+    "viewer_unavailable": "لا يدعم هذا الإصدار من العارض البرامج المحمولة.",
+    "viewer_invalid_result": "لم يؤكد النظام بدء العملية.",
+    "wine_ready": "تم إعداد Wine. احفظ الوحدة إذا لزم الأمر، ثم انقر على اختبار البرنامج."
   }
 }

@@ -10,7 +10,8 @@ const { createRequire } = require('node:module');
 const { pipeline } = require('stream/promises');
 const yazl = require('yazl');
 const yauzl = require('yauzl');
-const { exportProject, extractWindowsTemplate, safeProjectName } = require('../src/shared/project-export');
+const { exportProject, extractWindowsTemplate, inspectProjectAssets, safeProjectName } = require('../src/shared/project-export');
+const { importPortableProject } = require('../src/shared/portable-app');
 
 const APP = 'LaunchBox Viewer.app';
 const WINDOWS = [
@@ -42,6 +43,59 @@ function fixture(t) {
   const outputPath = path.join(root, 'export.zip');
   const config = { brand: { name: 'Curso António' }, content: [] };
   return { root, assetsDir, templatePath, outputPath, config, projectName: 'Curso António' };
+}
+
+function executableHeader(platform, fileType = 2) {
+  if (platform === 'mac') {
+    const bytes = Buffer.alloc(32);
+    bytes.writeUInt32LE(0xfeedfacf, 0);
+    bytes.writeUInt32LE(0x01000007, 4);
+    bytes.writeUInt32LE(3, 8);
+    bytes.writeUInt32LE(fileType, 12);
+    return bytes;
+  }
+  const bytes = Buffer.alloc(1024);
+  bytes.write('MZ', 0);
+  bytes.writeUInt32LE(0x80, 0x3c);
+  bytes.write('PE\0\0', 0x80);
+  bytes.writeUInt16LE(0x8664, 0x84);
+  bytes.writeUInt16LE(1, 0x86);
+  bytes.writeUInt16LE(0xf0, 0x94);
+  bytes.writeUInt16LE(0x22, 0x96);
+  bytes.writeUInt16LE(0x20b, 0x98);
+  return bytes;
+}
+
+function portableFixture(t, { windows = true, mac = true, symlinks = false, allowWine = false } = {}) {
+  const f = fixture(t);
+  const sourcePath = path.join(f.root, 'portable-source');
+  fs.mkdirSync(sourcePath);
+  if (windows) fs.writeFileSync(path.join(sourcePath, 'tool.exe'), executableHeader('windows'));
+  const bundle = 'Portable Tool.app';
+  if (mac) {
+    const contents = path.join(sourcePath, bundle, 'Contents');
+    fs.mkdirSync(path.join(contents, 'MacOS'), { recursive: true });
+    fs.mkdirSync(path.join(contents, 'Resources', 'empty-state'), { recursive: true });
+    fs.writeFileSync(path.join(contents, 'Info.plist'), '<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>Portable Tool</string><key>CFBundleIdentifier</key><string>example.portable.tool</string></dict></plist>');
+    fs.writeFileSync(path.join(contents, 'MacOS', 'Portable Tool'), executableHeader('mac'), { mode: 0o750 });
+    fs.writeFileSync(path.join(contents, 'Resources', 'settings.json'), '{"portable":true}', { mode: 0o640 });
+    const framework = path.join(contents, 'Frameworks', 'Demo.framework');
+    fs.mkdirSync(path.join(framework, 'Versions', 'A'), { recursive: true });
+    fs.writeFileSync(path.join(framework, 'Versions', 'A', 'Demo'), executableHeader('mac', 6), { mode: 0o755 });
+    if (symlinks) {
+      try {
+        fs.symlinkSync('A', path.join(framework, 'Versions', 'Current'), 'dir');
+        fs.symlinkSync('Versions/Current/Demo', path.join(framework, 'Demo'), 'file');
+      } catch (error) {
+        if (['EPERM', 'EACCES'].includes(error.code)) { t.skip('Symlink creation unavailable on this host.'); return null; }
+        throw error;
+      }
+    }
+  }
+  const data = importPortableProject({ sourcePath, assetsDir: f.assetsDir,
+    entries: { windows: windows ? 'tool.exe' : null, mac: mac ? bundle : null }, allowWine });
+  f.config.content.push({ id: 'portable-test', type: 'portable', title: 'Portable tool', data });
+  return { ...f, data, portableRoot: path.join(f.root, ...data.root.split('/')), bundle };
 }
 
 async function writeTemplate(filename, entries) {
@@ -109,6 +163,113 @@ test('Mac ZIP preserves all bundle bytes, executable modes and framework symlink
   assert.deepEqual(JSON.parse(entries.get('Curso António.data/data/project-config.json').data), f.config);
   assert.equal(entries.get('Curso António.data/dist-assets/logo.png').data.toString(), 'PNG');
   assert.equal([...entries.keys()].filter(name => name.startsWith('Curso António.app/')).length, MAC.length);
+});
+
+test('portable ZIP exports preserve safe app symlink bytes, executable modes and empty directories', async t => {
+  if (process.platform === 'win32') return t.skip('Windows cannot preserve Unix executable bits for native Mac asset exports.');
+  const f = portableFixture(t, { symlinks: true });
+  if (!f) return;
+  const executable = path.join(f.portableRoot, f.bundle, 'Contents', 'MacOS', 'Portable Tool');
+  const settings = path.join(f.portableRoot, f.bundle, 'Contents', 'Resources', 'settings.json');
+  const empty = path.join(f.portableRoot, f.bundle, 'Contents', 'Resources', 'empty-state');
+  if (process.platform !== 'win32') {
+    fs.chmodSync(f.portableRoot, 0o750);
+    fs.chmodSync(empty, 0o700);
+  }
+  for (const target of ['mac', 'windows']) {
+    await writeTemplate(f.templatePath, target === 'mac' ? MAC : WINDOWS);
+    const inspected = await inspectProjectAssets({ ...f, target });
+    assert.equal(inspected.links.length, 2);
+    assert.ok(inspected.files.every(item => item.kind === 'file'));
+    assert.ok(inspected.entries.some(item => item.kind === 'directory' && item.absolute === empty));
+    await exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = (target === 'mac' ? 'Curso António.data/' : 'resources/') + f.data.root;
+    const framework = base + '/' + f.bundle + '/Contents/Frameworks/Demo.framework';
+    assert.equal(entries.get(framework + '/Versions/Current').data.toString(), 'A');
+    assert.equal(entries.get(framework + '/Demo').data.toString(), 'Versions/Current/Demo');
+    assert.equal(entries.get(framework + '/Demo').mode & 0o170000, 0o120000);
+    assert.deepEqual(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').data, executableHeader('mac'));
+    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').mode, 0o100000 | (fs.statSync(executable).mode & 0o777));
+    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/Resources/settings.json').mode, 0o100000 | (fs.statSync(settings).mode & 0o777));
+    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/Resources/empty-state/').mode, 0o040000 | (fs.statSync(empty).mode & 0o777));
+    assert.equal(entries.get(base + '/').mode, 0o040000 | (fs.statSync(f.portableRoot).mode & 0o777));
+    assert.deepEqual(JSON.parse(entries.get((target === 'mac' ? 'Curso António.data/' : 'resources/') + 'data/project-config.json').data), f.config);
+  }
+});
+
+test('Mac portable export rejects executable permissions lost on import or later edits', async t => {
+  const f = portableFixture(t, { windows: false });
+  fs.chmodSync(path.join(f.portableRoot, f.bundle, 'Contents', 'MacOS', 'Portable Tool'), 0o644);
+  await writeTemplate(f.templatePath, MAC);
+  await assert.rejects(exportProject({ ...f, target: 'mac' }), /permiss|execut.*Mac|Mac.*execut/i);
+  assert.equal(fs.existsSync(f.outputPath), false);
+});
+
+test('portable export rejects missing native targets and permits an explicit Mac Wine option', async t => {
+  const windowsOnly = portableFixture(t, { mac: false });
+  await writeTemplate(windowsOnly.templatePath, MAC);
+  await assert.rejects(exportProject({ ...windowsOnly, target: 'mac' }), /Mac|macOS|Wine|compatível/i);
+  assert.equal(fs.existsSync(windowsOnly.outputPath), false);
+  windowsOnly.config.content[0].data.allowWine = true;
+  await exportProject({ ...windowsOnly, target: 'mac' });
+  const macOnly = portableFixture(t, { windows: false });
+  await writeTemplate(macOnly.templatePath, WINDOWS);
+  await assert.rejects(exportProject({ ...macOnly, target: 'windows' }), /Windows|compatível|executável/i);
+  assert.equal(fs.existsSync(macOnly.outputPath), false);
+});
+
+test('portable export rejects escaping, chained, dangling and cyclic symlinks without replacing output', async t => {
+  const f = portableFixture(t);
+  const marker = path.join(f.portableRoot, 'link');
+  try { fs.symlinkSync('tool.exe', marker, 'file'); fs.unlinkSync(marker); }
+  catch (error) { if (['EPERM', 'EACCES'].includes(error.code)) return t.skip('Symlink creation unavailable on this host.'); throw error; }
+  fs.writeFileSync(path.join(f.assetsDir, 'other-private.txt'), 'NOT PART OF PORTABLE APP');
+  await writeTemplate(f.templatePath, MAC);
+  fs.writeFileSync(f.outputPath, 'PREVIOUS EXPORT');
+  const invalidCases = [
+    [['link', path.join(f.assetsDir, 'other-private.txt')]],
+    [['link', '../other-private.txt']],
+    [['link', 'hop'], ['hop', '../other-private.txt']],
+    [['link', 'missing-file']],
+    [['link', 'hop'], ['hop', 'link']],
+    [['link', '.']]
+  ];
+  for (const links of invalidCases) {
+    for (const [name, destination] of links) fs.symlinkSync(destination, path.join(f.portableRoot, name), 'file');
+    await assert.rejects(exportProject({ ...f, target: 'mac' }), /ligaç|symlink|ciclo|cycle|fora|inexistente|ENOENT|ELOOP/i);
+    assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS EXPORT');
+    for (const [name] of links) fs.unlinkSync(path.join(f.portableRoot, name));
+  }
+  assert.equal(fs.readdirSync(f.root).filter(name => name.endsWith('.tmp')).length, 0);
+});
+
+test('portable symlink permission never extends to other assets or local web roots', async t => {
+  const f = portableFixture(t);
+  await writeTemplate(f.templatePath, WINDOWS);
+  const webRoot = path.join(f.assetsDir, 'web-12345678-1234-4234-8234-123456789abc');
+  fs.mkdirSync(webRoot);
+  fs.writeFileSync(path.join(webRoot, 'index.html'), '<h1>Local</h1>');
+  try { fs.symlinkSync('index.html', path.join(webRoot, 'linked.html'), 'file'); }
+  catch (error) { if (['EPERM', 'EACCES'].includes(error.code)) return t.skip('Symlink creation unavailable on this host.'); throw error; }
+  f.config.content.push({ id: 'web-test', type: 'local-web', data: { root: 'dist-assets/' + path.basename(webRoot), entry: 'index.html' } });
+  await assert.rejects(exportProject({ ...f, target: 'windows' }), /Recurso não permitido/);
+  fs.unlinkSync(path.join(webRoot, 'linked.html'));
+  f.config.content = [];
+  fs.symlinkSync('tool.exe', path.join(f.portableRoot, 'unregistered-link'), 'file');
+  await assert.rejects(exportProject({ ...f, target: 'windows' }), /Recurso não permitido/);
+});
+
+test('ordinary empty asset directories survive export without making content executable', async t => {
+  const f = fixture(t);
+  fs.mkdirSync(path.join(f.assetsDir, 'empty', 'nested'), { recursive: true });
+  fs.writeFileSync(path.join(f.assetsDir, 'ordinary.txt'), 'Content', { mode: 0o755 });
+  await writeTemplate(f.templatePath, WINDOWS);
+  await exportProject({ ...f, target: 'windows' });
+  const entries = await readZip(f.outputPath);
+  assert.equal(entries.get('resources/dist-assets/empty/').mode, 0o040755);
+  assert.equal(entries.get('resources/dist-assets/empty/nested/').mode, 0o040755);
+  assert.equal(entries.get('resources/dist-assets/ordinary.txt').mode, 0o100644);
 });
 
 test('PHP export is blocked unless the selected target template includes its runtime', async t => {
