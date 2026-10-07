@@ -51,9 +51,10 @@ function packageRuntime(target) {
     'Licenses are in licenses/. Source URLs, immutable versions and SHA-256 checksums are in runtime-manifest.json.',
     'Build configuration and compiler information are in build-info/ and runtime-manifest.json.',
     'To rebuild, copy sources/recipe/ to an empty writable project directory.',
-    'Install Node.js22+, make, pkg-config and NASM; use Apple clang on macOS, or MSYS2 MINGW64 gcc on Windows.',
+    'Install Node.js22+, curl, Git, tar, bzip2, make, pkg-config and NASM; use Apple clang on macOS, or MSYS2 MINGW64 gcc on Windows.',
     'Run bash scripts/build-ffmpeg.sh ' + target + ' on the corresponding native architecture.',
     'The recipe downloads only the pinned source archives and validates their SHA-256 before extraction.',
+    'If the x264 archive endpoint is unavailable, official Git at the exact pinned commit recreates the same archive bytes; its SHA-256 must still match.',
     'The shipped archives may instead be placed in dist/ffmpeg-sources/ for an offline source build.',
     'No changes were made to upstream FFmpeg or x264 source code.', ''
   ].join('\n'));

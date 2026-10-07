@@ -17,7 +17,8 @@ those executables. See the shipped `ffmpeg/README-SOURCES.txt`,
 
 ## Build from source
 
-Install Node.js 22 or later and the native compiler, make, pkg-config and NASM.
+Install Node.js 22 or later, curl, Git, tar, bzip2 and the native compiler, make,
+pkg-config and NASM.
 On Windows use MSYS2 MINGW64 with packages `make tar xz bzip2 diffutils
 mingw-w64-x86_64-gcc mingw-w64-x86_64-nasm mingw-w64-x86_64-pkgconf` and make
 Node.js available in the shell PATH. On macOS use Xcode command-line tools and
@@ -35,6 +36,10 @@ IPTV codecs, filters and network protocols, runs a CPU H.264/AAC transcode, chec
 the result with ffprobe, and creates `dist/runtime-native/<target>.tar.gz`.
 These tar archives preserve Unix executable permissions when transferred via CI.
 Sources already placed in `dist/ffmpeg-sources/` are reused after hash validation.
+Downloads use curl. If VideoLAN's archive endpoint rejects the request, the
+recipe fetches the exact pinned commit from official VideoLAN Git and recreates
+the archive with `git archive` and bzip2. Its bytes must match the same SHA-256;
+the fallback cannot silently change the source version or accepted content.
 
 Install the Windows artifact, or copy both Mac archives to `dist/runtime-native/`
 on a Mac and assemble the universal runtime:

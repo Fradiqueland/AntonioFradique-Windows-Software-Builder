@@ -17,6 +17,8 @@
       "file": "x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55.tar.bz2",
       "directory": "x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55",
       "url": "https://code.videolan.org/videolan/x264/-/archive/b35605ace3ddf7c1a5d67a2eb553f034aef41d55/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55.tar.bz2",
+      "gitRepository": "https://code.videolan.org/videolan/x264.git",
+      "gitCommit": "b35605ace3ddf7c1a5d67a2eb553f034aef41d55",
       "sha256": "6eeb82934e69fd51e043bd8c5b0d152839638d1ce7aa4eea65a3fedcf83ff224"
     }
   ]
