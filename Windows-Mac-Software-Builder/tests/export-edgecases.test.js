@@ -13,7 +13,7 @@ const engine = require('../src/shared/project-export');
 const { normalizePortableLink, importPortableProject } = require('../src/shared/portable-app');
 
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'export-edge-'));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'export-edge-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const assetsDir = path.join(root, 'dist-assets');
   fs.mkdirSync(assetsDir);
@@ -47,19 +47,30 @@ function loadEngineWithFs(replacement, platform = process.platform) {
   return holder.exports;
 }
 
-test('same-size resource mutation after streaming starts aborts without replacing the previous export', async t => {
+async function assertStreamingMutation(t, useAlias = false) {
   const f = fixture(t);
   await template(f.templatePath, 'windows');
+  if (useAlias) {
+    const alias = path.join(f.root, 'temp-alias');
+    try { fs.symlinkSync(f.root, alias, process.platform === 'win32' ? 'junction' : 'dir'); }
+    catch (error) { if (error.code === 'EPERM') return t.skip('Creating a temporary directory alias is not permitted.'); throw error; }
+    f.assetsDir = path.join(alias, 'dist-assets');
+  }
   const asset = path.join(f.assetsDir, 'large.bin');
   fs.writeFileSync(asset, Buffer.alloc(256 * 1024, 0x41));
+  const canonicalAsset = fs.realpathSync(asset);
   fs.writeFileSync(f.outputPath, 'PREVIOUS EXPORT');
+  let intercepted = false;
   let changed = false;
   const promises = new Proxy(fs.promises, {
     get(target, property) {
       if (property !== 'open') return Reflect.get(target, property);
       return async (...args) => {
         const handle = await fs.promises.open(...args);
-        if (args[0] !== asset) return handle;
+        // inspectAssets deliberately canonicalises paths. /var aliases on Mac
+        // and Windows short temp paths must still address this same open file.
+        if (fs.realpathSync(args[0]) !== canonicalAsset) return handle;
+        intercepted = true;
         return new Proxy(handle, {
           get(value, key) {
             if (key === 'createReadStream') return options => {
@@ -82,11 +93,19 @@ test('same-size resource mutation after streaming starts aborts without replacin
     }
   });
   const mockedFs = new Proxy(fs, { get(target, property) { return property === 'promises' ? promises : Reflect.get(target, property); } });
-  await assert.rejects(loadEngineWithFs(mockedFs).exportProject({ ...f, target: 'windows' }), /mudou durante a exportação/);
-  assert.equal(changed, true);
+  const outcome = await loadEngineWithFs(mockedFs).exportProject({ ...f, target: 'windows' }).then(
+    value => ({ value }), error => ({ error })
+  );
+  assert.equal(intercepted, true, 'The mutation hook must intercept the canonical asset descriptor.');
+  assert.equal(changed, true, 'The same-size write must occur after the first streamed chunk.');
+  assert.ok(outcome.error, 'An asset changed during streaming must reject the export.');
+  assert.match(outcome.error.message, /mudou durante a exportação/);
   assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS EXPORT');
-  assert.deepEqual(fs.readdirSync(f.root).sort(), ['dist-assets', 'output.zip', 'template.zip']);
-});
+  assert.deepEqual(fs.readdirSync(f.root).sort(), ['dist-assets', 'output.zip', 'template.zip', ...(useAlias ? ['temp-alias'] : [])].sort());
+}
+
+test('same-size resource mutation after streaming starts aborts without replacing the previous export', t => assertStreamingMutation(t));
+test('streaming mutation is detected when the source is addressed through a directory alias', t => assertStreamingMutation(t, true));
 
 test('project names leave space for filesystem suffixes even with emoji and decomposed Unicode', () => {
   for (const input of ['😀'.repeat(80), 'ǘ'.repeat(80), 'Curso António']) {

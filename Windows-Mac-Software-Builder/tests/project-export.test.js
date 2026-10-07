@@ -35,7 +35,7 @@ const MAC = [
 ];
 
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'builder-export-'));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'builder-export-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const assetsDir = path.join(root, 'dist-assets');
   fs.mkdirSync(assetsDir);
