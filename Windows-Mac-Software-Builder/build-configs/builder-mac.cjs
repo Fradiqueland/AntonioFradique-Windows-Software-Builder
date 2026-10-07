@@ -2,4 +2,10 @@
 process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
 const base = require('../package.json').build;
 const { runtimeResources } = require('./runtime-resources.cjs');
-module.exports = { ...base, extraResources: [...base.extraResources, ...runtimeResources('mac-universal')] };
+module.exports = {
+  ...base,
+  // @electron/universal 2 requires this explicit exception for identical
+  // binaries that were already merged and checked with lipo before packaging.
+  mac: { ...base.mac, x64ArchFiles: 'Contents/Resources/ffmpeg/{ffmpeg,ffprobe}' },
+  extraResources: [...base.extraResources, ...runtimeResources('mac-universal')]
+};

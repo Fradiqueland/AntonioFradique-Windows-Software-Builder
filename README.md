@@ -10,10 +10,10 @@ Na [compilação v2.1 do GitHub Actions](https://github.com/Fradiqueland/Antonio
 
 | Computador | Artefacto v2.1 | Instalador incluído |
 | --- | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.1.0-Windows` | Setup `.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.1.0-macOS` | `.dmg` universal |
+| Windows x64 | `Windows-Mac-Software-Builder-2.1.1-Windows` | Setup `.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.1.1-macOS` | `.dmg` universal |
 
-Os downloads requerem uma sessão GitHub e ficam disponíveis durante 30 dias após a execução. Extraia o ZIP do artefacto para obter o instalador e `SHA256SUMS.txt`. Certifique-se de que a execução e o instalador são da versão 2.1.0; instaladores anteriores não incluem o módulo portable.
+Os downloads requerem uma sessão GitHub e ficam disponíveis durante 30 dias após a execução. Extraia o ZIP do artefacto para obter o instalador e `SHA256SUMS.txt`. Certifique-se de que a execução e o instalador são da versão 2.1.1; a v2.1.0 já inclui o módulo portable, mas não esta correção IPTV.
 
 No Windows, execute o Setup. No Mac, abra o DMG e arraste **Windows & Mac Software Builder.app** para **Aplicações**. O instalador Windows não tem assinatura de editor; a aplicação Mac tem assinatura ad-hoc e não está notarizada pela Apple. O [guia de instalação](Windows-Mac-Software-Builder/BUILD-V2.md) explica a verificação dos ficheiros e as autorizações individuais do sistema.
 
@@ -25,7 +25,7 @@ No Windows, execute o Setup. No Mac, abra o DMG e arraste **Windows & Mac Softwa
 - Produtos com título, logótipo, cores, banners, redes sociais e formulários de captura de contactos.
 - Aplicações Windows e Mac com os conteúdos e recursos do projeto incluídos.
 
-PHP e o motor ffmpeg são opcionais: os seus binários não estão incluídos no repositório nem são descarregados pelo workflow. HTML funciona sem PHP; páginas PHP precisam de um runtime compatível incluído no Builder e no modelo de exportação.
+PHP continua opcional: páginas PHP precisam de um runtime compatível incluído no Builder e no modelo de exportação. HTML funciona sem PHP. A v2.1.1 prepara e inclui FFmpeg nas compilações Windows/Mac para converter canais IPTV que o leitor direto não consegue descodificar. Os binários compilados ficam nos pacotes, fora do código Git.
 
 ## Exportar os seus produtos
 
@@ -50,6 +50,7 @@ Esta regra não é universal: a navegação entre páginas da mesma origem local
 
 - [Guia de compilação, instalação e exportação](Windows-Mac-Software-Builder/BUILD-V2.md)
 - [Importar e executar software portable](Windows-Mac-Software-Builder/PORTABLE.md)
+- [IPTV: correção v2.1.1 e diagnóstico](Windows-Mac-Software-Builder/IPTV.md)
 - [Importar HTML/PHP e conhecer os limites](Windows-Mac-Software-Builder/IMPORTAR-HTML-PHP.md)
 - [Revisão de bugs e correções v2.1](Windows-Mac-Software-Builder/AUDITORIA-V2.1.md)
 - [Auditoria do produto e atualizações v2](Windows-Mac-Software-Builder/AUDITORIA-2026-10-04.md)

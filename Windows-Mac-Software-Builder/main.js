@@ -1031,96 +1031,39 @@ handleTrustedIpc('youtube:hostUrl', async (_event, id) => {
 });
 
 /* =========================================================
- * IPTV — retransmissão local via ffmpeg
- *
- * Há canais que o Chromium não consegue reproduzir através do MediaSource
- * (ex.: vídeo entrelaçado 1080i, muito comum em canais desportivos europeus):
- * o hls.js/mpegts.js entregam os dados e o Chromium descarta-os em silêncio.
- * O VLC reproduz porque descodifica ele próprio. Aqui o processo principal
- * lança o ffmpeg a ler o stream (como o VLC faria), remultiplexa para MP4
- * fragmentado sem recodificar o vídeo (áudio → AAC, para cobrir AC-3/MP2 que
- * o Chromium não descodifica) e serve o resultado em http://127.0.0.1 a um
- * <video> normal, que usa o descodificador nativo em vez do MSE.
- *
- * O ffmpeg.exe não vem no repositório: fica em vendor/ffmpeg/ (em dev) e é
- * copiado para resources/ffmpeg/ pelo electron-builder. Sem ele, este motor
- * simplesmente não existe e o Viewer usa os outros.
+ * IPTV — compatibility transcoding in a local FFmpeg process.
+ * Video is decoded and re-encoded as progressive H.264 Main 720p/30;
+ * remuxing (-c:v copy) cannot repair an unsupported source bitstream.
+ * The optional bundled runtime must provide libx264, AAC and the filters.
  * ========================================================= */
-const iptvProxyTargets = new Map();   // token → { url, createdAt }
-const iptvProxyRuns = new Map();      // token → { child, log:[], exitCode }
+const { createIptvProxy } = require('./src/shared/iptv-proxy');
 function ffmpegPath() {
-  const names = process.platform === 'win32' ? ['ffmpeg.exe'] : ['ffmpeg'];
-  const dirs = [runtimeDirectory('ffmpeg')];
-  for (const d of dirs) for (const n of names) { const p = path.join(d, n); if (fs.existsSync(p)) return p; }
-  return null;
+  const executable = path.join(runtimeDirectory('ffmpeg'), process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+  try { return fs.statSync(executable).isFile() ? executable : null; } catch (_) { return null; }
 }
-function stopIptvProxy(token) {
-  const run = iptvProxyRuns.get(token);
-  if (run && run.child) { try { run.child.kill('SIGKILL'); } catch (_) { /* noop */ } }
-}
+const iptvProxy = createIptvProxy({ getExecutable: ffmpegPath });
 function serveIptvProxy(token, req, res) {
-  const target = iptvProxyTargets.get(token);
-  const ff = ffmpegPath();
-  if (!target || !ff) { res.writeHead(404); res.end(); return; }
-  stopIptvProxy(token); // um pedido novo do <video> substitui o anterior (o Chromium por vezes repete o GET)
-  const args = [
-    '-hide_banner', '-loglevel', 'warning', '-nostdin',
-    '-user_agent', IPTV_USER_AGENT,
-    '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
-    '-fflags', '+genpts+discardcorrupt', '-analyzeduration', '3000000', '-probesize', '3000000',
-    '-i', target.url,
-    '-map', '0:v:0?', '-map', '0:a:0?',
-    '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-ac', '2', '-af', 'aresample=async=1',
-    '-f', 'mp4', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-frag_duration', '1000000',
-    'pipe:1'
-  ];
-  const child = spawn(ff, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-  const run = { child, log: [], exitCode: null, startedAt: Date.now() };
-  iptvProxyRuns.set(token, run);
-  child.stderr.setEncoding('utf8');
-  child.stderr.on('data', (chunk) => {
-    for (const line of String(chunk).split(/\r?\n/)) { if (line.trim()) { run.log.push(line.trim()); if (run.log.length > 40) run.log.shift(); } }
+  iptvProxy.serve(token, req, res).catch(() => {
+    if (res.destroyed || res.writableEnded) return;
+    if (!res.headersSent) { res.writeHead(502); res.end(); }
+    else res.destroy();
   });
-  res.writeHead(200, { 'Content-Type': 'video/mp4', 'Cache-Control': 'no-store', 'Connection': 'keep-alive' });
-  /* BUG CORRIGIDO ("write after end" ao trocar de canal): o pipe stdout→res
-   * termina a resposta sozinho quando o stdout acaba; chamar res.end() à mão
-   * no 'exit' deixava chunks ainda por escrever a bater numa resposta já
-   * fechada, e o erro (sem listener) rebentava o processo principal. Agora:
-   * sem end() manual, unpipe antes de matar o ffmpeg, e erros absorvidos. */
-  res.on('error', () => { /* cliente fechou a meio: irrelevante */ });
-  child.stdout.on('error', () => { /* noop */ });
-  const detach = () => { try { child.stdout.unpipe(res); } catch (_) { /* noop */ } };
-  child.stdout.pipe(res);
-  child.on('exit', (code) => { run.exitCode = code; run.child = null; });
-  child.on('error', (err) => {
-    run.log.push('spawn: ' + err.message); run.exitCode = -1; run.child = null;
-    detach();
-    if (!res.writableEnded) { try { res.end(); } catch (_) { /* noop */ } }
-  });
-  res.on('close', () => { detach(); try { child.kill('SIGKILL'); } catch (_) { /* noop */ } });
 }
 handleTrustedIpc('iptv:proxyUrl', async (_event, url) => {
-  const u = String(url || '');
-  if (!/^https?:\/\//i.test(u)) throw new Error('URL de stream inválido.');
-  if (!ffmpegPath()) return null;
-  // Limpeza de alvos antigos (tokens com > 1 h)
-  const now = Date.now();
-  for (const [t, v] of iptvProxyTargets) if (now - v.createdAt > 3600000) { iptvProxyTargets.delete(t); stopIptvProxy(t); iptvProxyRuns.delete(t); }
-  const token = crypto.randomBytes(12).toString('hex');
-  iptvProxyTargets.set(token, { url: u, createdAt: now });
-  const port = await ensureYoutubeHost();
-  return { url: 'http://127.0.0.1:' + port + '/iptv/' + token, token };
+  if (!await iptvProxy.available()) return null;
+  const token = iptvProxy.register(url);
+  try {
+    const port = await ensureYoutubeHost();
+    return { url: 'http://127.0.0.1:' + port + '/iptv/' + token, token };
+  } catch (error) { iptvProxy.stop(token); throw error; }
 });
-handleTrustedIpc('iptv:proxyStatus', (_event, token) => {
-  const run = iptvProxyRuns.get(String(token || ''));
-  return run ? { running: !!run.child, exitCode: run.exitCode, log: run.log.slice(-12) } : null;
-});
-handleTrustedIpc('iptv:proxyStop', (_event, token) => { stopIptvProxy(String(token || '')); return true; });
-handleTrustedIpc('iptv:hasFfmpeg', () => !!ffmpegPath());
+handleTrustedIpc('iptv:proxyStatus', (_event, token) => iptvProxy.status(token));
+handleTrustedIpc('iptv:proxyStop', (_event, token) => { iptvProxy.stop(String(token || '')); return true; });
+handleTrustedIpc('iptv:hasFfmpeg', () => iptvProxy.available());
 
 app.on('will-quit', () => {
   try { if (ytServer) ytServer.close(); } catch (_) { /* noop */ }
-  for (const t of iptvProxyRuns.keys()) stopIptvProxy(t);
+  iptvProxy.closeAll();
 });
 
 /* Rede de segurança: uma exceção num stream/socket não pode abrir a janela

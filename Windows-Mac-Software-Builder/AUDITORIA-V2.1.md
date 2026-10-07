@@ -25,6 +25,12 @@ Esta revisão acompanhou a adição do módulo Software portable. Os problemas a
 | Processador | Electron x64 em modo de tradução podia bloquear uma aplicação nativa ARM64 | Deteção da arquitetura efetiva do computador |
 | Motor de execução | Electron 32.3.3 estava fora de suporte | Dependência atualizada e fixada em Electron 44.6.0 |
 
+## Correção IPTV — v2.1.1
+
+O diagnóstico de reprodução mostrou segmentos recebidos, uma falha do descodificador e uma tentativa TS que ficava presa depois de apresentar apenas um fotograma. Foram corrigidos o tratamento de erros após o arranque, a recuperação HLS sem limite efetivo e a deteção de reprodução que deixa de avançar.
+
+O fallback passou de cópia de vídeo para conversão CPU H.264/AAC; o FFmpeg e as fontes/licenças correspondentes são agora obrigatórios nos pacotes Windows/Mac. Os novos diagnósticos ocultam credenciais e caminhos dos URLs. Os testes nativos usam streams sintéticos locais, verificam vários fotogramas apresentados no Electron e repetem a conversão com o código/runtime empacotados. Consulte [IPTV.md](IPTV.md).
+
 ## Verificação
 
 Execute `npm ci` e `npm test`. O workflow nativo executa os testes, cria os dois modelos de exportação, verifica exportações reais no Electron e compila os dois instaladores. O teste de software portable usa um processo nativo do próprio sistema e verifica também a cópia física de `app.asar` e a persistência dos ficheiros de trabalho.

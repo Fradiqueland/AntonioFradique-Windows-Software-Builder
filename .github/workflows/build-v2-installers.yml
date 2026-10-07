@@ -25,17 +25,85 @@ env:
   CSC_FOR_PULL_REQUEST: 'true'
 
 jobs:
+  ffmpeg-native:
+    name: FFmpeg from verified sources (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            runner: windows-latest
+          - target: mac-x64
+            runner: macos-15-intel
+          - target: mac-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install native Windows build tools
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
+        with:
+          msystem: MINGW64
+          update: true
+          path-type: inherit
+          install: >-
+            make tar xz bzip2 diffutils
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-nasm
+            mingw-w64-x86_64-pkgconf
+      - name: Install native Mac build tools
+        if: runner.os == 'macOS'
+        run: brew install nasm pkg-config
+      - name: Compile and transcode with native Windows FFmpeg
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          bash scripts/build-ffmpeg.sh '${{ matrix.target }}' 2>&1 | tee build-ffmpeg.log
+      - name: Compile and transcode with native Mac FFmpeg
+        if: runner.os == 'macOS'
+        run: bash scripts/build-ffmpeg.sh '${{ matrix.target }}' 2>&1 | tee build-ffmpeg.log
+      - name: Upload native runtime with exact sources and recipe
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ffmpeg-native-${{ matrix.target }}
+          path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Upload compiler diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ffmpeg-build-logs-${{ matrix.target }}
+          path: |
+            Windows-Mac-Software-Builder/build-ffmpeg.log
+            Windows-Mac-Software-Builder/dist/ffmpeg-build/**/config.log
+            Windows-Mac-Software-Builder/dist/ffmpeg-build/**/config.mak
+          if-no-files-found: ignore
+          retention-days: 14
+
   viewer-templates:
     name: Viewer template (${{ matrix.target }})
+    needs: ffmpeg-native
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: windows-x64
             platform: win
+            runtime: windows-x64
+            runtime-artifacts: ffmpeg-native-windows-x64
             runner: windows-latest
           - target: mac-universal
             platform: mac
+            runtime: mac-universal
+            runtime-artifacts: ffmpeg-native-mac-*
             runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
@@ -46,12 +114,22 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: Windows-Mac-Software-Builder/package-lock.json
+      - name: Download compiled FFmpeg and exact sources
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: ${{ matrix.runtime-artifacts }}
+          path: Windows-Mac-Software-Builder/dist/runtime-native
+          merge-multiple: true
+      - name: Install and verify native runtime
+        run: node scripts/install-ffmpeg-runtime.js '${{ matrix.runtime }}' 2>&1 | tee build-runtime.log
       - name: Install dependencies
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Test application
         run: npm test 2>&1 | tee build-tests.log
       - name: Build native viewer and archive
         run: npm run build:viewer:${{ matrix.platform }} 2>&1 | tee build-viewer.log
+      - name: Verify the packaged Viewer can transcode offline
+        run: node scripts/check-packaged-ffmpeg.js viewer 2>&1 | tee build-viewer-ffmpeg.log
       - name: Upload export template and manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -73,16 +151,20 @@ jobs:
 
   builder-installers:
     name: Builder installer (${{ matrix.target }})
-    needs: viewer-templates
+    needs: [viewer-templates, ffmpeg-native]
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: Windows
             platform: win
+            runtime: windows-x64
+            runtime-artifacts: ffmpeg-native-windows-x64
             runner: windows-latest
           - target: macOS
             platform: mac
+            runtime: mac-universal
+            runtime-artifacts: ffmpeg-native-mac-*
             runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -93,6 +175,14 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: Windows-Mac-Software-Builder/package-lock.json
+      - name: Download compiled FFmpeg and exact sources
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: ${{ matrix.runtime-artifacts }}
+          path: Windows-Mac-Software-Builder/dist/runtime-native
+          merge-multiple: true
+      - name: Install and verify native runtime
+        run: node scripts/install-ffmpeg-runtime.js '${{ matrix.runtime }}' 2>&1 | tee build-runtime.log
       - name: Install dependencies
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Download both platform templates
@@ -103,18 +193,24 @@ jobs:
           merge-multiple: true
       - name: Exercise real Electron exports and link navigation
         run: npm run test:electron 2>&1 | tee build-electron-smoke-source.log
+      - name: Play transcoded IPTV in real Electron from source
+        run: npm run test:electron:iptv 2>&1 | tee build-iptv-smoke-source.log
       - name: Build native Builder installer with both templates
         run: npm run build:builder:${{ matrix.platform }} 2>&1 | tee build-builder.log
+      - name: Verify the packaged Builder can transcode offline
+        run: node scripts/check-packaged-ffmpeg.js builder 2>&1 | tee build-builder-ffmpeg.log
       - name: Verify packaged app and both embedded templates
         run: npm run verify:package 2>&1 | tee build-verification.log
       - name: Exercise packaged export code and dependencies in real Electron
         run: npm run test:electron:packaged 2>&1 | tee build-electron-smoke-packaged.log
+      - name: Play transcoded IPTV using packaged code and FFmpeg
+        run: npm run test:electron:iptv:packaged 2>&1 | tee build-iptv-smoke-packaged.log
       - name: Write installer checksums
         run: npm run checksums 2>&1 | tee build-checksums.log
       - name: Upload installer
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Windows-Mac-Software-Builder-2.1.0-${{ matrix.target }}
+          name: Windows-Mac-Software-Builder-2.1.1-${{ matrix.target }}
           path: |
             Windows-Mac-Software-Builder/dist/builder/*.exe
             Windows-Mac-Software-Builder/dist/builder/*.dmg
@@ -130,5 +226,6 @@ jobs:
           path: |
             Windows-Mac-Software-Builder/build-*.log
             Windows-Mac-Software-Builder/build-electron-smoke-*.json
+            Windows-Mac-Software-Builder/build-iptv-smoke-*.json
           if-no-files-found: ignore
           retention-days: 14

@@ -111,6 +111,15 @@ function showToast(message) {
   setTimeout(() => t.remove(), 4000);
 }
 
+// Diagnostic copies must never include provider credentials carried in URL
+// userinfo, Xtream paths or query strings. Playback continues using the original.
+function redactDiagnosticUrls(message) {
+  return String(message).replace(/https?:\/\/[^\s<>"']+/gi, (value) => {
+    try { return new URL(value).origin + '/[caminho omitido]'; }
+    catch (_) { return '[URL omitido]'; }
+  });
+}
+
 function extractYoutubeId(input) {
   if (!input) return null;
   const raw = String(input).trim();
@@ -167,12 +176,18 @@ function destroyHls() {
     window.__iptvProxyToken = null;
   }
   if (currentHls) {
-    try { currentHls.destroy(); } catch (_) { /* noop */ }
+    const hls = currentHls;
     currentHls = null;
+    try { hls.destroy(); } catch (_) { /* noop */ }
   }
   if (currentTs) {
-    try { currentTs.pause(); currentTs.unload(); currentTs.detachMediaElement(); currentTs.destroy(); } catch (_) { /* noop */ }
+    const player = currentTs;
     currentTs = null;
+    // A failed decoder can make pause/unload throw. Still detach and destroy
+    // the engine so it cannot keep downloading or appending to a failed MSE.
+    for (const method of ['pause', 'unload', 'detachMediaElement', 'destroy']) {
+      try { player[method](); } catch (_) { /* continue the remaining cleanup */ }
+    }
   }
 }
 
@@ -1049,13 +1064,14 @@ async function renderIptv(data, moduleId) {
   diagBtn.addEventListener('click', () => diagBox.classList.toggle('hidden'));
   function logDiag(msg) {
     if (myGen !== stageGeneration) return;
+    const safeMessage = redactDiagnosticUrls(msg);
     const t = new Date();
     const hh = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
-    diagLines.push(hh + ' ' + msg);
+    diagLines.push(hh + ' ' + safeMessage);
     if (diagLines.length > 300) diagLines.shift();
     diagPre.textContent = diagLines.join('\n');
     diagPre.scrollTop = diagPre.scrollHeight;
-    console.log('[IPTV]', msg);
+    console.log('[IPTV]', safeMessage);
   }
   logDiag('Viewer v' + (window.__viewerVersion || '?') + ' · hls.js ' + (window.Hls ? (window.Hls.version || 'ok') : 'AUSENTE')
     + ' · mpegts.js ' + (window.mpegts ? (window.mpegts.version || 'ok') : 'AUSENTE') + ' · MSE ' + (window.MediaSource ? 'ok' : 'AUSENTE'));
@@ -1173,14 +1189,14 @@ async function renderIptv(data, moduleId) {
    *   - ficheiros (.mp4, .mp3…) → <video> nativo
    * Para URLs Xtream (/live/user/pass/ID.ext) tentam-se as duas variantes,
    * porque há canais que o servidor só serve num dos formatos. Um "watchdog"
-   * dá 20 s a cada tentativa: um canal que fica em preto sem erro passa ao
-   * motor seguinte em vez de ficar eternamente a rodar. */
+   * deteta falta de progresso tanto no arranque como depois do primeiro frame,
+   * passando ao motor seguinte em vez de deixar um canal parado a descarregar. */
   const XTREAM_LIVE = /^(.*\/live\/[^/]+\/[^/]+\/\d+)\.(ts|m3u8)(\?.*)?$/i;
   const FILE_EXT = /\.(mp4|m4v|webm|mkv|mov|mp3|m4a|aac|ogg|wav|flac)(\?|$)/i;
   let hasFfmpeg = false;
   let ffmpegReady = Promise.resolve();
   if (window.viewer && typeof window.viewer.iptvHasFfmpeg === 'function') {
-    ffmpegReady = window.viewer.iptvHasFfmpeg().then((v) => { hasFfmpeg = !!v; logDiag('ffmpeg local: ' + (hasFfmpeg ? 'disponível' : 'AUSENTE (vendor/ffmpeg/ffmpeg.exe)')); }).catch(() => {});
+    ffmpegReady = window.viewer.iptvHasFfmpeg().then((v) => { hasFfmpeg = !!v; logDiag('ffmpeg local: ' + (hasFfmpeg ? 'disponível' : 'AUSENTE neste produto')); }).catch(() => {});
   }
   function buildAttempts(url) {
     const x = XTREAM_LIVE.exec(url);
@@ -1200,6 +1216,13 @@ async function renderIptv(data, moduleId) {
 
   let playSeq = 0;
   let lastFailReason = '';
+  function mediaFailureReason(error) {
+    if (error && error.code === 3) {
+      return 'falha de descodificação (código 3): o vídeo pode usar um formato incompatível com este leitor'
+        + (hasFfmpeg ? '' : '; FFmpeg não está disponível neste produto para tentar a transcodificação');
+    }
+    return 'erro no leitor (código ' + (error && error.code) + ')';
+  }
   const isCurrent = (seq) => myGen === stageGeneration && seq === playSeq;
   function cancelAttempt() {
     if (attemptCleanup) { attemptCleanup(); attemptCleanup = null; }
@@ -1238,7 +1261,8 @@ async function renderIptv(data, moduleId) {
     const { engine, url } = attempts[idx];
     logDiag('tentativa ' + (idx + 1) + '/' + attempts.length + ' [' + engine + '] ' + url);
 
-    let done = false;
+    let done = false; // cancelled/failed, not merely started playing
+    let playing = false;
     let watchdog = null;
     let frameCallback = null;
     let videoError = null;
@@ -1256,44 +1280,72 @@ async function renderIptv(data, moduleId) {
     };
     function onVideoError(handler) {
       videoError = handler;
-      video.addEventListener('error', handler, { once: true });
+      video.addEventListener('error', handler);
     }
     const frames = () => {
       try { return video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality().totalVideoFrames : -1; } catch (_) { return -1; }
     };
+    let previousTime = video.currentTime;
+    let previousFrames = frames();
+    function watchProgress(delay = 15000) {
+      previousTime = video.currentTime;
+      previousFrames = frames();
+      clearTimeout(watchdog);
+      watchdog = setTimeout(checkProgress, delay);
+    }
+    function logProxyStatus() {
+      if (engine !== 'proxy' || !proxyToken) return;
+      window.viewer.iptvProxyStatus(proxyToken).then((st) => {
+        if (isCurrent(seq) && st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | '));
+      }).catch(() => {});
+    }
     const next = (reason) => {
       if (done || !isCurrent(seq)) return;
       done = true;
       stopWatching();
-      lastFailReason = engine + ': ' + reason;
+      lastFailReason = redactDiagnosticUrls(engine + ': ' + reason);
       logDiag('✗ [' + engine + '] ' + reason);
       runAttempt(attempts, idx + 1, seq);
     };
     const ok = (how) => {
-      if (done || !isCurrent(seq)) return;
-      done = true;
+      if (done || playing || !isCurrent(seq)) return;
+      playing = true;
       stopWatching();
+      watchProgress();
       logDiag('✓ [' + engine + '] a reproduzir (' + how + ', ' + video.videoWidth + 'x' + video.videoHeight + ')');
     };
+    // Decoder failures also arrive directly on <video>, without a usable HLS
+    // or MPEG-TS error. They are terminal for this attempt, even after frames.
+    onVideoError(() => {
+      if (done || !isCurrent(seq) || !video.error) return;
+      logProxyStatus();
+      next(mediaFailureReason(video.error));
+    });
     // Sucesso = frames de vídeo a serem realmente apresentados, não apenas o
     // evento "playing" (que dispara mesmo com o vídeo em preto).
     if (typeof video.requestVideoFrameCallback === 'function') {
       const onFrame = () => { frameCallback = null; if (!done && isCurrent(seq) && video.videoWidth > 0) ok('frame apresentado'); };
       try { frameCallback = video.requestVideoFrameCallback(onFrame); } catch (_) { /* noop */ }
     }
-    // Watchdog: ao fim de 15 s decide com base no que o <video> realmente fez.
-    watchdog = setTimeout(() => {
+    function checkProgress() {
       if (done || !isCurrent(seq)) return;
-      if (engine === 'proxy' && proxyToken) {
-        window.viewer.iptvProxyStatus(proxyToken).then((st) => { if (st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | ')); }).catch(() => {});
-      }
+      if (video.error) { logProxyStatus(); next(mediaFailureReason(video.error)); return; }
+      if (video.ended) { stopWatching(); return; }
+      // Pausing a working player is a user action, not a broken stream.
+      if (playing && video.paused) { watchProgress(); return; }
       const f = frames();
-      const advancing = video.currentTime > 0.5 && !video.paused;
-      if (advancing && f > 0) { ok('watchdog: ' + f + ' frames'); return; }
-      if (advancing && video.videoWidth === 0) { ok('watchdog: só áudio'); return; }
+      const advancing = Math.abs(video.currentTime - previousTime) > 0.05 && !video.paused;
+      const visibleProgress = video.videoWidth === 0 || f < 0 || f > previousFrames;
+      if (advancing && visibleProgress) {
+        if (playing) watchProgress();
+        else ok(video.videoWidth === 0 ? 'watchdog: só áudio' : 'watchdog: ' + f + ' frames');
+        return;
+      }
+      logProxyStatus();
       if (advancing) { next('a tocar mas sem frames de vídeo (' + video.videoWidth + 'x' + video.videoHeight + ', ' + f + ' frames) — codec não suportado?'); return; }
-      next('sem reprodução ao fim de 15 s (' + bufInfo() + ', frames ' + f + ')');
-    }, engine === 'proxy' ? 25000 : 15000);
+      next('sem progresso de reprodução (' + bufInfo() + ', frames ' + f + ')');
+    }
+    watchProgress(engine === 'proxy' ? 25000 : 15000);
 
     try {
       if (engine === 'hls') {
@@ -1302,11 +1354,19 @@ async function renderIptv(data, moduleId) {
         currentHls = hls;
         let recoveries = 0;
         hls.on(window.Hls.Events.ERROR, (_evt, d) => {
-          if (!d || !isCurrent(seq) || currentHls !== hls) return;
+          if (!d || done || !isCurrent(seq) || currentHls !== hls) return;
           const code = d.response && d.response.code ? ' HTTP ' + d.response.code : '';
           logDiag('hls ' + (d.fatal ? 'FATAL ' : '') + (d.details || d.type) + code + (d.reason ? ' — ' + d.reason : ''));
+          if (video.error) { next(mediaFailureReason(video.error)); return; }
           if (!d.fatal) return;
-          if (recoveries < 2 && d.type === window.Hls.ErrorTypes.MEDIA_ERROR) { recoveries++; hls.recoverMediaError(); return; }
+          if (recoveries < 2 && d.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+            recoveries++;
+            // Recovery can pause/detach the media element. That pause is not a
+            // user pause: require playback to start again within the watchdog.
+            playing = false;
+            watchProgress();
+            try { hls.recoverMediaError(); return; } catch (_) { /* try the next engine */ }
+          }
           next((d.details || d.type) + code);
         });
         hls.on(window.Hls.Events.BUFFER_CODECS, (_e, d) => {
@@ -1372,8 +1432,9 @@ async function renderIptv(data, moduleId) {
         );
         currentTs = player;
         player.on(M.Events.ERROR, (type, detail, info) => {
+          if (done || !isCurrent(seq) || currentTs !== player) return;
           logDiag('mpegts ERRO ' + type + ' / ' + detail + (info && info.msg ? ' — ' + info.msg : '') + (info && info.code ? ' (HTTP ' + info.code + ')' : ''));
-          if (currentTs === player) next(String(detail || type) + (info && info.code ? ' HTTP ' + info.code : ''));
+          next(video.error ? mediaFailureReason(video.error) : String(detail || type) + (info && info.code ? ' HTTP ' + info.code : ''));
         });
         let lastStat = 0;
         player.on(M.Events.STATISTICS_INFO, (st) => {
@@ -1403,16 +1464,6 @@ async function renderIptv(data, moduleId) {
           proxyToken = res.token;
           window.__iptvProxyToken = res.token;
           logDiag('ffmpeg a retransmitir via ' + res.url);
-          const explain = (why) => {
-            if (done || !isCurrent(seq)) return;
-            window.viewer.iptvProxyStatus(res.token).then((st) => {
-              if (done || !isCurrent(seq)) return;
-              if (st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | '));
-              if (st && st.exitCode !== null && st.exitCode !== undefined) logDiag('ffmpeg terminou com código ' + st.exitCode);
-              next(why);
-            }).catch(() => next(why));
-          };
-          onVideoError(() => explain('o <video> rejeitou o MP4 do ffmpeg' + (video.error ? ' (código ' + video.error.code + ')' : '')));
           video.src = res.url;
           Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
         }).catch((err) => next('proxy: ' + (err && err.message ? err.message : err)));
@@ -1420,7 +1471,6 @@ async function renderIptv(data, moduleId) {
       }
 
       // native
-      onVideoError(() => next('o navegador não conseguiu reproduzir este formato'));
       video.src = url;
       Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
     } catch (err) {

@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Windows & Mac Software Builder — construtor e exportação de aplicações Windows e macOS",
   "main": "main.js",
   "author": "AntonioFradique.net",
@@ -22,7 +22,9 @@
     "verify:package": "node scripts/verify-package.js",
     "checksums": "node scripts/write-checksums.js",
     "test:electron": "electron scripts/smoke-real-exports.cjs",
-    "test:electron:packaged": "electron scripts/smoke-real-exports.cjs --packaged"
+    "test:electron:packaged": "electron scripts/smoke-real-exports.cjs --packaged",
+    "test:electron:iptv": "electron scripts/smoke-iptv.cjs",
+    "test:electron:iptv:packaged": "electron scripts/smoke-iptv.cjs --packaged"
   },
   "build": {
     "appId": "com.launchbox.builder",
