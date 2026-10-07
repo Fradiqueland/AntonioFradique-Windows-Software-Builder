@@ -6,6 +6,11 @@ const I18N = {
   dict: {},
   ready: false
 };
+let projectGeneration = 0;
+let projectTransition = null;
+let contentMutation = null;
+let localeRequest = 0;
+const settingsWrites = new Set();
 
 function tRaw(key) {
   if (!key) return undefined;
@@ -42,8 +47,11 @@ function applyI18n(root = document) {
 }
 
 async function setLanguage(lang, { persist = true } = {}) {
+  const request = ++localeRequest;
+  const generation = projectGeneration;
   try {
     const { lang: applied, dict } = await window.icurator.loadLocale(lang);
+    if (request !== localeRequest || generation !== projectGeneration) return;
     I18N.lang = applied;
     I18N.dict = dict;
     I18N.ready = true;
@@ -155,11 +163,52 @@ document.querySelectorAll('.panel.collapsible .section-head h2').forEach((h) => 
 const autosaveTimers = new WeakMap();
 function queueAutosave(form) {
   if (!form) return;
+  const generation = projectGeneration;
   clearTimeout(autosaveTimers.get(form));
   autosaveTimers.set(form, setTimeout(() => {
+    if (generation !== projectGeneration || projectTransition) return;
     if (typeof form.reportValidity === 'function' && !form.checkValidity()) { form.reportValidity(); return; }
     form.requestSubmit();
   }, 250));
+}
+
+function beginSettingsSave(form) {
+  if (projectTransition || settingsWrites.has(form)) return false;
+  if (contentMutation) { queueAutosave(form); return false; }
+  settingsWrites.add(form);
+  form.inert = true;
+  updateBuilderBusyUI();
+  return true;
+}
+
+function endSettingsSave(form) {
+  settingsWrites.delete(form);
+  form.inert = !!projectTransition;
+  updateBuilderBusyUI();
+}
+
+async function pickForCurrentProject(pick, showStatus) {
+  if (projectTransition) return null;
+  const generation = projectGeneration;
+  try {
+    const result = await pick();
+    return generation === projectGeneration ? result : null;
+  } catch (err) {
+    if (generation === projectGeneration) showStatus(t('common.error_prefix') + err.message, 'error');
+    return null;
+  }
+}
+
+function updateBuilderBusyUI() {
+  const writing = !!contentMutation || settingsWrites.size > 0;
+  document.querySelectorAll('.panel').forEach((panel) => { panel.inert = !!projectTransition; });
+  if (projectsListEl) projectsListEl.inert = writing || !!projectTransition || exportInProgress;
+  if (projectNewForm) projectNewForm.inert = writing || !!projectTransition || exportInProgress;
+  contentList.inert = writing || !!projectTransition;
+  contentAddBtn.disabled = !!projectTransition;
+  if (contentEditorSave) contentEditorSave.disabled = writing || !!projectTransition || !TYPE_KEYS.includes(moduleType.value)
+    || (moduleType.value === 'portable' && !!portableOperation);
+  updateExportButton();
 }
 document.querySelectorAll('form.autosave').forEach((form) => {
   form.addEventListener('change', () => queueAutosave(form));
@@ -285,7 +334,7 @@ Object.keys(colorInputs).forEach((key) => {
 const logoPickLabel = document.querySelector('label[for="brand-logo"]');
 if (logoPickLabel) logoPickLabel.addEventListener('click', async (e) => {
   e.preventDefault();
-  const picked = await window.icurator.pickFile('image');
+  const picked = await pickForCurrentProject(() => window.icurator.pickFile('image'), showBrandStatus);
   if (!picked) return;
   brandState.pendingLogoSourcePath = picked.path;
   brandState.pendingRemoveLogo = false;
@@ -305,6 +354,7 @@ logoRemoveBtn.addEventListener('click', () => {
 
 brandForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!beginSettingsSave(brandForm)) return;
   brandSaveBtn.disabled = true;
   showBrandStatus(t('common.saving'), '');
   const justPickedLogo = brandState.pendingLogoSourcePath;
@@ -337,6 +387,7 @@ brandForm.addEventListener('submit', async (e) => {
     showBrandStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     brandSaveBtn.disabled = false;
+    endSettingsSave(brandForm);
   }
 });
 
@@ -369,6 +420,7 @@ function fillSocialInputs(social) {
 if (socialForm) {
   socialForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!beginSettingsSave(socialForm)) return;
     socialSaveBtn.disabled = true;
     showSocialStatus(t('common.saving'), '');
     try {
@@ -384,6 +436,7 @@ if (socialForm) {
       showSocialStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
     } finally {
       socialSaveBtn.disabled = false;
+      endSettingsSave(socialForm);
     }
   });
 }
@@ -400,20 +453,23 @@ const showLeadsStatus = makeStatus(document.getElementById('leads-status'));
 
 leadsForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!beginSettingsSave(leadsForm)) return;
   leadsSaveBtn.disabled = true;
   showLeadsStatus(t('common.saving'), '');
   try {
-    await window.icurator.saveLeadsConfig({
+    const updated = await window.icurator.saveLeadsConfig({
       enabled: leadsEnabled.checked,
       heading: leadsHeading.value,
       formHtml: leadsHtml.value
     });
+    updateExportSummary(updated);
     showLeadsStatus(t('common.saved'), 'success');
   } catch (err) {
     console.error(err);
     showLeadsStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     leadsSaveBtn.disabled = false;
+    endSettingsSave(leadsForm);
   }
 });
 
@@ -438,7 +494,7 @@ function makeBannerSlot(slotName) {
   const pickLabel = document.querySelector('label[for="banner-' + slotName + '-image"]');
   if (pickLabel) pickLabel.addEventListener('click', async (e) => {
     e.preventDefault();
-    const picked = await window.icurator.pickFile('image');
+    const picked = await pickForCurrentProject(() => window.icurator.pickFile('image'), showBannerStatus);
     if (!picked) return;
     state.pendingImageSourcePath = picked.path;
     state.pendingRemoveImage = false;
@@ -503,6 +559,7 @@ const bannerBottomSlot = makeBannerSlot('bottom');
 
 bannerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!beginSettingsSave(bannerForm)) return;
   bannerSaveBtn.disabled = true;
   showBannerStatus(t('common.saving'), '');
   const justPickedTop = bannerTopSlot.state.pendingImageSourcePath;
@@ -522,6 +579,7 @@ bannerForm.addEventListener('submit', async (e) => {
     showBannerStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     bannerSaveBtn.disabled = false;
+    endSettingsSave(bannerForm);
   }
 });
 
@@ -657,6 +715,7 @@ let contentModules = [];
 let editingId = null;        // id of module being edited (null = creating new)
 let pendingFileSourcePath = null;  // absolute path picked in <input type=file> for current edit
 let pendingFileName = null;
+const pendingFilesByType = new Map();
 let pendingWebSourcePath = null;
 let editorGeneration = 0;   // ignore a file dialog result after switching projects/editors
 let pendingPortableSourcePath = null;
@@ -667,6 +726,8 @@ let portableOperation = null;
 let portableStatus = null;
 let portableHostPlatform = '';
 let activeDynamicType = '';
+let editorRevision = 0;
+let iptvRequest = 0;
 let galleryItems = [];       // current gallery editor items ({kind:'existing'|'new', ...})
 let iptvChannels = [];       // resolved channels for the module being edited (non-manual sources)
 let iptvManual = [];         // manual channel rows [{name,url}]
@@ -677,6 +738,11 @@ function showDynamicGroup(type) {
     editorGeneration++;
     portableOperation = null;
     activeDynamicType = type;
+    const fileDraft = pendingFilesByType.get(type);
+    pendingFileSourcePath = fileDraft ? fileDraft.path : null;
+    pendingFileName = fileDraft ? fileDraft.name : null;
+    iptvRequest++;
+    dyn.iptv.load.disabled = false;
   }
   dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
   syncTypeUI(type);
@@ -711,7 +777,7 @@ function updatePortableActions() {
   dyn.portable.configureWine.disabled = busy;
   dyn.portable.configureWine.classList.toggle('hidden', portableHostPlatform !== 'darwin');
   dyn.portable.wineHelp.classList.toggle('hidden', portableHostPlatform !== 'darwin');
-  if (moduleType.value === 'portable') contentEditorSave.disabled = busy;
+  if (moduleType.value === 'portable') contentEditorSave.disabled = busy || !!contentMutation || !!projectTransition || settingsWrites.size > 0;
 }
 
 function setPortableStatus(key, kind = '', detail = '') {
@@ -827,7 +893,7 @@ function syncTypeUI(type) {
   if (typePickHint) typePickHint.classList.toggle('hidden', chosen);
   if (typeChosenEl) typeChosenEl.classList.toggle('hidden', !chosen);
   if (typeChipEl) typeChipEl.textContent = chosen ? ((TYPE_ICON[type] || '') + ' ' + typeLabel(type)) : '';
-  if (contentEditorSave) contentEditorSave.disabled = !chosen;
+  if (contentEditorSave) contentEditorSave.disabled = !chosen || !!contentMutation || !!projectTransition || settingsWrites.size > 0;
 }
 
 const typeChangeBtn = document.getElementById('type-change');
@@ -851,6 +917,9 @@ function setFileCurrentText(type, text, hasFile) {
 
 function clearEditor() {
   editorGeneration++;
+  editorRevision++;
+  iptvRequest++;
+  pendingFilesByType.clear();
   editingId = null;
   pendingFileSourcePath = null;
   pendingFileName = null;
@@ -888,6 +957,7 @@ function clearEditor() {
   iptvManual = [];
   iptvM3uPath = null;
   if (dyn.iptv.source) dyn.iptv.source.value = 'xtream';
+  if (dyn.iptv.load) dyn.iptv.load.disabled = false;
   if (dyn.iptv.xtreamUrl) dyn.iptv.xtreamUrl.value = '';
   if (dyn.iptv.xtreamUser) dyn.iptv.xtreamUser.value = '';
   if (dyn.iptv.xtreamPass) dyn.iptv.xtreamPass.value = '';
@@ -1071,41 +1141,46 @@ function renderContentList() {
   });
 }
 
-async function persistContent(successMessage, expectedEditorGeneration = null) {
-  // Send the in-memory list to main; for the module being edited, pendingFileSourcePath
-  // (if any) is already attached inside its data.sourcePath.
+async function persistContent(successMessage, proposedModules = contentModules) {
+  if (contentMutation || projectTransition || settingsWrites.size > 0 || exportInProgress) return false;
+  const operation = { generation: projectGeneration };
+  contentMutation = operation;
+  updateBuilderBusyUI();
   const payload = {
-    modules: contentModules.map((m) => ({
-      id: m.id,
-      title: m.title,
-      type: m.type,
-      data: m.data || {},
-      password: m.password || ''
-    }))
+    modules: proposedModules.map((m) => ({ id: m.id, title: m.title, type: m.type,
+      data: m.data || {}, password: m.password || '' }))
   };
-  const updated = await window.icurator.saveContent(payload);
-  if (expectedEditorGeneration !== null && expectedEditorGeneration !== editorGeneration) return false;
-  contentModules = Array.isArray(updated.content) ? updated.content : [];
-  // After persistence, sourcePath has been consumed — clear pending.
-  pendingFileSourcePath = null;
-  pendingFileName = null;
-  renderContentList();
-  // Keep the Export summary's module count in sync (it was stale at "0"
-  // after adding modules because only load/brand/banner saves refreshed it).
-  updateExportSummary(updated);
-  if (successMessage) showContentStatus(successMessage, 'success');
+  try {
+    const updated = await window.icurator.saveContent(payload);
+    if (operation.generation !== projectGeneration) return false;
+    contentModules = Array.isArray(updated.content) ? updated.content : [];
+    // A reorder/delete must not consume a file selected in a different draft.
+    renderContentList();
+    updateExportSummary(updated);
+    if (successMessage) showContentStatus(successMessage, 'success');
+    return true;
+  } finally {
+    if (contentMutation === operation) {
+      contentMutation = null;
+      updateBuilderBusyUI();
+      updatePortableActions();
+    }
+  }
 }
 
 async function moveModule(id, delta) {
+  if (contentMutation || projectTransition || settingsWrites.size > 0) return;
   const idx = contentModules.findIndex((m) => m.id === id);
-  if (idx < 0) return;
   const newIdx = idx + delta;
-  if (newIdx < 0 || newIdx >= contentModules.length) return;
-  const [item] = contentModules.splice(idx, 1);
-  contentModules.splice(newIdx, 0, item);
+  if (idx < 0 || newIdx < 0 || newIdx >= contentModules.length) return;
+  const proposed = contentModules.slice();
+  const [item] = proposed.splice(idx, 1);
+  proposed.splice(newIdx, 0, item);
+  const generation = projectGeneration;
   try {
-    await persistContent(t('content.order_updated'));
+    await persistContent(t('content.order_updated'), proposed);
   } catch (err) {
+    if (generation !== projectGeneration) return;
     console.error(err);
     showContentStatus(t('content.reorder_error_prefix') + err.message, 'error');
   }
@@ -1139,17 +1214,16 @@ function askDeleteModule(li, mod) {
 }
 
 async function deleteModule(id) {
-  const mod = contentModules.find((m) => m.id === id);
-  if (!mod) return;
-  const previousModules = contentModules.slice();
-  contentModules = contentModules.filter((m) => m.id !== id);
-  if (editingId === id) hideEditor();
-  const generation = editorGeneration;
+  if (contentMutation || projectTransition || settingsWrites.size > 0) return;
+  if (!contentModules.some((mod) => mod.id === id)) return;
+  const generation = projectGeneration;
+  const proposed = contentModules.filter((mod) => mod.id !== id);
   try {
-    await persistContent(t('content.module_deleted'), generation);
+    const applied = await persistContent(t('content.module_deleted'), proposed);
+    if (applied && editingId === id) hideEditor();
   } catch (err) {
-    if (generation !== editorGeneration) return;
-    contentModules = previousModules;
+    if (generation !== projectGeneration) return;
+    // The saved list and the open draft stay intact until deletion succeeds.
     renderContentList();
     console.error(err);
     showContentStatus(t('content.delete_error_prefix') + err.message, 'error');
@@ -1161,6 +1235,8 @@ async function deleteModule(id) {
 contentAddBtn.addEventListener('click', () => openEditorForNew());
 contentEditorClose.addEventListener('click', () => hideEditor());
 contentEditorCancel.addEventListener('click', () => hideEditor());
+contentForm.addEventListener('input', () => { editorRevision++; });
+contentForm.addEventListener('change', () => { editorRevision++; });
 
 moduleType.addEventListener('change', () => {
   showDynamicGroup(moduleType.value);
@@ -1180,6 +1256,7 @@ dyn.portable.pick.addEventListener('click', async () => {
     const candidates = picked.candidates.filter((item) => item && typeof item.path === 'string'
       && ['windows', 'mac'].includes(item.platform));
     if (!candidates.length) { setPortableStatus('no_candidates', 'error'); return; }
+    editorRevision++;
     pendingPortableSourcePath = picked.sourcePath;
     portableCandidates = candidates;
     portableSourceName = picked.sourceName || '';
@@ -1259,16 +1336,30 @@ const FILE_PICK_CATEGORY = {
   'download-vault': 'download'
 };
 
+async function pickForCurrentEditor(pick, type) {
+  const generation = editorGeneration;
+  const project = projectGeneration;
+  try {
+    const result = await pick();
+    return generation === editorGeneration && project === projectGeneration && moduleType.value === type ? result : null;
+  } catch (err) {
+    if (generation === editorGeneration && project === projectGeneration) showContentStatus(t('common.error_prefix') + err.message, 'error');
+    return null;
+  }
+}
+
 function bindFilePicker(type) {
   const input = dyn[type].file;
   const label = document.querySelector('label[for="' + input.id + '"]');
   const category = FILE_PICK_CATEGORY[type] || 'launch';
   if (label) label.addEventListener('click', async (e) => {
     e.preventDefault();
-    const picked = await window.icurator.pickFile(category);
+    const picked = await pickForCurrentEditor(() => window.icurator.pickFile(category), type);
     if (!picked) return;
     pendingFileSourcePath = picked.path;
     pendingFileName = picked.name;
+    pendingFilesByType.set(type, { path: picked.path, name: picked.name });
+    editorRevision++;
     setFileNameForInput(input, picked.name);
     setFileCurrentText(type, t('content.file_new_prefix') + (pendingFileName || pendingFileSourcePath), true);
   });
@@ -1288,6 +1379,7 @@ dyn['local-web'].pick.addEventListener('click', async () => {
       showContentStatus(t('content.local_web.invalid_file'), 'error');
       return;
     }
+    editorRevision++;
     pendingWebSourcePath = picked.path;
     dyn['local-web'].name.textContent = picked.name;
     dyn['local-web'].name.removeAttribute('data-i18n');
@@ -1322,7 +1414,7 @@ function renderGalleryList() {
     rm.className = 'icon-btn danger';
     rm.textContent = '✕';
     rm.title = t('content.btn_delete');
-    rm.addEventListener('click', () => { galleryItems.splice(idx, 1); renderGalleryList(); });
+    rm.addEventListener('click', () => { editorRevision++; galleryItems.splice(idx, 1); renderGalleryList(); });
     li.append(name, rm);
     list.appendChild(li);
   });
@@ -1330,8 +1422,9 @@ function renderGalleryList() {
 
 if (dyn['image-gallery'].addBtn) {
   dyn['image-gallery'].addBtn.addEventListener('click', async () => {
-    const picked = await window.icurator.pickFiles('image');
+    const picked = await pickForCurrentEditor(() => window.icurator.pickFiles('image'), 'image-gallery');
     if (!Array.isArray(picked) || picked.length === 0) return;
+    editorRevision++;
     for (const p of picked) galleryItems.push({ kind: 'new', path: p.path, name: p.name });
     renderGalleryList();
   });
@@ -1387,25 +1480,38 @@ function renderIptvManualList() {
     rm.className = 'icon-btn danger';
     rm.textContent = '✕';
     rm.title = t('content.iptv.manual_remove', 'Remover');
-    rm.addEventListener('click', () => { iptvManual.splice(idx, 1); renderIptvManualList(); });
+    rm.addEventListener('click', () => { editorRevision++; iptvManual.splice(idx, 1); renderIptvManualList(); });
     li.append(nameIn, urlIn, rm);
     list.appendChild(li);
   });
 }
 
+function invalidateIptvChannels() {
+  iptvRequest++;
+  iptvChannels = [];
+  dyn.iptv.load.disabled = false;
+  setIptvStatus(t('content.iptv.no_channels'), '');
+}
+for (const input of [dyn.iptv.xtreamUrl, dyn.iptv.xtreamUser, dyn.iptv.xtreamPass, dyn.iptv.m3u8Url]) {
+  input.addEventListener('input', invalidateIptvChannels);
+}
+
 if (dyn.iptv.source) {
-  dyn.iptv.source.addEventListener('change', () => updateIptvSourceUI());
+  dyn.iptv.source.addEventListener('change', () => { invalidateIptvChannels(); updateIptvSourceUI(); });
 }
 if (dyn.iptv.manualAdd) {
   dyn.iptv.manualAdd.addEventListener('click', () => {
+    editorRevision++;
     iptvManual.push({ name: '', url: '' });
     renderIptvManualList();
   });
 }
 if (dyn.iptv.m3uPick) {
   dyn.iptv.m3uPick.addEventListener('click', async () => {
-    const picked = await window.icurator.pickFile('playlist');
+    const picked = await pickForCurrentEditor(() => window.icurator.pickFile('playlist'), 'iptv');
     if (!picked) return;
+    invalidateIptvChannels();
+    editorRevision++;
     iptvM3uPath = picked.path;
     if (dyn.iptv.m3uName) dyn.iptv.m3uName.textContent = picked.name;
   });
@@ -1439,10 +1545,14 @@ if (dyn.iptv.load) {
     } else {
       return;
     }
+    const generation = editorGeneration;
+    const request = ++iptvRequest;
     dyn.iptv.load.disabled = true;
     setIptvStatus(t('content.iptv.loading', 'A carregar canais…'), '');
     try {
       const res = await window.icurator.iptvLoad(payload);
+      if (generation !== editorGeneration || request !== iptvRequest) return;
+      editorRevision++;
       if (res && res.ok) {
         iptvChannels = Array.isArray(res.channels) ? res.channels : [];
         setIptvStatus(t('content.iptv.loaded_count').replace('{count}', String(res.count || iptvChannels.length)), 'success');
@@ -1451,10 +1561,11 @@ if (dyn.iptv.load) {
         setIptvStatus((res && res.error) ? res.error : t('content.iptv.load_error', 'Não foi possível carregar os canais.'), 'error');
       }
     } catch (err) {
+      if (generation !== editorGeneration || request !== iptvRequest) return;
       iptvChannels = [];
       setIptvStatus(t('content.iptv.load_error', 'Não foi possível carregar os canais.') + ' ' + (err && err.message ? err.message : ''), 'error');
     } finally {
-      dyn.iptv.load.disabled = false;
+      if (generation === editorGeneration && request === iptvRequest) dyn.iptv.load.disabled = false;
     }
   });
 }
@@ -1467,7 +1578,8 @@ contentForm.addEventListener('submit', async (e) => {
   const password = modulePassword ? modulePassword.value.trim() : '';
   if (!title) { moduleTitle.focus(); return; }
   if (!TYPE_KEYS.includes(type)) return;
-  if (type === 'portable' && portableOperation) return;
+  if (contentMutation || projectTransition || settingsWrites.size > 0 || exportInProgress
+      || (type === 'portable' && portableOperation)) return;
 
   // Build the data object for this module
   let data = {};
@@ -1530,55 +1642,26 @@ contentForm.addEventListener('submit', async (e) => {
     if (type === 'download-vault') data.buttonLabel = dyn['download-vault'].btn.value.trim();
   }
 
-  // Keep a saved snapshot for portable test actions if persistence fails.
-  const previousPortableModules = type === 'portable' ? contentModules.slice() : null;
-  const previousEditingId = editingId;
-  const portableSaveOperation = type === 'portable' ? { generation: editorGeneration } : null;
-  // Update or insert in the local list
-  if (editingId) {
-    const idx = contentModules.findIndex((m) => m.id === editingId);
-    if (idx >= 0) {
-      // If editing and changing type, drop the old file association so GC kicks in.
-      const old = contentModules[idx];
-      const typeChanged = old.type !== type;
-      contentModules[idx] = {
-        id: old.id,
-        title,
-        type,
-        data: typeChanged ? data : data,
-        password
-      };
-    }
-  } else {
-    const newMod = { id: uuid(), title, type, data, password };
-    contentModules.push(newMod);
-    editingId = newMod.id;
-  }
-
-  if (portableSaveOperation) { portableOperation = portableSaveOperation; updatePortableActions(); }
+  const generation = editorGeneration;
+  const revision = editorRevision;
+  const currentProject = projectGeneration;
+  const savedId = editingId || uuid();
+  const module = { id: savedId, title, type, data, password };
+  const proposed = contentModules.some((item) => item.id === savedId)
+    ? contentModules.map((item) => item.id === savedId ? module : item)
+    : [...contentModules, module];
   try {
-    const applied = await persistContent(t('content.module_saved'), portableSaveOperation ? portableSaveOperation.generation : null);
-    if (applied === false) return;
-    // After save, re-open the editor on the (now updated) module so the user
-    // sees the persisted state (e.g. the new file path).
-    const savedId = editingId;
+    const applied = await persistContent(t('content.module_saved'), proposed);
+    if (!applied || currentProject !== projectGeneration || generation !== editorGeneration) return;
+    // A newer password, title or other draft input must survive a slow save.
+    editingId = savedId;
+    if (revision !== editorRevision) { renderContentList(); updatePortableActions(); return; }
     hideEditor();
-    if (savedId) openEditorForEdit(savedId);
+    openEditorForEdit(savedId);
   } catch (err) {
-    if (portableSaveOperation && portableSaveOperation.generation !== editorGeneration) return;
-    if (previousPortableModules) {
-      contentModules = previousPortableModules;
-      editingId = previousEditingId;
-      renderContentList();
-      updatePortableActions();
-    }
+    if (currentProject !== projectGeneration) return;
     console.error(err);
     showContentStatus(t('common.error_prefix') + err.message, 'error');
-  } finally {
-    if (portableSaveOperation && portableOperation === portableSaveOperation) {
-      portableOperation = null;
-      updatePortableActions();
-    }
   }
 });
 
@@ -1586,6 +1669,9 @@ contentForm.addEventListener('submit', async (e) => {
  * Initial load
  * ========================================================= */
 async function applyConfig(config) {
+  editorGeneration++;
+  iptvRequest++;
+  portableOperation = null;
   {
     // --- Brand
     const brand = config.brand || {};
@@ -1651,6 +1737,7 @@ async function applyConfig(config) {
 }
 
 async function loadInitialConfig() {
+  if (!beginProjectTransition()) return;
   try {
     await loadExportTargets();
     const config = await window.icurator.loadConfig();
@@ -1658,7 +1745,7 @@ async function loadInitialConfig() {
     await refreshProjects();
   } catch (err) {
     console.error('Falha ao carregar configuração inicial:', err);
-  }
+  } finally { endProjectTransition(); }
 }
 
 /* =========================================================
@@ -1675,6 +1762,23 @@ const activeProjectName = document.getElementById('active-project-name');
 const activeProjectCloseBtn = document.getElementById('active-project-close');
 
 let projectsCache = { activeId: null, projects: [] };
+
+function beginProjectTransition() {
+  if (projectTransition || contentMutation || settingsWrites.size > 0 || exportInProgress) return false;
+  projectTransition = {};
+  projectGeneration++;
+  editorGeneration++;
+  iptvRequest++;
+  portableOperation = null;
+  updateBuilderBusyUI();
+  return true;
+}
+
+function endProjectTransition() {
+  projectTransition = null;
+  updateBuilderBusyUI();
+  updatePortableActions();
+}
 
 function activeProjectLabel() {
   const p = projectsCache.projects.find((x) => x.id === projectsCache.activeId);
@@ -1746,8 +1850,11 @@ function renderProjectsList() {
 }
 
 async function refreshProjects() {
+  const generation = projectGeneration;
   try {
-    projectsCache = await window.icurator.projectsList();
+    const state = await window.icurator.projectsList();
+    if (generation !== projectGeneration) return;
+    projectsCache = state;
     renderProjectsList();
   } catch (err) {
     console.error('Falha a listar projetos:', err);
@@ -1755,7 +1862,9 @@ async function refreshProjects() {
 }
 
 async function openProject(id) {
+  if (projectTransition) return;
   if (id === projectsCache.activeId) { goToTab('content'); return; }
+  if (!beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsOpen(id);
     projectsCache = res.state;
@@ -1765,7 +1874,7 @@ async function openProject(id) {
   } catch (err) {
     console.error('Falha a abrir projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-  }
+  } finally { endProjectTransition(); }
 }
 
 function startRename(li, project) {
@@ -1794,6 +1903,7 @@ function startRename(li, project) {
   const commit = async () => {
     const newName = input.value.trim();
     if (!newName || newName === project.name) { renderProjectsList(); return; }
+    if (!beginProjectTransition()) return;
     try {
       projectsCache = await window.icurator.projectsRename(project.id, newName);
       renderProjectsList();
@@ -1803,7 +1913,7 @@ function startRename(li, project) {
       console.error('Falha a renomear projeto:', err);
       showProjectsStatus(t('common.error_prefix') + err.message, 'error');
       renderProjectsList();
-    }
+    } finally { endProjectTransition(); }
   };
   save.addEventListener('click', commit);
   cancel.addEventListener('click', () => renderProjectsList());
@@ -1841,6 +1951,7 @@ function askDeleteProject(li, project) {
 }
 
 async function performDeleteProject(project) {
+  if (!beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsDelete(project.id);
     projectsCache = res.state;
@@ -1855,10 +1966,11 @@ async function performDeleteProject(project) {
   } catch (err) {
     console.error('Falha a apagar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-  }
+  } finally { endProjectTransition(); }
 }
 
 async function duplicateProject(id) {
+  if (!beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsDuplicate(id);
     projectsCache = res.state;
@@ -1869,7 +1981,7 @@ async function duplicateProject(id) {
   } catch (err) {
     console.error('Falha a clonar projeto:', err);
     showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-  }
+  } finally { endProjectTransition(); }
 }
 
 if (projectNewForm) {
@@ -1877,6 +1989,7 @@ if (projectNewForm) {
     e.preventDefault();
     const name = (projectNewName.value || '').trim();
     if (!name) { showProjectsStatus(t('projects.name_required'), 'error'); return; }
+    if (!beginProjectTransition()) return;
     try {
       const res = await window.icurator.projectsCreate(name);
       projectsCache = res.state;
@@ -1888,7 +2001,7 @@ if (projectNewForm) {
     } catch (err) {
       console.error('Falha a criar projeto:', err);
       showProjectsStatus(t('common.error_prefix') + err.message, 'error');
-    }
+    } finally { endProjectTransition(); }
   });
 }
 
@@ -1927,7 +2040,7 @@ function selectedExportTarget() {
 function updateExportButton() {
   const target = selectedExportTarget();
   const moduleCount = lastExportConfig && Array.isArray(lastExportConfig.content) ? lastExportConfig.content.length : 0;
-  exportBuildBtn.disabled = exportInProgress || moduleCount === 0 || !target || !target.available;
+  exportBuildBtn.disabled = exportInProgress || !!contentMutation || !!projectTransition || settingsWrites.size > 0 || moduleCount === 0 || !target || !target.available;
   exportTargetSelect.disabled = exportInProgress;
 }
 
@@ -2057,7 +2170,7 @@ async function loadIconState(config) {
 }
 
 if (iconPickBtn) iconPickBtn.addEventListener('click', async () => {
-  const picked = await window.icurator.pickFile('icon');
+  const picked = await pickForCurrentProject(() => window.icurator.pickFile('icon'), showIconStatus);
   if (!picked) return;
   if (!/\.(ico|png|jpe?g)$/i.test(picked.name)) {
     alert(t('export.icon_must_be_image'));
@@ -2126,9 +2239,9 @@ let lastExportedPath = null;
 
 exportBuildBtn.addEventListener('click', async () => {
   const target = selectedExportTarget();
-  if (exportInProgress || !target || !target.available) return;
+  if (exportInProgress || contentMutation || projectTransition || settingsWrites.size > 0 || !target || !target.available) return;
   exportInProgress = true;
-  updateExportButton();
+  updateBuilderBusyUI();
   exportLogEl.innerHTML = '';
   appendExportLog(t('export.log.starting'));
   lastExportedPath = null;
@@ -2154,7 +2267,7 @@ exportBuildBtn.addEventListener('click', async () => {
     appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     exportInProgress = false;
-    updateExportButton();
+    updateBuilderBusyUI();
   }
 });
 

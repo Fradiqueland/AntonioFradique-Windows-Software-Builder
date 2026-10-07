@@ -23,6 +23,15 @@ function safeName(name) {
     !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name);
 }
 
+function normalizePortableLink(link, platform = process.platform) {
+  // Node returns Windows relative links with native separators. Reject every
+  // absolute/drive/UNC form before canonicalising those separators for a ZIP.
+  if (typeof link !== 'string' || !link || link.length > 4096 || /[:\x00-\x1f\x7f]/.test(link)
+      || path.posix.isAbsolute(link) || path.win32.isAbsolute(link)
+      || (platform !== 'win32' && link.includes('\\'))) throw new Error('Ligação simbólica externa ou inválida.');
+  return platform === 'win32' ? link.replace(/\\/g, '/') : link;
+}
+
 function directoryRoot(filename) {
   if (typeof filename !== 'string' || !path.isAbsolute(filename)) throw new Error('Selecione uma pasta com caminho absoluto.');
   const stat = fs.lstatSync(filename);
@@ -57,8 +66,8 @@ function scanTree(sourcePath) {
         bytes += stat.size;
         if (stat.size > LIMITS.fileBytes || bytes > LIMITS.totalBytes) throw new Error('A aplicação excede os limites: 2 GB por ficheiro ou 8 GB no total.');
       } else {
-        node.link = fs.readlinkSync(absolute);
-        if (!node.link || node.link.length > 4096 || path.posix.isAbsolute(node.link) || /[\\:\x00-\x1f\x7f]/.test(node.link)) throw new Error(`Ligação simbólica externa ou inválida: ${relative}`);
+        node.rawLink = fs.readlinkSync(absolute);
+        node.link = normalizePortableLink(node.rawLink);
       }
     }
   }
@@ -327,7 +336,7 @@ function copyTree(scan, destination, dereferenceLinks = false) {
     if (++count > LIMITS.entries) throw new Error('A cópia excede o limite de ficheiros e pastas.');
     const filename = relative ? path.join(destination, ...relative.split('/')) : destination;
     const node = dereferenceLinks && source.kind === 'symlink' ? source.resolved : source;
-    if (source.kind === 'symlink' && fs.readlinkSync(source.absolute) !== source.link) throw new Error('Uma ligação simbólica mudou durante a cópia.');
+    if (source.kind === 'symlink' && fs.readlinkSync(source.absolute) !== source.rawLink) throw new Error('Uma ligação simbólica mudou durante a cópia.');
     if (node.kind === 'directory') {
       if (relative) fs.mkdirSync(filename, { mode: 0o700 });
       for (const child of children.get(node.relative) || []) {
@@ -441,4 +450,4 @@ function assertPortableTarget({ data, assetsDir, target }) {
     warnings: requiresWine ? ['Esta aplicação requer Wine instalado no Mac. A compatibilidade não é garantida; não é convertida numa aplicação Mac nativa.'] : [] };
 }
 
-module.exports = { LIMITS, copyPortableTree, scanPortableFolder, importPortableProject, validatePortableProject, updatePortableProject, removePortableProject, assertPortableTarget };
+module.exports = { LIMITS, normalizePortableLink, copyPortableTree, scanPortableFolder, importPortableProject, validatePortableProject, updatePortableProject, removePortableProject, assertPortableTarget };

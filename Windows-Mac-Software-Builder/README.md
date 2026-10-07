@@ -6,7 +6,7 @@ Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Buil
 
 | Elemento | Windows | Mac |
 | --- | --- | --- |
-| Instalação do Builder | Setup `.exe` para Windows x64 | `.dmg` universal para Intel e Apple Silicon |
+| Instalação do Builder | Setup `.exe` para Windows x64 | `.dmg` universal para Intel e Apple Silicon (macOS 13+) |
 | Produto exportado no Builder Windows | EXE único auto-extraível | ZIP com `.app` universal e pasta `.data` |
 | Produto exportado no Builder Mac | ZIP portátil com EXE e dependências | ZIP com `.app` universal e pasta `.data` |
 
@@ -41,6 +41,7 @@ A navegação interna entre páginas da mesma origem local continua no módulo i
 - [Software portable: importação, execução e limites de compatibilidade](PORTABLE.md)
 - [Importação HTML/PHP e persistência](IMPORTAR-HTML-PHP.md)
 - [Runtime PHP opcional](vendor/php/README.md)
+- [Revisão de bugs e correções v2.1](AUDITORIA-V2.1.md)
 - [Auditoria e limitações conhecidas](AUDITORIA-2026-10-04.md)
 - [Arquitetura e notas de manutenção](NOTAS.md)
 

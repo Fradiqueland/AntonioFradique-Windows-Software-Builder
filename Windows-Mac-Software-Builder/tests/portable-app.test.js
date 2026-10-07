@@ -141,7 +141,7 @@ test('import preserves internal relative symlink chains; copy can materialize th
   const data = portable.importPortableProject({ ...f, entries: { windows: 'App.exe' } });
   const valid = portable.validatePortableProject({ data, assetsDir: f.assetsDir });
   assert.equal(valid.hasSymlinks, true);
-  assert.equal(fs.readlinkSync(path.join(valid.rootPath, 'file-link')), 'assets-link/original.txt');
+  assert.equal(portable.normalizePortableLink(fs.readlinkSync(path.join(valid.rootPath, 'file-link'))), 'assets-link/original.txt');
   const destination = path.join(f.root, 'work-copy');
   portable.copyPortableTree(valid.rootPath, destination, { dereferenceLinks: true });
   assert.equal(fs.lstatSync(path.join(destination, 'assets-link')).isDirectory(), true);

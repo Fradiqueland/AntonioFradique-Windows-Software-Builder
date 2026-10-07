@@ -195,7 +195,7 @@ async function main() {
   report.dependencies = Object.fromEntries(['yauzl', 'yazl'].map(name => [name, appRequire(name + '/package.json').version]));
   const lock = require('../package-lock.json');
   for (const [name, version] of Object.entries(report.dependencies)) assert.equal(version, lock.packages['node_modules/' + name].version);
-  temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'builder-real-electron-'));
+  temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'builder-real-electron-')));
   window = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   await window.loadURL('data:text/html,<title>Export regression smoke</title>');
   const assetsDir = path.join(temporary, 'assets');

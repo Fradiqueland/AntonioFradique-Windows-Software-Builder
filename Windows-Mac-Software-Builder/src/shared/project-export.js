@@ -13,7 +13,7 @@ const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
 const yazl = require('yazl');
 const { validateWebProject } = require('./local-web');
-const { assertPortableTarget } = require('./portable-app');
+const { assertPortableTarget, normalizePortableLink } = require('./portable-app');
 
 const MAC_BUNDLE = 'LaunchBox Viewer.app';
 const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, depth: 64 });
@@ -25,6 +25,11 @@ const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
 function safeProjectName(value) {
   let name = String(value || 'My Software').normalize('NFC').replace(/[\\/:<>"|?*\x00-\x1f\x7f]/g, '-').trim();
   name = Array.from(name).slice(0, 80).join('').replace(/[. ]+$/, '');
+  // Leave room for .app/.data and avoid invalid filesystem components when a
+  // short display name uses multi-byte characters or decomposed Unicode.
+  const characters = Array.from(name);
+  while (Buffer.byteLength(characters.join(''), 'utf8') > 240 || Buffer.byteLength(characters.join('').normalize('NFD'), 'utf8') > 240) characters.pop();
+  name = characters.join('').replace(/[. ]+$/, '');
   if (!name || name === '.' || name === '..') name = 'My Software';
   if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) name = `_${name}`;
   return name;
@@ -58,7 +63,7 @@ function registerPath(paths, name, kind) {
   }
 }
 
-function verifyStream(size, crc32) {
+function verifyStream(size, crc32, verifyFinal) {
   let count = 0;
   let crc = 0xffffffff;
   return new Transform({
@@ -72,7 +77,8 @@ function verifyStream(size, crc32) {
       if (count !== size || (crc32 !== undefined && ((crc ^ 0xffffffff) >>> 0) !== crc32)) {
         return callback(new Error('Ficheiro ZIP corrompido: tamanho ou CRC inválido.'));
       }
-      callback();
+      if (verifyFinal) Promise.resolve().then(verifyFinal).then(() => callback(), callback);
+      else callback();
     }
   });
 }
@@ -133,7 +139,7 @@ async function inspectTemplate(templatePath, target) {
     const required = target === 'mac'
       ? [`${MAC_BUNDLE}/Contents/Info.plist`, `${MAC_BUNDLE}/Contents/Resources/app.asar`, `${MAC_BUNDLE}/Contents/MacOS/LaunchBox Viewer`]
       : ['LaunchBox Viewer.exe', 'resources/app.asar'];
-    if (required.some(name => paths.get(key(name)) !== 'file')) throw new Error('Template incompleto: executável ou app.asar em falta.');
+    if (required.some(name => !entries.some(item => item.name === name && item.kind === 'file'))) throw new Error('Template incompleto: executável ou app.asar em falta ou com nome incorreto.');
     if (target === 'mac' && !(entries.find(item => item.name === `${MAC_BUNDLE}/Contents/MacOS/LaunchBox Viewer`).mode & 0o111)) {
       throw new Error('O executável do template Mac não tem permissão de execução.');
     }
@@ -208,10 +214,11 @@ async function inspectAssets(assetsDir, portableRoots = []) {
       entries.push(item);
       if (kind === 'directory') await walk(absolute, relative, depth + 1);
       else if (kind === 'symlink') {
-        item.link = await fs.promises.readlink(absolute, { encoding: 'buffer' });
-        item.linkTarget = item.link.toString('utf8');
-        if (!item.link.length || item.link.length > 4096 || !Buffer.from(item.linkTarget, 'utf8').equals(item.link) ||
-            /[\\:\x00-\x1f\x7f]/.test(item.linkTarget) || item.linkTarget.startsWith('/')) throw new Error(`Destino de ligação simbólica inválido: ${relative}`);
+        item.rawLink = await fs.promises.readlink(absolute, { encoding: 'buffer' });
+        const rawTarget = item.rawLink.toString('utf8');
+        if (!Buffer.from(rawTarget, 'utf8').equals(item.rawLink)) throw new Error(`Destino de ligação simbólica inválido: ${relative}`);
+        item.linkTarget = normalizePortableLink(rawTarget, process.platform);
+        item.link = Buffer.from(item.linkTarget, 'utf8');
         if ((bytes += item.link.length) > LIMITS.totalBytes) throw new Error('Os recursos excedem os limites de tamanho.');
       } else {
         if (stat.size > LIMITS.fileBytes || (bytes += stat.size) > LIMITS.totalBytes) throw new Error('Os recursos excedem os limites de tamanho.');
@@ -300,11 +307,17 @@ async function assetStream(asset, root) {
   const handle = await fs.promises.open(asset.absolute, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
   try {
     const actual = await handle.stat();
-    if (!actual.isFile() || actual.size !== asset.stat.size || actual.ino !== asset.stat.ino || actual.mtimeMs !== asset.stat.mtimeMs) throw new Error('Um recurso mudou durante a exportação.');
-    const stream = handle.createReadStream();
-    const checked = verifyStream(actual.size);
+    const matches = stat => stat.isFile() && stat.size === asset.stat.size && stat.ino === asset.stat.ino && stat.dev === asset.stat.dev
+      && stat.mtimeMs === asset.stat.mtimeMs && stat.ctimeMs === asset.stat.ctimeMs;
+    if (!matches(actual)) throw new Error('Um recurso mudou durante a exportação.');
+    // Keep the descriptor open until the final stat has checked modifications
+    // made while the file was streaming, including writes of the same length.
+    const stream = handle.createReadStream({ autoClose: false });
+    const checked = verifyStream(actual.size, undefined, async () => {
+      if (!matches(await handle.stat())) throw new Error('Um recurso mudou durante a exportação.');
+    });
     stream.on('error', error => checked.destroy(error));
-    checked.on('close', () => stream.destroy());
+    checked.on('close', () => { stream.destroy(); handle.close().catch(() => {}); });
     return stream.pipe(checked);
   } catch (error) { await handle.close(); throw error; }
 }

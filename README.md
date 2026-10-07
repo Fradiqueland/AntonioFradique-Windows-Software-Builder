@@ -11,7 +11,7 @@ Na [compilação v2.1 do GitHub Actions](https://github.com/Fradiqueland/Antonio
 | Computador | Artefacto v2.1 | Instalador incluído |
 | --- | --- | --- |
 | Windows x64 | `Windows-Mac-Software-Builder-2.1.0-Windows` | Setup `.exe` |
-| Mac Intel ou Apple Silicon | `Windows-Mac-Software-Builder-2.1.0-macOS` | `.dmg` universal |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.1.0-macOS` | `.dmg` universal |
 
 Os downloads requerem uma sessão GitHub e ficam disponíveis durante 30 dias após a execução. Extraia o ZIP do artefacto para obter o instalador e `SHA256SUMS.txt`. Certifique-se de que a execução e o instalador são da versão 2.1.0; instaladores anteriores não incluem o módulo portable.
 
@@ -51,9 +51,12 @@ Esta regra não é universal: a navegação entre páginas da mesma origem local
 - [Guia de compilação, instalação e exportação](Windows-Mac-Software-Builder/BUILD-V2.md)
 - [Importar e executar software portable](Windows-Mac-Software-Builder/PORTABLE.md)
 - [Importar HTML/PHP e conhecer os limites](Windows-Mac-Software-Builder/IMPORTAR-HTML-PHP.md)
+- [Revisão de bugs e correções v2.1](Windows-Mac-Software-Builder/AUDITORIA-V2.1.md)
 - [Auditoria do produto e atualizações v2](Windows-Mac-Software-Builder/AUDITORIA-2026-10-04.md)
 - [Arquitetura e notas de manutenção](Windows-Mac-Software-Builder/NOTAS.md)
 - [README da aplicação](Windows-Mac-Software-Builder/README.md)
+
+Requisitos dos programas v2.1: Windows 10+ x64 ou macOS 13+; motor Electron 44.6.0.
 
 Requisitos de desenvolvimento: **Node.js 22**, Git e Windows x64 ou macOS.
 

@@ -368,19 +368,29 @@ function createProjectFolder(id) {
 
 function readProjectsIndex() {
   try {
-    if (fs.existsSync(PROJECTS_INDEX)) {
-      const idx = JSON.parse(fs.readFileSync(PROJECTS_INDEX, 'utf-8'));
-      if (idx && Array.isArray(idx.projects)) return idx;
+    if (!fs.existsSync(PROJECTS_INDEX)) return { activeId: null, projects: [] };
+    const idx = JSON.parse(fs.readFileSync(PROJECTS_INDEX, 'utf-8'));
+    const ids = new Set();
+    if (!idx || typeof idx !== 'object' || !Array.isArray(idx.projects) ||
+        (idx.activeId !== null && typeof idx.activeId !== 'string')) throw new Error('Formato do índice inválido.');
+    for (const project of idx.projects) {
+      if (!project || typeof project.id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(project.id) ||
+          ids.has(project.id) || typeof project.name !== 'string') throw new Error('Projeto inválido no índice.');
+      ids.add(project.id);
     }
+    return idx;
   } catch (err) {
-    console.error('Falha a ler projects.json:', err);
+    throw new Error(`Não foi possível ler ${PROJECTS_INDEX}. O ficheiro foi preservado; corrija-o ou restaure uma cópia de segurança. ${err.message}`);
   }
-  return { activeId: null, projects: [] };
 }
 
 function writeProjectsIndex(idx) {
   fs.mkdirSync(WRITE_BASE, { recursive: true });
-  fs.writeFileSync(PROJECTS_INDEX, JSON.stringify(idx, null, 2), 'utf-8');
+  const temp = PROJECTS_INDEX + '.' + crypto.randomUUID() + '.tmp';
+  try {
+    fs.writeFileSync(temp, JSON.stringify(idx, null, 2), { encoding: 'utf8', flag: 'wx' });
+    fs.renameSync(temp, PROJECTS_INDEX);
+  } finally { try { fs.unlinkSync(temp); } catch (_) {} }
 }
 
 /* Move o conteúdo de srcDir para destDir (usado só na migração inicial do
@@ -421,28 +431,35 @@ function touchActiveProject() {
   } catch (err) { console.warn('Falha a atualizar updatedAt do projeto:', err); }
 }
 
-/* Arranque do Builder: garante que existe pelo menos um projeto, migra o
- * layout antigo (data/ + dist-assets/ na raiz) para o primeiro projeto, e
- * aponta as constantes para o projeto ativo. */
+/* Arranque do Builder: garante que existe pelo menos um projeto, copia o
+ * layout antigo para o primeiro projeto preservando o original como backup,
+ * e aponta as constantes para o projeto ativo após validar a configuração. */
 function initProjects() {
   let idx = readProjectsIndex();
 
   if (idx.projects.length === 0) {
     const id = genProjectId();
-    createProjectFolder(id);
-
-    // Migração do projeto único antigo, se existir na raiz.
     const legacyDataDir = path.join(WRITE_BASE, 'data');
     const legacyAssetsDir = path.join(WRITE_BASE, 'dist-assets');
     const legacyConfig = path.join(legacyDataDir, 'project-config.json');
-    if (fs.existsSync(legacyConfig)) {
-      moveDirContents(legacyDataDir, path.join(projectDir(id), 'data'));
-      moveDirContents(legacyAssetsDir, path.join(projectDir(id), 'dist-assets'));
+    try {
+      createProjectFolder(id);
+      // Keep the legacy copy until the new index has committed successfully.
+      if (fs.existsSync(legacyConfig)) {
+        const legacy = readConfig(legacyConfig);
+        copyDirRecursive(legacyDataDir, path.join(projectDir(id), 'data'));
+        if (fs.existsSync(legacyAssetsDir)) copyProjectAssets(legacyAssetsDir, path.join(projectDir(id), 'dist-assets'), legacy);
+      } else {
+        fs.writeFileSync(path.join(projectDir(id), 'data', 'project-config.json'), JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+      }
+      const now = Date.now();
+      idx = { activeId: id, projects: [{ id, name: 'Projeto 1', createdAt: now, updatedAt: now }] };
+      writeProjectsIndex(idx);
+    } catch (error) {
+      try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (_) {}
+      throw error;
     }
-
-    const now = Date.now();
-    idx = { activeId: id, projects: [{ id, name: 'Projeto 1', createdAt: now, updatedAt: now }] };
-    writeProjectsIndex(idx);
+    // Retain the original legacy folders as a migration backup.
   }
 
   if (!idx.activeId || !idx.projects.some((p) => p.id === idx.activeId)) {
@@ -450,11 +467,9 @@ function initProjects() {
     writeProjectsIndex(idx);
   }
 
+  readConfig(path.join(projectDir(idx.activeId), 'data', 'project-config.json'));
   applyActiveProjectPaths(idx.activeId);
   ensureDirs();
-  if (!fs.existsSync(CONFIG_PATH)) {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-  }
 }
 
 function deepMerge(defaults, override) {
@@ -507,22 +522,35 @@ function migrateConfig(cfg) {
   return cfg;
 }
 
-function readConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    // Viewer in SFX mode should ALWAYS have a stamped-in project; if it
-    // doesn't, something went wrong with the export — surface defaults
-    // rather than throw, so the window still opens with the corners.
-    if (isViewer) return structuredClone(DEFAULT_CONFIG);
-    ensureDirs();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-    return structuredClone(DEFAULT_CONFIG);
+function validateConfigShape(config) {
+  const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!record(config)) throw new Error('A configuração deve ser um objeto JSON.');
+  function check(defaults, value, key) {
+    if (value === undefined) return;
+    if (defaults === null) {
+      if (value !== null && typeof value !== 'string') throw new Error(`Definição inválida: ${key}.`);
+    } else if (Array.isArray(defaults)) {
+      if (!Array.isArray(value)) throw new Error(`Definição inválida: ${key}.`);
+    } else if (record(defaults)) {
+      if (!record(value)) throw new Error(`Definição inválida: ${key}.`);
+      for (const child of Object.keys(defaults)) check(defaults[child], value[child], `${key}.${child}`);
+    } else if (typeof value !== typeof defaults) throw new Error(`Definição inválida: ${key}.`);
   }
+  check(DEFAULT_CONFIG, config, 'config');
+  for (const mod of config.content || []) {
+    if (!record(mod) || typeof mod.type !== 'string' || (mod.data !== undefined && !record(mod.data))) {
+      throw new Error('Módulo inválido na configuração.');
+    }
+  }
+  return config;
+}
+
+function readConfig(configPath = CONFIG_PATH) {
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    return migrateConfig(deepMerge(DEFAULT_CONFIG, JSON.parse(raw)));
+    const parsed = validateConfigShape(JSON.parse(fs.readFileSync(configPath, 'utf8')));
+    return migrateConfig(deepMerge(DEFAULT_CONFIG, parsed));
   } catch (err) {
-    console.error('Failed to read config, returning defaults:', err);
-    return structuredClone(DEFAULT_CONFIG);
+    throw new Error(`Não foi possível ler ${configPath}. O projeto não foi alterado; corrija o ficheiro ou restaure uma cópia de segurança. ${err.message}`);
   }
 }
 
@@ -548,10 +576,25 @@ function copyAssetToProject(sourcePath, prefix = 'asset') {
   ensureDirs();
   const ext = path.extname(sourcePath) || '';
   const base = sanitizeFilename(path.basename(sourcePath, ext)) || prefix;
-  const finalName = `${prefix}-${Date.now()}-${base}${ext}`;
+  const finalName = `${prefix}-${crypto.randomUUID()}-${base}${ext}`;
   const destAbs = path.join(ASSETS_DIR, finalName);
-  fs.copyFileSync(sourcePath, destAbs);
+  try { fs.copyFileSync(sourcePath, destAbs, fs.constants.COPYFILE_EXCL); }
+  catch (error) { try { fs.unlinkSync(destAbs); } catch (_) {} throw error; }
   return path.posix.join('dist-assets', finalName);
+}
+
+function cleanupFiles(files) {
+  for (const filename of new Set(files)) {
+    try { fs.unlinkSync(filename); }
+    catch (error) { if (error.code !== 'ENOENT') console.warn('Falha a limpar recurso:', filename, error.message); }
+  }
+}
+
+function commitConfigFiles(config, created, retired) {
+  try { writeConfig(config); }
+  catch (error) { cleanupFiles(created); throw error; }
+  cleanupFiles(retired.filter(filename => !created.includes(filename)));
+  return config;
 }
 
 /* Extrai o ID (11 caracteres) de qualquer variante de link do YouTube:
@@ -603,14 +646,27 @@ function relToAbs(relativePath) {
 function deleteAssetIfInside(relativePath) {
   if (!relativePath) return;
   const abs = relToAbs(relativePath);
-  if (isInsideAssetsDir(abs) && fs.existsSync(abs)) {
+  try {
+    resolveProjectFile(relativePath);
     try { fs.unlinkSync(abs); } catch (err) { console.warn('Failed to delete old asset:', err); }
-  }
+  } catch (_) { /* Missing or unsafe references must never delete other files. */ }
 }
 
 function resolveRelativeAsset(relativePath) {
   if (!relativePath) return null;
   return relToAbs(relativePath);
+}
+
+function resolveProjectFile(relativePath) {
+  if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro inválido.');
+  const absolute = relToAbs(relativePath);
+  const root = fs.realpathSync(ASSETS_DIR);
+  const real = fs.realpathSync(absolute);
+  const relative = path.relative(root, real);
+  if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative) || !fs.statSync(real).isFile()) {
+    throw new Error('Caminho não permitido: ' + relativePath);
+  }
+  return real;
 }
 
 function copyDirRecursive(src, dest) {
@@ -1105,17 +1161,21 @@ handleTrustedIpc('projects:list', () => {
 
 handleTrustedIpc('projects:create', (_event, payload) => {
   assertBuilder();
+  const idx = readProjectsIndex();
   const name = sanitizeProjectName(payload && payload.name);
   const id = genProjectId();
-  createProjectFolder(id);
+  try {
+    createProjectFolder(id);
+    fs.writeFileSync(path.join(projectDir(id), 'data', 'project-config.json'), JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+    const now = Date.now();
+    idx.projects.push({ id, name, createdAt: now, updatedAt: now });
+    idx.activeId = id;
+    writeProjectsIndex(idx);
+  } catch (error) {
+    try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (_) {}
+    throw error;
+  }
   applyActiveProjectPaths(id);
-  ensureDirs();
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-  const idx = readProjectsIndex();
-  const now = Date.now();
-  idx.projects.push({ id, name, createdAt: now, updatedAt: now });
-  idx.activeId = id;
-  writeProjectsIndex(idx);
   return { state: projectsState(), config: readConfig() };
 });
 
@@ -1124,11 +1184,12 @@ handleTrustedIpc('projects:open', (_event, payload) => {
   const id = payload && payload.id;
   const idx = readProjectsIndex();
   if (!idx.projects.some((p) => p.id === id)) throw new Error('Projeto não encontrado.');
+  const config = readConfig(path.join(projectDir(id), 'data', 'project-config.json'));
   idx.activeId = id;
   writeProjectsIndex(idx);
   applyActiveProjectPaths(id);
   ensureDirs();
-  return { state: projectsState(), config: readConfig() };
+  return { state: projectsState(), config };
 });
 
 handleTrustedIpc('projects:rename', (_event, payload) => {
@@ -1149,31 +1210,38 @@ handleTrustedIpc('projects:delete', (_event, payload) => {
   const id = payload && payload.id;
   const idx = readProjectsIndex();
   if (!idx.projects.some((p) => p.id === id)) throw new Error('Projeto não encontrado.');
-  try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (err) { console.warn('Falha a apagar pasta do projeto:', err); }
   idx.projects = idx.projects.filter((p) => p.id !== id);
 
   let switchedConfig = null;
-  if (idx.activeId === id) {
-    if (idx.projects.length === 0) {
-      const nid = genProjectId();
-      createProjectFolder(nid);
-      applyActiveProjectPaths(nid);
-      ensureDirs();
-      fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
-      const now = Date.now();
-      idx.projects.push({ id: nid, name: 'Projeto 1', createdAt: now, updatedAt: now });
-      idx.activeId = nid;
-    } else {
-      // O mais recente passa a ativo.
-      const next = idx.projects.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
-      idx.activeId = next.id;
-      applyActiveProjectPaths(next.id);
-      ensureDirs();
+  let replacementId = null;
+  const switching = idx.activeId === id;
+  try {
+    if (switching) {
+      if (idx.projects.length === 0) {
+        const nid = genProjectId();
+        replacementId = nid;
+        createProjectFolder(nid);
+        fs.writeFileSync(path.join(projectDir(nid), 'data', 'project-config.json'), JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+        const now = Date.now();
+        idx.projects.push({ id: nid, name: 'Projeto 1', createdAt: now, updatedAt: now });
+        idx.activeId = nid;
+      } else {
+        // O mais recente passa a ativo.
+        const next = idx.projects.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+        idx.activeId = next.id;
+      }
+      switchedConfig = readConfig(path.join(projectDir(idx.activeId), 'data', 'project-config.json'));
     }
-    switchedConfig = readConfig();
+    writeProjectsIndex(idx);
+  } catch (error) {
+    if (replacementId) { try { fs.rmSync(projectDir(replacementId), { recursive: true, force: true }); } catch (_) {} }
+    throw error;
   }
-  writeProjectsIndex(idx);
-  return { state: projectsState(), config: switchedConfig };
+  if (switching) applyActiveProjectPaths(idx.activeId);
+  let warning = null;
+  try { fs.rmSync(projectDir(id), { recursive: true, force: true }); }
+  catch (err) { warning = `O projeto saiu da lista, mas não foi possível limpar ${projectDir(id)}: ${err.message}`; console.warn(warning); }
+  return { state: projectsState(), config: switchedConfig, ...(warning ? { warning } : {}) };
 });
 
 handleTrustedIpc('projects:duplicate', (_event, payload) => {
@@ -1183,13 +1251,13 @@ handleTrustedIpc('projects:duplicate', (_event, payload) => {
   const src = idx.projects.find((p) => p.id === srcId);
   if (!src) throw new Error('Projeto não encontrado.');
   const newId = genProjectId();
-  createProjectFolder(newId);
   // Copia data/ (config + ícone) e dist-assets/ (logo, banners, ficheiros) do
   // projeto de origem para a nova pasta, de forma independente.
   const srcRoot = projectDir(srcId);
   const dstRoot = projectDir(newId);
   try {
-    const sourceConfig = JSON.parse(fs.readFileSync(path.join(srcRoot, 'data', 'project-config.json'), 'utf8'));
+    const sourceConfig = readConfig(path.join(srcRoot, 'data', 'project-config.json'));
+    createProjectFolder(newId);
     copyDirRecursive(path.join(srcRoot, 'data'), path.join(dstRoot, 'data'));
     const sourceAssets = path.join(srcRoot, 'dist-assets');
     if (fs.existsSync(sourceAssets)) copyProjectAssets(sourceAssets, path.join(dstRoot, 'dist-assets'), sourceConfig);
@@ -1197,15 +1265,15 @@ handleTrustedIpc('projects:duplicate', (_event, payload) => {
     const duplicateConfig = { ...sourceConfig, content: (sourceConfig.content || []).map((mod) => mod.type === 'portable'
       ? { ...mod, data: { ...mod.data, revision: crypto.randomUUID() } } : mod) };
     fs.writeFileSync(path.join(dstRoot, 'data', 'project-config.json'), JSON.stringify(duplicateConfig, null, 2), 'utf8');
+    const now = Date.now();
+    const name = sanitizeProjectName(src.name + ' (cópia)');
+    idx.projects.push({ id: newId, name, createdAt: now, updatedAt: now });
+    idx.activeId = newId;
+    writeProjectsIndex(idx);
   } catch (error) {
-    fs.rmSync(dstRoot, { recursive: true, force: true });
+    try { fs.rmSync(dstRoot, { recursive: true, force: true }); } catch (_) {}
     throw error;
   }
-  const now = Date.now();
-  const name = sanitizeProjectName(src.name + ' (cópia)');
-  idx.projects.push({ id: newId, name, createdAt: now, updatedAt: now });
-  idx.activeId = newId;
-  writeProjectsIndex(idx);
   applyActiveProjectPaths(newId);
   ensureDirs();
   return { state: projectsState(), config: readConfig() };
@@ -1222,12 +1290,12 @@ handleTrustedIpc('brand:save', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   let logoRelative = current.brand.logo || null;
+  const created = [];
   if (payload && payload.logoSourcePath) {
     if (!fs.existsSync(payload.logoSourcePath)) throw new Error('Ficheiro de logo não encontrado: ' + payload.logoSourcePath);
-    deleteAssetIfInside(logoRelative);
     logoRelative = copyAssetToProject(payload.logoSourcePath, 'logo');
+    created.push(relToAbs(logoRelative));
   } else if (payload && payload.removeLogo) {
-    deleteAssetIfInside(logoRelative);
     logoRelative = null;
   }
   const updated = {
@@ -1237,13 +1305,14 @@ handleTrustedIpc('brand:save', (_event, payload) => {
         ? payload.title.trim() : DEFAULT_CONFIG.brand.title,
       logo: logoRelative,
       colors: {
-        sidebar: (payload && payload.colors && payload.colors.sidebar) || current.brand.colors.sidebar,
-        background: (payload && payload.colors && payload.colors.background) || current.brand.colors.background,
-        buttons: (payload && payload.colors && payload.colors.buttons) || current.brand.colors.buttons
+        sidebar: (typeof payload?.colors?.sidebar === 'string' && payload.colors.sidebar) || current.brand.colors.sidebar,
+        background: (typeof payload?.colors?.background === 'string' && payload.colors.background) || current.brand.colors.background,
+        buttons: (typeof payload?.colors?.buttons === 'string' && payload.colors.buttons) || current.brand.colors.buttons
       }
     }
   };
-  writeConfig(updated);
+  commitConfigFiles(updated, created, []);
+  if (current.brand.logo !== logoRelative) deleteAssetIfInside(current.brand.logo);
   return updated;
 });
 
@@ -1271,6 +1340,7 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
   assertBuilder();
   const current = readConfig();
   const curBanners = (current.marketing && current.marketing.banners) || {};
+  const created = [];
 
   // Cada slot (top/bottom) é independente: copia a imagem nova, remove a
   // existente, ou mantém a atual conforme o payload do slot.
@@ -1280,10 +1350,9 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
     let image = cur.image || null;
     if (p.imageSourcePath) {
       if (!fs.existsSync(p.imageSourcePath)) throw new Error('Ficheiro de banner não encontrado: ' + p.imageSourcePath);
-      deleteAssetIfInside(image);
       image = copyAssetToProject(p.imageSourcePath, 'banner-' + slotName);
+      created.push(relToAbs(image));
     } else if (p.removeImage) {
-      deleteAssetIfInside(image);
       image = null;
     }
     return {
@@ -1293,15 +1362,21 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
     };
   };
 
-  const updated = {
-    ...current,
-    marketing: {
-      ...current.marketing,
-      banners: { top: saveSlot('top'), bottom: saveSlot('bottom') }
-    }
-  };
-  if (updated.marketing.banner) delete updated.marketing.banner;
-  writeConfig(updated);
+  let updated;
+  try {
+    updated = {
+      ...current,
+      marketing: {
+        ...current.marketing,
+        banners: { top: saveSlot('top'), bottom: saveSlot('bottom') }
+      }
+    };
+    if (updated.marketing.banner) delete updated.marketing.banner;
+    commitConfigFiles(updated, created, []);
+  } catch (error) { cleanupFiles(created); throw error; }
+  for (const slot of ['top', 'bottom']) {
+    if (curBanners[slot]?.image !== updated.marketing.banners[slot].image) deleteAssetIfInside(curBanners[slot]?.image);
+  }
   return updated;
 });
 
@@ -1353,9 +1428,10 @@ function moduleAssetFiles(mod) {
 
 handleTrustedIpc('content:save', (_event, payload) => {
   assertBuilder();
+  if (!Array.isArray(payload && payload.modules)) throw new Error('Lista de módulos inválida. O projeto não foi alterado.');
   const current = readConfig();
   const previous = Array.isArray(current.content) ? current.content : [];
-  const incoming = Array.isArray(payload && payload.modules) ? payload.modules : [];
+  const incoming = payload.modules;
   const nextModules = [];
   const importedWeb = [];
   const importedPortable = [];
@@ -1768,16 +1844,13 @@ handleTrustedIpc('dialog:saveFileAs', async (_event, payload) => {
   const rel = payload && typeof payload.file === 'string' ? payload.file : null;
   const suggested = (payload && typeof payload.fileName === 'string' && payload.fileName) || 'ficheiro';
   if (!rel) throw new Error('Ficheiro inválido.');
-  const abs = resolveRelativeAsset(rel);
-  // Validação de fronteira canónica (resolve + separador) — evita bypass por
-  // confusão de prefixo (ex.: ../dist-assets-evil/x começa por "dist-assets").
-  const real = abs ? path.resolve(abs) : null;
-  const root = path.resolve(ASSETS_DIR) + path.sep;
-  if (!real || !real.startsWith(root)) throw new Error('Caminho não permitido: ' + rel);
-  if (!fs.existsSync(real)) throw new Error('Ficheiro não existe: ' + real);
+  const real = resolveProjectFile(rel);
   const win = BrowserWindow.getFocusedWindow() || viewerWindow || builderWindow;
   const result = await dialog.showSaveDialog(win, { defaultPath: suggested });
   if (result.canceled || !result.filePath) return { ok: false, cancelled: true };
+  // The dialog can remain open while projects change. Keep the selected source
+  // and reject a substituted symlink instead of following it after the wait.
+  if (fs.realpathSync(real) !== real || !fs.statSync(real).isFile()) throw new Error('O ficheiro mudou enquanto o diálogo estava aberto.');
   fs.copyFileSync(real, result.filePath);
   return { ok: true, path: result.filePath };
 });
@@ -1799,10 +1872,8 @@ handleTrustedIpc('shell:openExternal', async (_event, url) => {
 });
 
 handleTrustedIpc('shell:launchFile', async (_event, relativePath) => {
-  if (typeof relativePath !== 'string' || !relativePath) throw new Error('Caminho de ficheiro vazio.');
-  const abs = relToAbs(relativePath);
-  if (!isInsideAssetsDir(abs)) throw new Error('Caminho não permitido: ' + relativePath);
-  if (!fs.existsSync(abs)) throw new Error('Ficheiro não existe: ' + abs);
+  if (exportBusy) throw new Error('Aguarde a conclusão da exportação antes de abrir o ficheiro.');
+  const abs = resolveProjectFile(relativePath);
   const errMsg = await shell.openPath(abs);
   if (errMsg) throw new Error(errMsg);
   return true;
@@ -1813,25 +1884,25 @@ handleTrustedIpc('shell:launchFile', async (_event, relativePath) => {
 const ICON_ALLOWED_EXTS = ['.ico', '.png', '.jpg', '.jpeg'];
 const ICON_SOURCE_NAMES = ICON_ALLOWED_EXTS.map((e) => 'icon-source' + e);
 
-function clearStoredIcons() {
-  // Remove qualquer ícone-fonte anterior (qualquer extensão) e o legado icon.ico.
-  for (const f of ICON_SOURCE_NAMES) {
-    const p = path.join(DATA_DIR, f);
-    if (fs.existsSync(p)) { try { fs.unlinkSync(p); } catch (_) { /* ignore */ } }
+function storedIconPaths(config) {
+  const files = ICON_SOURCE_NAMES.map(name => path.join(DATA_DIR, name)).concat(ICON_DEST_PATH);
+  const icon = config.export && config.export.iconPath;
+  if (typeof icon === 'string' && /^data\/icon-source-[A-Za-z0-9-]+\.(ico|png|jpg|jpeg)$/.test(icon)) {
+    files.push(path.join(DATA_DIR, path.posix.basename(icon)));
   }
-  if (fs.existsSync(ICON_DEST_PATH)) { try { fs.unlinkSync(ICON_DEST_PATH); } catch (_) { /* ignore */ } }
+  return files;
 }
 
 handleTrustedIpc('export:saveIcon', (_event, payload) => {
   assertBuilder();
   ensureDirs();
+  const current = readConfig();
+  const retired = storedIconPaths(current);
 
   // Remover o ícone personalizado (volta ao predefinido).
   if (payload && payload.removeIcon) {
-    clearStoredIcons();
-    const current = readConfig();
     const updated = { ...current, export: { ...(current.export || {}), iconPath: null } };
-    writeConfig(updated);
+    commitConfigFiles(updated, [], retired);
     return updated;
   }
 
@@ -1841,12 +1912,12 @@ handleTrustedIpc('export:saveIcon', (_event, payload) => {
   if (!ICON_ALLOWED_EXTS.includes(ext)) {
     throw new Error('O ícone tem de ser .ico, .png ou .jpg. O GIF não é suportado — os ícones de Windows são estáticos. Converta a imagem para PNG e tente de novo.');
   }
-  clearStoredIcons();
-  const destName = 'icon-source' + ext;
-  fs.copyFileSync(payload.sourcePath, path.join(DATA_DIR, destName));
-  const current = readConfig();
+  const destName = 'icon-source-' + crypto.randomUUID() + ext;
+  const destination = path.join(DATA_DIR, destName);
+  try { fs.copyFileSync(payload.sourcePath, destination, fs.constants.COPYFILE_EXCL); }
+  catch (error) { cleanupFiles([destination]); throw error; }
   const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/' + destName } };
-  writeConfig(updated);
+  commitConfigFiles(updated, [destination], retired);
   return updated;
 });
 
@@ -2148,6 +2219,10 @@ app.whenReady().then(async () => {
       else createBuilderWindow();
     }
   });
+}).catch(error => {
+  console.error('Não foi possível abrir o projeto:', error);
+  dialog.showErrorBox('Não foi possível abrir o projeto', error.message);
+  app.quit();
 });
 
 app.on('window-all-closed', () => {

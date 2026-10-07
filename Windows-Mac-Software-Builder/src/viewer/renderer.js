@@ -16,7 +16,8 @@ const socialEl = document.getElementById('viewer-social');
 const stageEl = document.getElementById('viewer-stage');
 let currentHls = null;   // active hls.js instance for the IPTV player (destroyed on stage change)
 let currentTs = null;    // active mpegts.js instance (raw MPEG-TS streams)
-let iptvCleanup = null;  // tears down the IPTV favourites popover + its document listener
+let iptvCleanup = null;  // cancels the active IPTV attempt, timers and popover
+let lightboxCleanup = null;
 let stageGeneration = 0; // incremented by clearStage(); lets async renderers detect they went stale
 let currentWebModuleToken = null; // local HTTP/PHP service owned by the visible module
 
@@ -30,6 +31,7 @@ const bannerBottomEl = document.getElementById('banner-bottom');
 
 let config = null;
 let i18nDict = {};
+let languageGeneration = 0;
 
 /* -------- i18n (com seletor de idioma em direto no Viewer) -------- */
 
@@ -139,8 +141,14 @@ function clearStage() {
     closeWebModule(currentWebModuleToken);
     currentWebModuleToken = null;
   }
-  destroyHls();
   if (iptvCleanup) { try { iptvCleanup(); } catch (_) { /* noop */ } iptvCleanup = null; }
+  if (lightboxCleanup) lightboxCleanup();
+  destroyHls();
+  // Detached native media can keep playing/downloading while retained by an
+  // async callback. Explicitly release it before removing the stage DOM.
+  stageEl.querySelectorAll('video, audio').forEach((media) => {
+    try { media.pause(); media.removeAttribute('src'); media.load(); } catch (_) { /* noop */ }
+  });
   stageEl.className = 'viewer-stage';
   stageEl.innerHTML = '';
 }
@@ -151,11 +159,7 @@ function closeWebModule(token) {
   }
 }
 
-window.addEventListener('beforeunload', () => {
-  stageGeneration++;
-  closeWebModule(currentWebModuleToken);
-  currentWebModuleToken = null;
-});
+window.addEventListener('beforeunload', clearStage);
 
 function destroyHls() {
   if (window.__iptvProxyToken && window.viewer && typeof window.viewer.iptvProxyStop === 'function') {
@@ -451,6 +455,7 @@ async function renderGallery(data) {
  * grande sobre o curso, com botão para descarregar. Fecha com ×, clique no
  * fundo ou Escape. */
 function openLightbox(url, fileName, relFile) {
+  if (lightboxCleanup) lightboxCleanup();
   const overlay = document.createElement('div');
   overlay.className = 'lightbox-overlay';
 
@@ -458,7 +463,9 @@ function openLightbox(url, fileName, relFile) {
   function close() {
     document.removeEventListener('keydown', onKey);
     overlay.remove();
+    if (lightboxCleanup === close) lightboxCleanup = null;
   }
+  lightboxCleanup = close;
   document.addEventListener('keydown', onKey);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
@@ -817,7 +824,7 @@ function renderSocial(social) {
     btn.title = SOCIAL_LABELS[k];
     btn.setAttribute('aria-label', SOCIAL_LABELS[k]);
     btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="' + (SOCIAL_ICONS[k] || '') + '"/></svg>';
-    btn.addEventListener('click', () => { window.viewer.openExternal(url); });
+    btn.addEventListener('click', () => handleExternal({ url }));
     socialEl.appendChild(btn);
   });
 }
@@ -840,11 +847,29 @@ async function handleModuleClick(mod, btn) {
   }
   const pwd = (mod && typeof mod.password === 'string') ? mod.password.trim() : '';
   if (pwd && !unlockedModules.has(mod.id)) {
+    // An action's gate is visible content too. Translating it must neither
+    // restore a previous module nor perform the protected action.
+    activeModuleRef = { mod, btn };
     setActiveMenuBtn(btn);
     renderPasswordGate(mod, btn, pwd);
     return;
   }
-  await dispatchModule(mod, btn);
+  const pending = dispatchModule(mod, btn);
+  const generation = stageGeneration;
+  try { await pending; }
+  catch (err) {
+    if (generation !== stageGeneration) return;
+    clearStage();
+    const host = document.createElement('div');
+    host.className = 'viewer-empty';
+    host.setAttribute('role', 'alert');
+    const message = document.createElement('p');
+    message.textContent = tr('viewer.local_web_error', 'Não foi possível abrir este ficheiro.');
+    const detail = document.createElement('p');
+    detail.textContent = err && err.message ? err.message : String(err);
+    host.append(message, detail);
+    stageEl.appendChild(host);
+  }
 }
 
 /* Favoritos de IPTV — guardados no computador do aluno através do processo
@@ -858,7 +883,12 @@ function iptvFavKey(moduleId) {
   return 'lbxIptvFav::' + base;
 }
 function normalizeFavs(obj) {
-  return (obj && Array.isArray(obj.folders)) ? obj : null;
+  if (!obj || !Array.isArray(obj.folders)) return null;
+  return { folders: obj.folders.filter((folder) => folder && typeof folder.id === 'string'
+    && typeof folder.name === 'string' && Array.isArray(folder.keys)).map((folder) => ({
+    id: folder.id, name: folder.name, _open: !!folder._open,
+    keys: [...new Set(folder.keys.filter((key) => typeof key === 'string' && key))]
+  })) };
 }
 function loadFavsLocal(key) {
   try { return normalizeFavs(JSON.parse(localStorage.getItem(key) || 'null')); } catch (_) { return null; }
@@ -902,7 +932,8 @@ function saveFavs(moduleId, data) {
 async function renderIptv(data, moduleId) {
   clearStage();
   stageEl.classList.add('iptv-mode');
-  const channels = (data && Array.isArray(data.channels)) ? data.channels : [];
+  const channels = (data && Array.isArray(data.channels))
+    ? data.channels.filter((ch) => ch && typeof ch.url === 'string' && ch.url) : [];
   if (channels.length === 0) {
     stageEl.innerHTML = '<div class="viewer-empty"><p>' + tr('viewer.iptv_empty', 'Sem canais para mostrar.') + '</p></div>';
     return;
@@ -937,6 +968,9 @@ async function renderIptv(data, moduleId) {
   let editingFolderId = null;
   let deletingFolderId = null;
   let creatingFolder = false;
+  let attemptCleanup = null;
+  let searchTimer = null;
+  let pickerTimer = null;
 
   const chanKey = (ch) => (ch && (ch.url || ch.name)) || '';
   const byKey = new Map();
@@ -1014,6 +1048,7 @@ async function renderIptv(data, moduleId) {
   diagBox.append(diagCopy, diagPre);
   diagBtn.addEventListener('click', () => diagBox.classList.toggle('hidden'));
   function logDiag(msg) {
+    if (myGen !== stageGeneration) return;
     const t = new Date();
     const hh = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
     diagLines.push(hh + ' ' + msg);
@@ -1143,8 +1178,9 @@ async function renderIptv(data, moduleId) {
   const XTREAM_LIVE = /^(.*\/live\/[^/]+\/[^/]+\/\d+)\.(ts|m3u8)(\?.*)?$/i;
   const FILE_EXT = /\.(mp4|m4v|webm|mkv|mov|mp3|m4a|aac|ogg|wav|flac)(\?|$)/i;
   let hasFfmpeg = false;
+  let ffmpegReady = Promise.resolve();
   if (window.viewer && typeof window.viewer.iptvHasFfmpeg === 'function') {
-    window.viewer.iptvHasFfmpeg().then((v) => { hasFfmpeg = !!v; logDiag('ffmpeg local: ' + (hasFfmpeg ? 'disponível' : 'AUSENTE (vendor/ffmpeg/ffmpeg.exe)')); }).catch(() => {});
+    ffmpegReady = window.viewer.iptvHasFfmpeg().then((v) => { hasFfmpeg = !!v; logDiag('ffmpeg local: ' + (hasFfmpeg ? 'disponível' : 'AUSENTE (vendor/ffmpeg/ffmpeg.exe)')); }).catch(() => {});
   }
   function buildAttempts(url) {
     const x = XTREAM_LIVE.exec(url);
@@ -1164,8 +1200,20 @@ async function renderIptv(data, moduleId) {
 
   let playSeq = 0;
   let lastFailReason = '';
+  const isCurrent = (seq) => myGen === stageGeneration && seq === playSeq;
+  function cancelAttempt() {
+    if (attemptCleanup) { attemptCleanup(); attemptCleanup = null; }
+  }
+  function resetVideo() {
+    try { video.pause(); video.removeAttribute('src'); video.load(); } catch (_) { /* noop */ }
+  }
   function play(ch, item) {
+    if (myGen !== stageGeneration) return;
+    const seq = ++playSeq;
+    cancelAttempt();
     destroyHls();
+    proxyToken = null;
+    resetVideo();
     if (activeItem) activeItem.classList.remove('active');
     activeItem = item || null;
     if (activeItem) activeItem.classList.add('active');
@@ -1174,50 +1222,68 @@ async function renderIptv(data, moduleId) {
     now.appendChild(diagBtn);
     logDiag('── canal: ' + (ch.name || '') + ' → ' + ch.url);
     if (!ch.url) return;
-    const seq = ++playSeq;
-    const attempts = buildAttempts(ch.url);
     lastFailReason = '';
-    hostsReady.then(() => runAttempt(attempts, 0, seq));
+    Promise.all([hostsReady, ffmpegReady]).then(() => {
+      if (isCurrent(seq)) runAttempt(buildAttempts(ch.url), 0, seq);
+    });
   }
 
   function runAttempt(attempts, idx, seq) {
-    if (seq !== playSeq) return;               // o aluno já escolheu outro canal
-    if (idx >= attempts.length) { destroyHls(); logDiag('✗ todos os motores falharam'); showPlayError(); return; }
-    const { engine, url } = attempts[idx];
+    if (!isCurrent(seq)) return;
+    cancelAttempt();
     destroyHls();
-    try { video.pause(); } catch (_) { /* noop */ }
-    video.removeAttribute('src');
-    try { video.load(); } catch (_) { /* noop */ }
+    proxyToken = null;
+    resetVideo();
+    if (idx >= attempts.length) { logDiag('✗ todos os motores falharam'); showPlayError(); return; }
+    const { engine, url } = attempts[idx];
     logDiag('tentativa ' + (idx + 1) + '/' + attempts.length + ' [' + engine + '] ' + url);
 
     let done = false;
     let watchdog = null;
+    let frameCallback = null;
+    let videoError = null;
+    function stopWatching() {
+      clearTimeout(watchdog);
+      if (frameCallback !== null && typeof video.cancelVideoFrameCallback === 'function') {
+        video.cancelVideoFrameCallback(frameCallback);
+      }
+      frameCallback = null;
+    }
+    attemptCleanup = () => {
+      done = true;
+      stopWatching();
+      if (videoError) video.removeEventListener('error', videoError);
+    };
+    function onVideoError(handler) {
+      videoError = handler;
+      video.addEventListener('error', handler, { once: true });
+    }
     const frames = () => {
       try { return video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality().totalVideoFrames : -1; } catch (_) { return -1; }
     };
     const next = (reason) => {
-      if (done || seq !== playSeq) return;
+      if (done || !isCurrent(seq)) return;
       done = true;
-      clearTimeout(watchdog);
+      stopWatching();
       lastFailReason = engine + ': ' + reason;
       logDiag('✗ [' + engine + '] ' + reason);
       runAttempt(attempts, idx + 1, seq);
     };
     const ok = (how) => {
-      if (done || seq !== playSeq) return;
+      if (done || !isCurrent(seq)) return;
       done = true;
-      clearTimeout(watchdog);
+      stopWatching();
       logDiag('✓ [' + engine + '] a reproduzir (' + how + ', ' + video.videoWidth + 'x' + video.videoHeight + ')');
     };
     // Sucesso = frames de vídeo a serem realmente apresentados, não apenas o
     // evento "playing" (que dispara mesmo com o vídeo em preto).
     if (typeof video.requestVideoFrameCallback === 'function') {
-      const onFrame = () => { if (!done && seq === playSeq && video.videoWidth > 0) ok('frame apresentado'); };
-      try { video.requestVideoFrameCallback(onFrame); } catch (_) { /* noop */ }
+      const onFrame = () => { frameCallback = null; if (!done && isCurrent(seq) && video.videoWidth > 0) ok('frame apresentado'); };
+      try { frameCallback = video.requestVideoFrameCallback(onFrame); } catch (_) { /* noop */ }
     }
     // Watchdog: ao fim de 15 s decide com base no que o <video> realmente fez.
     watchdog = setTimeout(() => {
-      if (done || seq !== playSeq) return;
+      if (done || !isCurrent(seq)) return;
       if (engine === 'proxy' && proxyToken) {
         window.viewer.iptvProxyStatus(proxyToken).then((st) => { if (st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | ')); }).catch(() => {});
       }
@@ -1236,7 +1302,7 @@ async function renderIptv(data, moduleId) {
         currentHls = hls;
         let recoveries = 0;
         hls.on(window.Hls.Events.ERROR, (_evt, d) => {
-          if (!d || currentHls !== hls) return;
+          if (!d || !isCurrent(seq) || currentHls !== hls) return;
           const code = d.response && d.response.code ? ' HTTP ' + d.response.code : '';
           logDiag('hls ' + (d.fatal ? 'FATAL ' : '') + (d.details || d.type) + code + (d.reason ? ' — ' + d.reason : ''));
           if (!d.fatal) return;
@@ -1250,6 +1316,7 @@ async function renderIptv(data, moduleId) {
         });
         let firstFrag = true, firstAppend = true;
         hls.on(window.Hls.Events.LEVEL_LOADED, (_e, d) => {
+          if (!isCurrent(seq) || currentHls !== hls) return;
           const det = d && d.details;
           if (det) {
             logDiag('hls playlist: ' + det.fragments.length + ' segmento(s), ' + (det.live ? 'live' : 'VOD') + ', duração alvo ' + det.targetduration + 's');
@@ -1282,6 +1349,7 @@ async function renderIptv(data, moduleId) {
           if (firstFrag) { firstFrag = false; logDiag('hls 1.º segmento descodificado: ' + bufInfo()); }
         });
         hls.on(window.Hls.Events.MANIFEST_PARSED, (_e, d) => {
+          if (!isCurrent(seq) || currentHls !== hls) return;
           const lv = (d && d.levels) || [];
           logDiag('hls manifesto ok: ' + lv.length + ' nível(is) ' + lv.map((l) => (l.width || '?') + 'x' + (l.height || '?') + (l.videoCodec ? ' ' + l.videoCodec : '') + (l.audioCodec ? '/' + l.audioCodec : '')).join(', '));
           Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
@@ -1327,19 +1395,24 @@ async function renderIptv(data, moduleId) {
 
       if (engine === 'proxy') {
         window.viewer.iptvProxyUrl(url).then((res) => {
-          if (done || seq !== playSeq) return;
-          if (!res || !res.url) { next('ffmpeg indisponível'); return; }
+          if (done || !isCurrent(seq) || !res || !res.url) {
+            if (res && res.token) window.viewer.iptvProxyStop(res.token).catch(() => {});
+            if (!done && isCurrent(seq)) next('ffmpeg indisponível');
+            return;
+          }
           proxyToken = res.token;
           window.__iptvProxyToken = res.token;
           logDiag('ffmpeg a retransmitir via ' + res.url);
           const explain = (why) => {
+            if (done || !isCurrent(seq)) return;
             window.viewer.iptvProxyStatus(res.token).then((st) => {
+              if (done || !isCurrent(seq)) return;
               if (st && st.log && st.log.length) logDiag('ffmpeg: ' + st.log.join(' | '));
               if (st && st.exitCode !== null && st.exitCode !== undefined) logDiag('ffmpeg terminou com código ' + st.exitCode);
               next(why);
             }).catch(() => next(why));
           };
-          video.addEventListener('error', () => explain('o <video> rejeitou o MP4 do ffmpeg' + (video.error ? ' (código ' + video.error.code + ')' : '')), { once: true });
+          onVideoError(() => explain('o <video> rejeitou o MP4 do ffmpeg' + (video.error ? ' (código ' + video.error.code + ')' : '')));
           video.src = res.url;
           Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
         }).catch((err) => next('proxy: ' + (err && err.message ? err.message : err)));
@@ -1347,7 +1420,7 @@ async function renderIptv(data, moduleId) {
       }
 
       // native
-      video.addEventListener('error', () => next('o navegador não conseguiu reproduzir este formato'), { once: true });
+      onVideoError(() => next('o navegador não conseguiu reproduzir este formato'));
       video.src = url;
       Promise.resolve(video.play()).catch((err) => logDiag('play() recusado: ' + (err && err.message)));
     } catch (err) {
@@ -1358,6 +1431,7 @@ async function renderIptv(data, moduleId) {
   // ---- Menu flutuante para escolher/criar pasta ao clicar na estrela ----
   let openPicker = null;
   function closePicker() {
+    clearTimeout(pickerTimer);
     if (openPicker) {
       openPicker.remove();
       openPicker = null;
@@ -1367,7 +1441,12 @@ async function renderIptv(data, moduleId) {
   function onDocClick(e) {
     if (openPicker && !openPicker.contains(e.target)) closePicker();
   }
-  iptvCleanup = closePicker;
+  iptvCleanup = () => {
+    playSeq++;
+    cancelAttempt();
+    clearTimeout(searchTimer);
+    closePicker();
+  };
   function openFolderPicker(ch, anchorBtn) {
     closePicker();
     const key = chanKey(ch);
@@ -1429,7 +1508,9 @@ async function renderIptv(data, moduleId) {
     pop.style.top = top + 'px';
     pop.style.left = left + 'px';
     openPicker = pop;
-    setTimeout(() => document.addEventListener('click', onDocClick, true), 0);
+    pickerTimer = setTimeout(() => {
+      if (myGen === stageGeneration && openPicker === pop) document.addEventListener('click', onDocClick, true);
+    }, 0);
     input.focus();
   }
 
@@ -1686,10 +1767,9 @@ async function renderIptv(data, moduleId) {
     render();
   });
 
-  let searchTimer = null;
   search.addEventListener('input', () => {
     if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(render, 120);
+    searchTimer = setTimeout(() => { if (myGen === stageGeneration) render(); }, 120);
   });
 
   render();
@@ -1720,6 +1800,7 @@ async function dispatchModule(mod, btn) {
  * entered, the module stays unlocked for the rest of the viewing session. */
 function renderPasswordGate(mod, btn, pwd) {
   clearStage();
+  const generation = stageGeneration;
   const host = document.createElement('div');
   host.className = 'viewer-empty';
 
@@ -1756,14 +1837,30 @@ function renderPasswordGate(mod, btn, pwd) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (submit.disabled || generation !== stageGeneration) return;
     if (input.value === pwd) {
+      submit.disabled = true;
       unlockedModules.add(mod.id);
       if (btn) {
         btn.classList.remove('locked');
         const lock = btn.querySelector('.viewer-menu-lock');
         if (lock) lock.remove();
       }
-      await dispatchModule(mod, btn);
+      if (mod.type === 'external' || mod.type === 'launch') {
+        // The gate has finished. Keep no action reference that translation or
+        // session restoration could execute again.
+        activeModuleRef = null;
+        setActiveMenuBtn(null);
+        clearStage();
+        const welcome = document.createElement('div');
+        welcome.className = 'viewer-empty';
+        const heading = document.createElement('h2');
+        const text = document.createElement('p');
+        welcome.append(heading, text);
+        stageEl.appendChild(welcome);
+        applyDynamicTexts();
+      }
+      await handleModuleClick(mod, btn);
     } else {
       error.textContent = tr('viewer.pw_wrong', 'Senha incorreta.');
       input.value = '';
@@ -1795,7 +1892,13 @@ async function renderBanner(banners) {
 async function renderBannerSlot(position, banner, host) {
   if (!banner || !banner.enabled || !banner.image) return;
 
-  const fileUrl = await relToFileUrl(banner.image);
+  let fileUrl;
+  try { fileUrl = await relToFileUrl(banner.image); }
+  catch (err) {
+    showToast(tr('viewer.local_web_error', 'Não foi possível abrir este ficheiro.') + ' ' + (err && err.message ? err.message : err));
+    return;
+  }
+  if (!fileUrl) return;
 
   const link = document.createElement('a');
   link.href = '#';
@@ -1911,10 +2014,16 @@ async function boot() {
   document.title = title;
 
   if (config.brand && config.brand.logo) {
-    const logoUrl = await relToFileUrl(config.brand.logo);
-    if (logoUrl) {
-      logoEl.src = logoUrl;
-      logoEl.classList.remove('hidden');
+    try {
+      const logoUrl = await relToFileUrl(config.brand.logo);
+      if (logoUrl) {
+        logoEl.src = logoUrl;
+        logoEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      logoEl.classList.add('hidden');
+      logoEl.removeAttribute('src');
+      showToast(tr('viewer.local_web_error', 'Não foi possível abrir este ficheiro.') + ' ' + (err && err.message ? err.message : err));
     }
   } else {
     logoEl.classList.add('hidden');
@@ -1976,15 +2085,19 @@ function applyDynamicTexts() {
 }
 
 async function setLanguage(lang) {
+  const generation = ++languageGeneration;
   let applied = lang;
   try {
     const res = await window.viewer.loadLocale(lang);
+    if (generation !== languageGeneration) return;
     i18nDict = res.dict || {};
     if (res.lang) applied = res.lang;
   } catch (_) { return; }
   applyI18n();
   applyDynamicTexts();
   applyDir(ALLOWED_LANGS.includes(applied) ? applied : 'pt');
+  const langSelect = document.getElementById('viewer-lang');
+  if (langSelect) langSelect.value = ALLOWED_LANGS.includes(applied) ? applied : 'pt';
   // Re-renderiza o módulo aberto para que o texto interno (ex.: "Escolha um
   // canal…" e os rótulos do IPTV) acompanhe o novo idioma.
   if (activeModuleRef && activeModuleRef.mod) {

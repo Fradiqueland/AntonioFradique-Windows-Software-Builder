@@ -67,6 +67,16 @@ test('production content handler imports the full portable folder and persists n
   assert.deepEqual(f.config(), saved);
 });
 
+test('malformed module-list requests preserve saved content and imported files', (t) => {
+  const f = fixture(t), saved = f.save([f.module()]);
+  const roots = fs.readdirSync(f.assetsDir);
+  for (const payload of [undefined, {}, { modules: null }, { modules: {} }, { modules: 'invalid' }]) {
+    assert.throws(() => f.handlers.get('content:save')({}, payload), /Lista de módulos inválida/);
+    assert.deepEqual(f.config(), saved);
+    assert.deepEqual(fs.readdirSync(f.assetsDir), roots);
+  }
+});
+
 test('editing and reordering use saved roots, keep revisions and apply selected Wine permission', (t) => {
   const f = fixture(t), saved = f.save([f.module()]);
   const first = saved.content[0], root = first.data.root, revision = first.data.revision;

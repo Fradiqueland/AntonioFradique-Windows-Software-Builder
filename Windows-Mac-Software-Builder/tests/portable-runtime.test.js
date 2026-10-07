@@ -32,7 +32,7 @@ function macho(cpu = 0x1000007) {
 }
 
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'portable-runtime-test-'));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'portable-runtime-test-')));
   const source = path.join(root, 'portable source');
   const assetsDir = path.join(root, 'extracted viewer', 'dist-assets');
   const storageDir = path.join(root, 'persistent');
