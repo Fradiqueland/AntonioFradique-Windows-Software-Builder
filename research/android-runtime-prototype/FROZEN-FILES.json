@@ -1,0 +1,107 @@
+[
+  {
+    "file": "CHECKPOINT.md",
+    "bytes": 8636,
+    "sha256": "06e88d59eff0d6c88abdb7e248c6a01ec8c3ac03aef9d3b96b4aa8d115fe7b25"
+  },
+  {
+    "file": "HOST-REPRODUCTION.md",
+    "bytes": 3989,
+    "sha256": "a0fffd43f7f446fc30764fb2a18c395c7fb0b134209db1b36d78ed4f5b26d19d"
+  },
+  {
+    "file": "run_vm.py",
+    "bytes": 8266,
+    "sha256": "576d3185a50d38abc7926b6b7d2bc435194904544233a3fc243031525b9cfab2"
+  },
+  {
+    "file": "build_fixture.py",
+    "bytes": 1947,
+    "sha256": "ae5228e7773936797d4b95de2e074d2d1a585ec8b2b189811a6d7cbc8455a2f4"
+  },
+  {
+    "file": "download_images.py",
+    "bytes": 1700,
+    "sha256": "84bdb2abdc1671ae22be572a2e4f93017ae9360a7a1d156a5d3b9dd335df5b37"
+  },
+  {
+    "file": "bootstrap-tools.json",
+    "bytes": 522,
+    "sha256": "add7842309f4e6e554629ad4d7fc8154d2147206aabe1de48c6e7a66037f123b"
+  },
+  {
+    "file": "ubuntu-tools-manifest.json",
+    "bytes": 20862,
+    "sha256": "4ec113673e9de037ae567fa1bc8a512159bce055d9b3bf2262637ff0ed4a4026"
+  },
+  {
+    "file": "waydroid-images.json",
+    "bytes": 854,
+    "sha256": "0fb374c745178aee65cb9ba77ea66e4ead613c093d9fff24df5a9b74510d9fa4"
+  },
+  {
+    "file": "image-download-evidence.json",
+    "bytes": 436,
+    "sha256": "ca88f9cdff04405792ad25467a939ebe733548b44d037be2bd15773740034dea"
+  },
+  {
+    "file": "fixture-evidence.json",
+    "bytes": 429,
+    "sha256": "afd44105a752a85915350e1265cfaac64651381e02129e19f5537de55ce49c8e"
+  },
+  {
+    "file": "metrics.json",
+    "bytes": 1161,
+    "sha256": "981a12f6b2218a53012f250dcb7f778e1bb534379ba1150c0fa5bb4379c6686e"
+  },
+  {
+    "file": "failure-evidence.log",
+    "bytes": 4182,
+    "sha256": "b585f606e92c290dded960af796c80fb43112341ffe31c89f3c70638852222ae"
+  },
+  {
+    "file": "fixtures/AndroidManifest.xml",
+    "bytes": 695,
+    "sha256": "361fb554deee38aa6325ae6d8d630b7eb74a465c605863af6f96a86aa6717cff"
+  },
+  {
+    "file": "fixtures/smali/MainActivity.smali",
+    "bytes": 1183,
+    "sha256": "f516320e51e64d1ba7ba7fe2e982f5ec6ff724bde6c291a38072e0d3e69c5cea"
+  },
+  {
+    "file": "fixtures/smali/TapListener.smali",
+    "bytes": 1425,
+    "sha256": "111d2ab03d55bf775d2b21c89d555833b395fd434368de89ab32c4f0c82455c3"
+  },
+  {
+    "file": "package-prep/guest-start.sh",
+    "bytes": 2945,
+    "sha256": "a66c4604b239f40cee60e13de74554c9fbde4db27111c64c1bb43e16897066b0"
+  },
+  {
+    "file": "package-prep/GUEST-STARTUP.md",
+    "bytes": 9220,
+    "sha256": "b8c29f243eef64dd96934fb723fb62984fcbbf4672daf1ec5af5a93908582111"
+  },
+  {
+    "file": "package-prep/prefetch.py",
+    "bytes": 5374,
+    "sha256": "7006742983242f880162c6d9f9d7eda1014ca2e90d4f71a239dbf00e1501db5f"
+  },
+  {
+    "file": "package-prep/root-packages.json",
+    "bytes": 358,
+    "sha256": "ea4834c5c31efcc687b49ed9ebdc0b98921aa0bae135168d79dd337301ec6630"
+  },
+  {
+    "file": "package-prep/package-manifest.json",
+    "bytes": 115499,
+    "sha256": "a45ab7a74c1425f7f1b4736651e742352dda55138fdae74f57c4eadb8ca493b3"
+  },
+  {
+    "file": "package-prep/signature-verification.log",
+    "bytes": 14962,
+    "sha256": "9264acaff27e32e2884eb27466776b77f98562aa9668ab8f1a56bb387033a606"
+  }
+]

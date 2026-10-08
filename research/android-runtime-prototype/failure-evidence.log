@@ -1,0 +1,33 @@
+Frozen excerpts from serial.log; not a complete Android or strace log.
+Earlier SIGPIPE shutdown and later pipe EPIPE are different attempts.
+No sys.boot_completed=1 or APK rendering/input acceptance was captured.
+
+[  372.118983] init: createProcessGroup(1069, 65) failed for service 'lmkd': Read-only file system
+[  377.132930] init: createProcessGroup(1069, 66) failed for service 'lmkd': Read-only file system
+[  382.501572] init: createProcessGroup(1069, 97) failed for service 'lmkd': Read-only file system
+[  391.699623] init: critical process 'lmkd' exited 4 times before boot completed
+[  391.751623] init: InitFatalReboot: signal 6
+[  392.230333] init: #00 pc 00000000001475fe  /system/bin/init (android::init::InitFatalReboot(int)+94)
+10-08 20:07:46.234   343   343 D SystemServerTiming: OnBootPhase_550_org.lineageos.platform.internal.WayDroidService
+10-08 20:07:46.234   343   343 V SystemServerTiming: OnBootPhase_550_org.lineageos.platform.internal.WayDroidService took to complete: 0ms
+[  491.192883] init: Service vold has 'reboot_on_failure' option and failed, shutting down system.
+[  491.204903] init: Got shutdown_command 'reboot,vold-failed' Calling HandlePowerctlMessage()
+[  491.228687] init: Reboot start, reason: reboot,vold-failed, reboot_target: vold-failed
+[  491.153271] init: Service 'vold' (pid 25) received signal 13
+[  491.192883] init: Service vold has 'reboot_on_failure' option and failed, shutting down system.
+[  491.204903] init: Got shutdown_command 'reboot,vold-failed' Calling HandlePowerctlMessage()
+[  491.228687] init: Reboot start, reason: reboot,vold-failed, reboot_target: vold-failed
+[  491.153271] init: Service 'vold' (pid 25) received signal 13
+strace: Process 3850 attached with 5 threads
+/root/vold-strace.3850:20:18:50.828291 write(11<pipe:[34552]>, "\n\n----- pid 29 at 2026-10-08 20:18:49.822984045+0000 -----\n", 59) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:51.363123 write(11<pipe:[34552]>, "Cmd line: /system/bin/vold --blkid_context=u:r:blkid:s0 --blkid_untrusted_context=u:r:blkid_untrusted:s0 --fsck_context=u:r:fsck:s0 --fsck_untrusted_context=u:r:fsck_untrusted:s0\n", 179) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:51.364926 write(11<pipe:[34552]>, "ABI: 'x86_64'\n", 14) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:51.408651 write(11<pipe:[34552]>, "\n\"binder:29_2\" sysTid=29\n", 25) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.856456 write(11<pipe:[34552]>, "    #00 pc 00000000000b78d7  /apex/com.android.runtime/lib64/bionic/libc.so (__ioctl+7) (BuildId: edac77664d4699371f98b0f76841bb37)\n", 132) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.865538 write(11<pipe:[34552]>, "    #01 pc 0000000000069218  /apex/com.android.runtime/lib64/bionic/libc.so (ioctl+216) (BuildId: edac77664d4699371f98b0f76841bb37)\n", 132) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.890811 write(11<pipe:[34552]>, "    #02 pc 000000000006688f  /system/lib64/libbinder.so (android::IPCThreadState::talkWithDriver(bool)+287) (BuildId: 2b24859848afc726b36920fa623d769f)\n", 152) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.904791 write(11<pipe:[34552]>, "    #03 pc 0000000000066b70  /system/lib64/libbinder.so (android::IPCThreadState::getAndExecuteCommand()+16) (BuildId: 2b24859848afc726b36920fa623d769f)\n", 153) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.908514 write(11<pipe:[34552]>, "    #04 pc 00000000000675ff  /system/lib64/libbinder.so (android::IPCThreadState::joinThreadPool(bool)+63) (BuildId: 2b24859848afc726b36920fa623d769f)\n", 151) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.911570 write(11<pipe:[34552]>, "    #05 pc 00000000000260b8  /system/bin/vold (main+1448) (BuildId: a1f1e644a8283563112c8fa9c5a12e8d)\n", 102) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:54.916523 write(11<pipe:[34552]>, "    #06 pc 0000000000050cf9  /apex/com.android.runtime/lib64/bionic/libc.so (__libc_init+89) (BuildId: edac77664d4699371f98b0f76841bb37)\n", 137) = -1 EPIPE (Broken pipe)
+/root/vold-strace.3850:20:18:55.047023 write(11<pipe:[34552]>, "\n\"binder:29_1\" sysTid=31\n", 25) = -1 EPIPE (Broken pipe)

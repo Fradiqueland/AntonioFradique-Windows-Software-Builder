@@ -1,0 +1,482 @@
+[
+  {
+    "file": "aapt_1%3a14~beta1-2build3_amd64.deb",
+    "package": "aapt",
+    "version": "1:14~beta1-2build3",
+    "source": "android-platform-frameworks-base",
+    "bytes": 34360,
+    "sha256": "eb78b75f41736898eea60b83cbdfc9166a345f452816d44d4880e882cf742faa",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-frameworks-base/aapt_14~beta1-2build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "acl_2.3.2-1build1.1_amd64.deb",
+    "package": "acl",
+    "version": "2.3.2-1build1.1",
+    "source": "acl",
+    "bytes": 39398,
+    "sha256": "0beec20d005bb4b3138ac9c99ab7c10a06acaf1ea1ad4e10ad760e56561edd58",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/a/acl/acl_2.3.2-1build1.1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-framework-res_1%3a14~beta1-2build3_all.deb",
+    "package": "android-framework-res",
+    "version": "1:14~beta1-2build3",
+    "source": "android-platform-frameworks-base",
+    "bytes": 18989422,
+    "sha256": "5d1c5699d17ed6aad383332d38a57a685cfe49b1c37182a9392fbe4edf3878d4",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-frameworks-base/android-framework-res_14~beta1-2build3_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libaapt_1%3a14~beta1-2build3_amd64.deb",
+    "package": "android-libaapt",
+    "version": "1:14~beta1-2build3",
+    "source": "android-platform-frameworks-base",
+    "bytes": 919632,
+    "sha256": "b40836eeda9bede48606c1efb19849f51999fd309919f327dca97244921d0c0c",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-frameworks-base/android-libaapt_14~beta1-2build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libandroidfw_1%3a14~beta1-2build3_amd64.deb",
+    "package": "android-libandroidfw",
+    "version": "1:14~beta1-2build3",
+    "source": "android-platform-frameworks-base",
+    "bytes": 182112,
+    "sha256": "6bd5dce4ccd18b4fec243066a8e1b08182f407394cffe5d05e8438b91317710f",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-frameworks-base/android-libandroidfw_14~beta1-2build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libbacktrace_1%3a34.0.4-1build3_amd64.deb",
+    "package": "android-libbacktrace",
+    "version": "1:34.0.4-1build3",
+    "source": "android-platform-tools (34.0.4-1build3)",
+    "bytes": 227210,
+    "sha256": "71ea510665c57491e3c333df57264c58757e88f2e07e084a78828e5843852675",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools/android-libbacktrace_34.0.4-1build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libbase_1%3a34.0.4-1build3_amd64.deb",
+    "package": "android-libbase",
+    "version": "1:34.0.4-1build3",
+    "source": "android-platform-tools (34.0.4-1build3)",
+    "bytes": 98980,
+    "sha256": "528842562fdf34b62fedbd6c49733cd583ec249820575ce913062232431155d8",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools/android-libbase_34.0.4-1build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libcutils_1%3a34.0.4-1build3_amd64.deb",
+    "package": "android-libcutils",
+    "version": "1:34.0.4-1build3",
+    "source": "android-platform-tools (34.0.4-1build3)",
+    "bytes": 35722,
+    "sha256": "7bbde3f2e38cc9542128f0b9eeb8bd0fa1aacb795ce151b671ba690d469f5fa2",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools/android-libcutils_34.0.4-1build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-liblog_1%3a34.0.4-1build3_amd64.deb",
+    "package": "android-liblog",
+    "version": "1:34.0.4-1build3",
+    "source": "android-platform-tools (34.0.4-1build3)",
+    "bytes": 35790,
+    "sha256": "2b91d308ce13d133b69076a3f1fb254dccb51b72dfc216b1865d40a5cf1b53b2",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools/android-liblog_34.0.4-1build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libutils_1%3a34.0.4-1build3_amd64.deb",
+    "package": "android-libutils",
+    "version": "1:34.0.4-1build3",
+    "source": "android-platform-tools (34.0.4-1build3)",
+    "bytes": 51814,
+    "sha256": "a15dc92c9373879a7391a9bb627376b98fb422fd41f0ddb6f3e4827b19229205",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools/android-libutils_34.0.4-1build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "android-libziparchive_1%3a34.0.4-1build3_amd64.deb",
+    "package": "android-libziparchive",
+    "version": "1:34.0.4-1build3",
+    "source": "android-platform-tools (34.0.4-1build3)",
+    "bytes": 40702,
+    "sha256": "eb6657afd452ec67ea0a726a76734bd65fe1e5f36b5ca4b97df9ab651d06a45a",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools/android-libziparchive_34.0.4-1build3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "apksigner_31.0.2-1ubuntu1_all.deb",
+    "package": "apksigner",
+    "version": "31.0.2-1ubuntu1",
+    "source": "android-platform-tools-apksig",
+    "bytes": 443686,
+    "sha256": "37a04ceb8c80b6956dd702b99d3a6b7cae1c0e8085d1334adc77b8f92a3117e6",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools-apksig/apksigner_31.0.2-1ubuntu1_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "busybox-static_1%3a1.36.1-6ubuntu3.1_amd64.deb",
+    "package": "busybox-static",
+    "version": "1:1.36.1-6ubuntu3.1",
+    "source": "busybox",
+    "bytes": 1008874,
+    "sha256": "944b2728f53ceb3916cec2c962873c9951e612408099601751db2a0a5d81e0ed",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/b/busybox/busybox-static_1.36.1-6ubuntu3.1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "cpio_2.15+dfsg-1ubuntu2_amd64.deb",
+    "package": "cpio",
+    "version": "2.15+dfsg-1ubuntu2",
+    "source": "cpio",
+    "bytes": 82668,
+    "sha256": "b3c7bb97baf1a5dabe0c672ebdc94724bdcd7251790152cfa4314efda5696817",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/c/cpio/cpio_2.15+dfsg-1ubuntu2_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "default-jre-headless_2%3a1.21-75+exp1_amd64.deb",
+    "package": "default-jre-headless",
+    "version": "2:1.21-75+exp1",
+    "source": "java-common (0.75+exp1)",
+    "bytes": 3094,
+    "sha256": "3cab975cad21d6ccb0aaee9ea5732ce361e6aa0e3d76ad1eb6026082e96f7db2",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/j/java-common/default-jre-headless_1.21-75+exp1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "default-jre_2%3a1.21-75+exp1_amd64.deb",
+    "package": "default-jre",
+    "version": "2:1.21-75+exp1",
+    "source": "java-common (0.75+exp1)",
+    "bytes": 922,
+    "sha256": "5b4cb4d2269e45a5beee59b00ef23250880dc1e8d696be7358a2cc73a158df8b",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/j/java-common/default-jre_1.21-75+exp1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "ipxe-qemu_1.21.1+git-20220113.fbbdc3926-0ubuntu2_all.deb",
+    "package": "ipxe-qemu",
+    "version": "1.21.1+git-20220113.fbbdc3926-0ubuntu2",
+    "source": "ipxe",
+    "bytes": 1564600,
+    "sha256": "1f1612934b6ddaf4dd633760dfe5ef2a79ea2507341fd5efe394ff589a044707",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/i/ipxe/ipxe-qemu_1.21.1+git-20220113.fbbdc3926-0ubuntu2_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "java-wrappers_0.4_all.deb",
+    "package": "java-wrappers",
+    "version": "0.4",
+    "source": "java-wrappers",
+    "bytes": 8662,
+    "sha256": "65efc59f2c2b98a75b5a089695a65bcbcb5c5f378de186807cca0c5923adbe8f",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/j/java-wrappers/java-wrappers_0.4_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libaio1t64_0.3.113-6build1.1_amd64.deb",
+    "package": "libaio1t64",
+    "version": "0.3.113-6build1.1",
+    "source": "libaio",
+    "bytes": 7210,
+    "sha256": "433212b33e26d424605c01cec1de33b63f2cc12870987b4cb7b3625baba66a19",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/liba/libaio/libaio1t64_0.3.113-6build1.1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libantlr3-runtime-java_3.5.3-2_all.deb",
+    "package": "libantlr3-runtime-java",
+    "version": "3.5.3-2",
+    "source": "antlr3",
+    "bytes": 163828,
+    "sha256": "8dee757edefeb69f200484c976d75cea274df7c045bdec23ee8720b570f7fb9e",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/antlr3/libantlr3-runtime-java_3.5.3-2_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libapksig-java_31.0.2-1ubuntu1_all.deb",
+    "package": "libapksig-java",
+    "version": "31.0.2-1ubuntu1",
+    "source": "android-platform-tools-apksig",
+    "bytes": 406398,
+    "sha256": "35a70af2666f09402034dc5d154ddbc84819e58b0f8ac60b311594bc5f7ecfc1",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/android-platform-tools-apksig/libapksig-java_31.0.2-1ubuntu1_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libatinject-jsr330-api-java_1.0+ds1-5_all.deb",
+    "package": "libatinject-jsr330-api-java",
+    "version": "1.0+ds1-5",
+    "source": "atinject-jsr330",
+    "bytes": 5348,
+    "sha256": "5e34eacd93dbd8e0a1aba1e4adf128a803a25f983540d327ef32ecfb0605fe89",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/a/atinject-jsr330/libatinject-jsr330-api-java_1.0+ds1-5_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libbrlapi0.8_6.6-4ubuntu5_amd64.deb",
+    "package": "libbrlapi0.8",
+    "version": "6.6-4ubuntu5",
+    "source": "brltty",
+    "bytes": 31388,
+    "sha256": "82272b3090c912e45d92ff7ed200de289c47e504513559377a6f6c5a372cbcf5",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/b/brltty/libbrlapi0.8_6.6-4ubuntu5_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libcacard0_1%3a2.8.0-3build4_amd64.deb",
+    "package": "libcacard0",
+    "version": "1:2.8.0-3build4",
+    "source": "libcacard",
+    "bytes": 36546,
+    "sha256": "7a75de14b0fdff2828a3d218a49e7fe4da2df533185ba9ccbabd0647db05e33c",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/libc/libcacard/libcacard0_2.8.0-3build4_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libdaxctl1_77-2ubuntu2_amd64.deb",
+    "package": "libdaxctl1",
+    "version": "77-2ubuntu2",
+    "source": "ndctl",
+    "bytes": 21404,
+    "sha256": "c6629b49c79343fb11ae404aeaa3156f051168da6c6d3d9d8d516acd94705061",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/n/ndctl/libdaxctl1_77-2ubuntu2_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "liberror-prone-java_2.18.0-1_all.deb",
+    "package": "liberror-prone-java",
+    "version": "2.18.0-1",
+    "source": "error-prone-java",
+    "bytes": 22484,
+    "sha256": "a1dcc5b74e2e760f01f9babeb131b38f40721aab88b8621d619881b5cb43fed9",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/e/error-prone-java/liberror-prone-java_2.18.0-1_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libfdt1_1.7.0-2build1_amd64.deb",
+    "package": "libfdt1",
+    "version": "1.7.0-2build1",
+    "source": "device-tree-compiler",
+    "bytes": 20128,
+    "sha256": "274d20dfab9d6b216b5de85446a93f6ce5b2cd82c847b8dfdc508577f76eb96a",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/d/device-tree-compiler/libfdt1_1.7.0-2build1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libguava-java_32.0.1-1_all.deb",
+    "package": "libguava-java",
+    "version": "32.0.1-1",
+    "source": "guava-libraries",
+    "bytes": 2692240,
+    "sha256": "785a761e87a9d5608ca1ab88a894ece3db233e9c9fd9c37670100f6ad9d7f8cb",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/g/guava-libraries/libguava-java_32.0.1-1_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libibverbs1_50.0-2ubuntu0.2_amd64.deb",
+    "package": "libibverbs1",
+    "version": "50.0-2ubuntu0.2",
+    "source": "rdma-core",
+    "bytes": 67960,
+    "sha256": "8489558105ee1d1c65ae6e0f1bac0e9b15f314a68f106ee9a63c89821242bd8e",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/r/rdma-core/libibverbs1_50.0-2ubuntu0.2_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libjcommander-java_1.71-4_all.deb",
+    "package": "libjcommander-java",
+    "version": "1.71-4",
+    "source": "jcommander",
+    "bytes": 68466,
+    "sha256": "a8838ec6d9cd1d51af22a9f8451e8fe5ec66f1fb78a278f98992ff0fbb4b8e6f",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/j/jcommander/libjcommander-java_1.71-4_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libjsr305-java_0.1~+svn49-11_all.deb",
+    "package": "libjsr305-java",
+    "version": "0.1~+svn49-11",
+    "source": "libjsr305-java",
+    "bytes": 26976,
+    "sha256": "4b85c3a48249d56499953d6372f2145e4447713dc80eb2d725165ce996cb9150",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/libj/libjsr305-java/libjsr305-java_0.1~+svn49-11_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libndctl6_77-2ubuntu2_amd64.deb",
+    "package": "libndctl6",
+    "version": "77-2ubuntu2",
+    "source": "ndctl",
+    "bytes": 62750,
+    "sha256": "4eab53588a8fa9e3192635e118c2d91bc069cde46a4a3785c77a0bb1ae001d02",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/n/ndctl/libndctl6_77-2ubuntu2_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libnl-route-3-200_3.7.0-0.3build1.1_amd64.deb",
+    "package": "libnl-route-3-200",
+    "version": "3.7.0-0.3build1.1",
+    "source": "libnl3",
+    "bytes": 189094,
+    "sha256": "c9dbd29cb7fdcf1a0587726cbc5432a7d3e81242108dfcfa2dd6716c44c74d4d",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/libn/libnl3/libnl-route-3-200_3.7.0-0.3build1.1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libpmem1_1.13.1-1.1ubuntu2_amd64.deb",
+    "package": "libpmem1",
+    "version": "1.13.1-1.1ubuntu2",
+    "source": "pmdk",
+    "bytes": 84760,
+    "sha256": "8f1be1cc834a98f0cf5c0950153f7f939a0c2c92095e98cd7bb40c752c545c1b",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/p/pmdk/libpmem1_1.13.1-1.1ubuntu2_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libprotobuf32t64_3.21.12-8.2ubuntu0.3_amd64.deb",
+    "package": "libprotobuf32t64",
+    "version": "3.21.12-8.2ubuntu0.3",
+    "source": "protobuf",
+    "bytes": 922638,
+    "sha256": "0b0dd45060288fbe5505b4b3c86e6222d6f4214574f653b2a7d0bbe72d5c6d87",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/p/protobuf/libprotobuf32t64_3.21.12-8.2ubuntu0.3_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "librdmacm1t64_50.0-2ubuntu0.2_amd64.deb",
+    "package": "librdmacm1t64",
+    "version": "50.0-2ubuntu0.2",
+    "source": "rdma-core",
+    "bytes": 70698,
+    "sha256": "7b7cc2fa16564bf301751b43d05d16f0846288b080d9a25a92a691d0df33fc68",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/r/rdma-core/librdmacm1t64_50.0-2ubuntu0.2_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libslirp0_4.7.0-1ubuntu3.1_amd64.deb",
+    "package": "libslirp0",
+    "version": "4.7.0-1ubuntu3.1",
+    "source": "libslirp",
+    "bytes": 63830,
+    "sha256": "4efa2d1c509de4d10fe965e86a3d864bf542996caf476d9111fd882c73857164",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/libs/libslirp/libslirp0_4.7.0-1ubuntu3.1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libsmali-java_2.5.2.git2771eae-4_all.deb",
+    "package": "libsmali-java",
+    "version": "2.5.2.git2771eae-4",
+    "source": "libsmali-java",
+    "bytes": 1365510,
+    "sha256": "b03bf94ad3f1e27f89d5122e2704e4c511fd3ad9ea117eac15fa4e3d6cb26cfa",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/universe/libs/libsmali-java/libsmali-java_2.5.2.git2771eae-4_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "liburing2_2.5-1build1_amd64.deb",
+    "package": "liburing2",
+    "version": "2.5-1build1",
+    "source": "liburing",
+    "bytes": 21092,
+    "sha256": "c2aef62accee92a06263c3ad4ef46132c13e409b54296c44792a20491830a7b0",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/libu/liburing/liburing2_2.5-1build1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libusbredirparser1t64_0.13.0-2.1build1_amd64.deb",
+    "package": "libusbredirparser1t64",
+    "version": "0.13.0-2.1build1",
+    "source": "usbredir",
+    "bytes": 16508,
+    "sha256": "78be9176f05512bcac369fcada499686b1dd34320965d27e3405c7aacbc4e461",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/u/usbredir/libusbredirparser1t64_0.13.0-2.1build1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "libxtst6_2%3a1.2.3-1.1build1_amd64.deb",
+    "package": "libxtst6",
+    "version": "2:1.2.3-1.1build1",
+    "source": "libxtst",
+    "bytes": 12642,
+    "sha256": "632d74c760f0a4e844c499e7bc1eca4c709aa096fde783a7a6807604aef77545",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/libx/libxtst/libxtst6_1.2.3-1.1build1_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "openjdk-21-jre-headless_21.0.12+8-1~24.04_amd64.deb",
+    "package": "openjdk-21-jre-headless",
+    "version": "21.0.12+8-1~24.04",
+    "source": "openjdk-21",
+    "bytes": 46539998,
+    "sha256": "8deb4f47ce44072c5952c9e55be690504d4cbc2e3465cc9c6d52496a69871dd0",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/o/openjdk-21/openjdk-21-jre-headless_21.0.12+8-1~24.04_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "openjdk-21-jre_21.0.12+8-1~24.04_amd64.deb",
+    "package": "openjdk-21-jre",
+    "version": "21.0.12+8-1~24.04",
+    "source": "openjdk-21",
+    "bytes": 232610,
+    "sha256": "050cda89bcc0d480d22e8945fbb3472a3cec6895919f739e32beead58305f2e9",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/o/openjdk-21/openjdk-21-jre_21.0.12+8-1~24.04_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "qemu-system-common_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb",
+    "package": "qemu-system-common",
+    "version": "1:8.2.2+ds-0ubuntu1.18",
+    "source": "qemu",
+    "bytes": 1255316,
+    "sha256": "0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/q/qemu/qemu-system-common_8.2.2+ds-0ubuntu1.18_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "qemu-system-data_1%3a8.2.2+ds-0ubuntu1.18_all.deb",
+    "package": "qemu-system-data",
+    "version": "1:8.2.2+ds-0ubuntu1.18",
+    "source": "qemu",
+    "bytes": 1796342,
+    "sha256": "a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/q/qemu/qemu-system-data_8.2.2+ds-0ubuntu1.18_all.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "qemu-system-x86_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb",
+    "package": "qemu-system-x86",
+    "version": "1:8.2.2+ds-0ubuntu1.18",
+    "source": "qemu",
+    "bytes": 11222476,
+    "sha256": "14602e262627adac030329d2cecfee5f6c0938b34566ff2ea2d4c9a9eb02430d",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/q/qemu/qemu-system-x86_8.2.2+ds-0ubuntu1.18_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "qemu-utils_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb",
+    "package": "qemu-utils",
+    "version": "1:8.2.2+ds-0ubuntu1.18",
+    "source": "qemu",
+    "bytes": 2220842,
+    "sha256": "10695e57937d8a1d0ec6d017a6770d02353ec0c9500e4a36928230b2d39026c5",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/q/qemu/qemu-utils_8.2.2+ds-0ubuntu1.18_amd64.deb",
+    "indexSha256Verified": true
+  },
+  {
+    "file": "seabios_1.16.3-2_all.deb",
+    "package": "seabios",
+    "version": "1.16.3-2",
+    "source": "seabios",
+    "bytes": 174648,
+    "sha256": "cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/pool/main/s/seabios/seabios_1.16.3-2_all.deb",
+    "indexSha256Verified": true
+  }
+]

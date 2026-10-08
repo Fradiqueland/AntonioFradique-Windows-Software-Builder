@@ -1,0 +1,14 @@
+{
+  "file": "builder-prototype.apk",
+  "package": "net.antoniofradique.builder.prototype",
+  "bytes": 12631,
+  "sha256": "fb2300f3072b1be4f95ee4ee1ba3e72fd9abda2c9bfe15d0d539a2c97e278463",
+  "verifiedSignatures": [
+    "v1",
+    "v2",
+    "v3"
+  ],
+  "signing": "disposable generated debug key, excluded from checkpoint",
+  "byteReproducibility": "signature and archive timestamps may vary",
+  "runtimeAcceptancePassed": false
+}

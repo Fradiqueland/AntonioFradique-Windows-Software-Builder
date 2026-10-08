@@ -1,0 +1,14 @@
+[
+  {
+    "file": "alpine-virt-3.24.2-x86_64.iso",
+    "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-virt-3.24.2-x86_64.iso",
+    "bytes": 69206016,
+    "sha256": "3ab424762af704b2c2a9e57df1dc37f982af260071504d977f2fb96822e7130b"
+  },
+  {
+    "file": "apk-tools-static-3.0.8-r0.apk",
+    "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/apk-tools-static-3.0.8-r0.apk",
+    "bytes": 2223866,
+    "sha256": "c8e2c88c13ba12a12269b79a3543e1190ff8c0ab0beb32b58cadfd5881c619e3"
+  }
+]

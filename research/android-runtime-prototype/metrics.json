@@ -1,0 +1,34 @@
+{
+  "accelerator": "TCG software emulation; /dev/kvm absent",
+  "virtualCpus": 2,
+  "guestRamMiB": 4096,
+  "linuxInstallCompletedRun": {
+    "elapsedSeconds": 194.46805674899952,
+    "userCpuSeconds": 192.859248,
+    "systemCpuSeconds": 2.496758,
+    "maxRssKiB": 1921420
+  },
+  "previousCompletedAndroidAttempt": {
+    "elapsed_seconds": 612.1029035949978,
+    "user_cpu_seconds": 504.875918,
+    "system_cpu_seconds": 10.918578,
+    "max_rss_kib": 5166644
+  },
+  "laterAttemptLastSample": {
+    "cpuPercent": 123,
+    "rssKiB": 5360184,
+    "processElapsed": "00:14:00",
+    "peak": false
+  },
+  "laterAttemptFinalCountersAvailable": false,
+  "qemuProcessRunningAtFreeze": false,
+  "androidBootCompletedProven": false,
+  "fixtureInstallLaunchProven": false,
+  "fixtureRenderInputProven": false,
+  "nativeWindowsMacRuntimeTested": false,
+  "notes": [
+    "Resource counters for the ended later session were not available; the sample is not a final peak.",
+    "Previous completed-run counters must not be assigned to the later traced warm attempt.",
+    "Guest wall-clock strings are retained as logged; they are not a separate host timing measurement."
+  ]
+}
