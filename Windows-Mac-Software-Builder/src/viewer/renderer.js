@@ -572,6 +572,22 @@ function renderDownloadVault(data) {
   stageEl.appendChild(host);
 }
 
+function renderAndroidUnavailable() {
+  // A future or edited project may carry an APK module. Never hand the file
+  // to the operating system or imply that the current Viewer can execute it.
+  clearStage();
+  stageEl.classList.add('html-mode');
+  const notice = document.createElement('div');
+  notice.className = 'html-host android-unavailable';
+  notice.setAttribute('role', 'alert');
+  const heading = document.createElement('h2');
+  heading.textContent = tr('android.viewer_title', 'Android application unavailable');
+  const message = document.createElement('p');
+  message.textContent = tr('android.viewer_unavailable', 'This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version.');
+  notice.append(heading, message);
+  stageEl.appendChild(notice);
+}
+
 function renderPortable(mod) {
   // Restoring the last module or changing language must never launch a process.
   // The only launch/configuration calls below are inside explicit button clicks.
@@ -1839,6 +1855,8 @@ async function dispatchModule(mod, btn) {
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
     case 'portable': setActiveMenuBtn(btn); renderPortable(mod); break;
+    case 'apk':
+    case 'android-apk': setActiveMenuBtn(btn); renderAndroidUnavailable(); break;
     case 'iptv':     setActiveMenuBtn(btn); await renderIptv(mod.data, mod.id); break;
     case 'external': await handleExternal(mod.data); break;
     case 'launch':   await handleLaunch(mod.data); break;

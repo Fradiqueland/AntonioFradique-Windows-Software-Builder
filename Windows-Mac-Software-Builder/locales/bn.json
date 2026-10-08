@@ -464,5 +464,20 @@
     "viewer_unavailable": "ভিউয়ারের এই সংস্করণ পোর্টেবল প্রোগ্রাম সমর্থন করে না।",
     "viewer_invalid_result": "সিস্টেম প্রসেস শুরু হওয়ার নিশ্চয়তা দেয়নি।",
     "wine_ready": "Wine কনফিগার করা হয়েছে। প্রয়োজনে মডিউল সংরক্ষণ করে প্রোগ্রাম পরীক্ষা করুন-এ ক্লিক করুন।"
+  },
+  "android": {
+    "card_title": "Android / APK — Experimental",
+    "card_description": "Integration information; import unavailable.",
+    "info_title": "Android / APK — experimental integration",
+    "goal": "The planned integration includes the Android engine in the Builder and exported applications only when a project uses APK. It is not available yet.",
+    "package_help": "Packages will be larger and need more memory and storage. Compatibility depends on the APK, its architecture and required Android services; not every application will be supported.",
+    "requirements": "Some Windows computers may require virtualization and a system feature to be enabled. Execution can be slow without acceleration. These requirements also apply to recipients of exported applications.",
+    "unavailable": "Android engine not included yet. Import and execution are unavailable in this version.",
+    "adapter_unavailable": "An engine was detected, but APK import and execution are not implemented in this version.",
+    "checking": "Checking the bundled Android engine…",
+    "import_button": "Import APK — unavailable",
+    "close_information": "Close information",
+    "viewer_title": "Android application unavailable",
+    "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
   }
 }

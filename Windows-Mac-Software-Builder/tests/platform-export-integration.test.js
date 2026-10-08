@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const androidRuntime = require('../src/shared/android-runtime');
+const iptvCipher = require('../src/shared/iptv-cipher');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
 function section(start, end) { return source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))); }
@@ -75,6 +77,7 @@ function routeHarness({ target = 'mac', format = 'zip', cancelled = false, failu
     buildWindowsExe: async () => { calls.push('sfx'); return { ok: true, format: 'exe' }; },
     readConfig: () => ({ brand: { title: 'Example' }, content: modules }),
     iptvCipher: { sanitizeConfigForCourse: (config) => config },
+    androidRuntime,
     localWeb: { validateWebProject() {} },
     portableApps: { assertPortableTarget(options) {
       validations.push(options);
@@ -82,6 +85,7 @@ function routeHarness({ target = 'mac', format = 'zip', cancelled = false, failu
       return { warnings: portableWarnings };
     } },
     getExportTemplatePath: (value) => '/templates/' + value + '.zip',
+    runtimeDirectory: (runtime) => '/runtime/' + runtime,
     dialog: { showSaveDialog: async (_window, options) => {
       dialogs.push(options); return { canceled: cancelled, filePath: '/output/project' };
     } },
@@ -123,6 +127,16 @@ test('export rejects unsupported platforms instead of silently producing the wro
   assert.equal(harness.calls.length, 0);
 });
 
+test('APK references are rejected before either ZIP or SFX export opens a save dialog', async () => {
+  for (const format of ['zip', 'exe']) {
+    const harness = routeHarness({ target: 'windows', format, modules: [{ type: 'apk', data: { ready: true } }] });
+    await assert.rejects(harness.run(), { code: 'ANDROID_RUNTIME_NOT_INCLUDED' });
+    assert.equal(harness.dialogs.length, 0);
+    assert.equal(harness.calls.length, 0);
+    assert.equal(harness.ctx.exportBusy, false);
+  }
+});
+
 test('ZIP route validates every portable target before opening a save dialog or writing output', async () => {
   const modules = [{ id: 'portable-one', type: 'portable', data: { root: 'dist-assets/portable-fixture' } }];
   for (const target of ['windows', 'mac']) {
@@ -159,6 +173,7 @@ test('SFX preflight rejects missing Windows entries and symlinks before staging 
       process: { platform: 'win32' }, exportBusy: false, ASSETS_DIR: '/project/dist-assets',
       assertBuilder() {}, hasProject: () => true,
       readConfig: () => ({ content: [{ id: 'portable', type: 'portable', data: {} }] }),
+      iptvCipher, androidRuntime,
       fs: { existsSync: () => false },
       portableApps: { assertPortableTarget(options) {
         validations.push(options);
@@ -191,4 +206,25 @@ test('Mac can locate a moved data folder without changing the signed app', async
   assert.equal(ctx.WRITE_BASE, chosen);
   assert.equal(ctx.CONFIG_PATH, path.join(chosen, 'data', 'project-config.json'));
   assert.equal(ctx.ASSETS_DIR, path.join(chosen, 'dist-assets'));
+});
+
+test('Mac optional runtimes follow the relocated data folder and retain sealed-resource fallback', () => {
+  const resources = path.resolve('/translocated/Example.app/Contents/Resources');
+  const movedData = path.resolve('/Documents/Example.data');
+  const ctx = { path, isViewer: true, app: { isPackaged: true },
+    process: { platform: 'darwin', resourcesPath: resources },
+    WRITE_BASE: path.resolve('/translocated/Example.data'),
+    fs: { existsSync: filename => filename === path.join(movedData, 'ffmpeg') || filename === path.join(movedData, 'php') }
+  };
+  vm.createContext(ctx);
+  vm.runInContext(section('function runtimeDirectory(', 'const webRuntime ='), ctx);
+  assert.equal(ctx.runtimeDirectory('ffmpeg'), path.join(resources, 'ffmpeg'));
+  ctx.WRITE_BASE = movedData;
+  assert.equal(ctx.runtimeDirectory('ffmpeg'), path.join(movedData, 'ffmpeg'));
+  assert.equal(ctx.runtimeDirectory('php'), path.join(movedData, 'php'));
+  ctx.isViewer = false;
+  assert.equal(ctx.runtimeDirectory('php'), path.join(resources, 'php'), 'Builder must use its installed runtime');
+  ctx.isViewer = true;
+  ctx.fs.existsSync = () => false;
+  assert.equal(ctx.runtimeDirectory('ffmpeg'), path.join(resources, 'ffmpeg'), 'Older sealed Viewer runtimes remain usable');
 });

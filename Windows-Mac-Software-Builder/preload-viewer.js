@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('viewer', {
   launchPortable: (moduleId) => ipcRenderer.invoke('portable:launch', moduleId),
   configurePortableWine: () => ipcRenderer.invoke('portable:configureWine'),
   loadConfig: () => ipcRenderer.invoke('config:load'),
+  getAndroidRuntimeStatus: (locale) => ipcRenderer.invoke('android:status', { locale }),
   openWebModule: (moduleId) => ipcRenderer.invoke('web:open', moduleId),
   closeWebModule: (token) => ipcRenderer.invoke('web:close', token),
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),

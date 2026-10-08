@@ -1,19 +1,27 @@
-# Windows & Mac Software Builder — v2.1
+# Windows & Mac Software Builder — v2.5
 
 Crie aplicações de conteúdos para **Windows e Mac**: cursos, bibliotecas, apresentações, páginas HTML/PHP, documentos e multimédia. Organize os módulos, personalize o aspeto e escolha a plataforma ao exportar.
 
 O **Builder** é o programa de edição instalado no seu computador. As **aplicações exportadas** são os produtos que cria e distribui; os destinatários não precisam de instalar o Builder.
 
+## Novidades da v2.5
+
+Compressão máxima sem perdas e remoção de ferramentas usadas apenas pelo editor dos modelos de visualização. Os projetos exportados incluem FFmpeg apenas quando têm IPTV e PHP apenas quando o site importado necessita dele. Os ficheiros de imagem, áudio e vídeo do utilizador não são recomprimidos.
+
+**Android / APK — Experimental:** existe um painel informativo, mas a importação e execução continuam indisponíveis. Não há um motor Android incorporado e validado nesta versão. A opção não descarrega nem abre emuladores externos e não permite exportar um produto APK que não funcione no computador do destinatário. iOS/IPA não é suportado.
+
+Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md) e [o estado do Android/APK](Windows-Mac-Software-Builder/ANDROID-APK.md).
+
 ## Descarregar e instalar o Builder
 
-Na [compilação v2.1 do GitHub Actions](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml), abra uma execução concluída com sucesso e descarregue os artefactos correspondentes:
+Na [Release v2.5.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.5.0), descarregue o instalador correspondente ao seu computador em **Assets**:
 
-| Computador | Artefacto v2.1 | Instalador incluído |
-| --- | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.1.1-Windows` | Setup `.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.1.1-macOS` | `.dmg` universal |
+| Computador | Instalador v2.5 |
+| --- | --- |
+| Windows x64 | `Windows-Mac-Software-Builder-2.5.0-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.5.0-mac-universal.dmg` |
 
-Os downloads requerem uma sessão GitHub e ficam disponíveis durante 30 dias após a execução. Extraia o ZIP do artefacto para obter o instalador e `SHA256SUMS.txt`. Certifique-se de que a execução e o instalador são da versão 2.1.1; a v2.1.0 já inclui o módulo portable, mas não esta correção IPTV.
+A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
 
 No Windows, execute o Setup. No Mac, abra o DMG e arraste **Windows & Mac Software Builder.app** para **Aplicações**. O instalador Windows não tem assinatura de editor; a aplicação Mac tem assinatura ad-hoc e não está notarizada pela Apple. O [guia de instalação](Windows-Mac-Software-Builder/BUILD-V2.md) explica a verificação dos ficheiros e as autorizações individuais do sistema.
 
@@ -25,7 +33,7 @@ No Windows, execute o Setup. No Mac, abra o DMG e arraste **Windows & Mac Softwa
 - Produtos com título, logótipo, cores, banners, redes sociais e formulários de captura de contactos.
 - Aplicações Windows e Mac com os conteúdos e recursos do projeto incluídos.
 
-PHP continua opcional: páginas PHP precisam de um runtime compatível incluído no Builder e no modelo de exportação. HTML funciona sem PHP. A v2.1.1 prepara e inclui FFmpeg nas compilações Windows/Mac para converter canais IPTV que o leitor direto não consegue descodificar. Os binários compilados ficam nos pacotes, fora do código Git.
+PHP continua opcional: páginas PHP precisam de um runtime compatível incluído no Builder e no modelo de exportação. HTML funciona sem PHP. A v2.5 inclui FFmpeg no Builder e apenas nos projetos exportados com IPTV, para converter canais que o leitor direto não consegue descodificar. Os binários compilados ficam nos pacotes, fora do código Git.
 
 ## Exportar os seus produtos
 
@@ -57,7 +65,7 @@ Esta regra não é universal: a navegação entre páginas da mesma origem local
 - [Arquitetura e notas de manutenção](Windows-Mac-Software-Builder/NOTAS.md)
 - [README da aplicação](Windows-Mac-Software-Builder/README.md)
 
-Requisitos dos programas v2.1: Windows 10+ x64 ou macOS 13+; motor Electron 44.6.0.
+Requisitos dos programas v2.5: Windows 10+ x64 ou macOS 13+; motor Electron 44.6.0.
 
 Requisitos de desenvolvimento: **Node.js 22**, Git e Windows x64 ou macOS.
 
@@ -68,10 +76,10 @@ npm test
 npm start
 ```
 
-O workflow **Build v2 Windows and Mac installers** compila os modelos e instaladores em máquinas nativas. Para builds locais, reúna os modelos Windows e Mac da mesma versão antes de compilar o Builder, conforme o guia.
+O workflow **Build Windows and Mac installers** compila os modelos e instaladores em máquinas nativas. Para builds locais, reúna os modelos Windows e Mac da mesma versão antes de compilar o Builder, conforme o guia.
 
 ## Limites atuais
 
-A versão 2.1 não exporta para iOS. Os conteúdos distribuídos são extraíveis; as palavras-passe dos módulos e a ofuscação IPTV não são proteção contra extração. A captura de contactos não confirma, por si só, a inscrição no fornecedor. Páginas importadas não mantêm cookies, `localStorage` ou IndexedDB entre aberturas do módulo.
+A versão 2.5 não exporta para iOS. Os conteúdos distribuídos são extraíveis; as palavras-passe dos módulos e a ofuscação IPTV não são proteção contra extração. A captura de contactos não confirma, por si só, a inscrição no fornecedor. Páginas importadas não mantêm cookies, `localStorage` ou IndexedDB entre aberturas do módulo.
 
 Ao atualizar o Builder, volte a exportar os projetos: os produtos anteriormente distribuídos não se atualizam automaticamente. Teste os instaladores e os produtos em computadores dos sistemas de destino antes de os distribuir.

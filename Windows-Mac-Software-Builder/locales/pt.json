@@ -464,5 +464,20 @@
     "viewer_unavailable": "Esta versão do visualizador não suporta programas portáteis.",
     "viewer_invalid_result": "O sistema não confirmou o início do processo.",
     "wine_ready": "Wine configurado. Guarde o módulo, se necessário, e clique em Testar programa."
+  },
+  "android": {
+    "card_title": "Android / APK — Experimental",
+    "card_description": "Informação sobre a integração; importação indisponível.",
+    "info_title": "Android / APK — integração experimental",
+    "goal": "A integração planeada inclui o motor Android no construtor e nas aplicações exportadas, apenas quando o projeto utiliza APK. Ainda não está disponível.",
+    "package_help": "Os pacotes ficam maiores e consomem mais memória e espaço. A compatibilidade depende do APK, da arquitetura e dos serviços Android exigidos; nem todas as aplicações serão suportadas.",
+    "requirements": "Alguns computadores Windows podem exigir ativar a virtualização e uma funcionalidade do sistema. Sem aceleração, a execução pode ser lenta. Estes requisitos também se aplicam a quem recebe a aplicação exportada.",
+    "unavailable": "Motor Android ainda não incluído. Importação e execução indisponíveis nesta versão.",
+    "adapter_unavailable": "Foi detetado um motor, mas a importação e execução APK ainda não estão implementadas nesta versão.",
+    "checking": "A verificar o motor Android incorporado…",
+    "import_button": "Importar APK — indisponível",
+    "close_information": "Fechar informação",
+    "viewer_title": "Aplicação Android indisponível",
+    "viewer_unavailable": "Este produto não inclui um motor Android validado. Não é possível executar o APK nesta versão. Contacte quem criou o software para obter uma versão compatível."
   }
 }

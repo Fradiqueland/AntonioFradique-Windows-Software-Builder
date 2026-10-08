@@ -12,13 +12,14 @@ const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
 const portableApps = require('./src/shared/portable-app');
 const portableRuntime = require('./src/shared/portable-runtime');
+const androidRuntime = require('./src/shared/android-runtime');
 const { isTrustedFrame, lockGuestPreferences, configureGuestNavigation } = require('./src/shared/electron-security');
 const { fileURLToPath } = require('url');
 
 // Only our own top-level UI may call privileged IPC. Embedded pages have no bridge.
 const VIEWER_CHANNELS = new Set([
   'config:load', 'asset:resolve', 'shell:openExternal', 'shell:launchFile',
-  'portable:launch', 'portable:configureWine',
+  'portable:launch', 'portable:configureWine', 'android:status',
   'dialog:saveFileAs', 'i18n:loadLocale', 'youtube:hostUrl', 'iptv:hosts',
   'iptv:hasFfmpeg', 'iptv:proxyUrl', 'iptv:proxyStatus', 'iptv:proxyStop',
   'favs:load', 'favs:save', 'state:load', 'state:save', 'web:open', 'web:close'
@@ -236,15 +237,28 @@ const PROJECTS_ROOT = path.join(WRITE_BASE, 'projects');
 const PROJECTS_INDEX = path.join(WRITE_BASE, 'projects.json');
 
 function runtimeDirectory(runtime) {
-  if (app.isPackaged) return path.join(process.resourcesPath, runtime);
+  if (app.isPackaged) {
+    // Optional runtimes live beside the immutable signed Mac Viewer. This
+    // lets either OS export only the components its project actually uses.
+    if (isViewer && process.platform === 'darwin') {
+      const companion = path.join(WRITE_BASE, runtime);
+      if (fs.existsSync(companion)) return companion;
+    }
+    return path.join(process.resourcesPath, runtime);
+  }
   const target = process.platform === 'darwin' ? 'mac-universal' : 'windows-x64';
   const specific = path.join(PROJECT_ROOT, 'vendor', runtime, target);
   return fs.existsSync(specific) ? specific : path.join(PROJECT_ROOT, 'vendor', runtime);
 }
-const phpDir = runtimeDirectory('php');
-const phpPath = path.join(phpDir, process.platform === 'win32' ? 'php.exe' : 'php');
-const webRuntime = localWeb.createWebRuntime({ phpPath });
+const webRuntime = localWeb.createWebRuntime({
+  getPhpPath: () => path.join(runtimeDirectory('php'), process.platform === 'win32' ? 'php.exe' : 'php')
+});
 const stopWebModules = () => webRuntime.closeAll().catch((err) => console.warn('Web cleanup:', err.message));
+
+handleTrustedIpc('android:status', (_event, payload) => androidRuntime.getAndroidRuntimeStatus({
+  audience: isViewer ? 'viewer' : 'creator',
+  locale: payload && typeof payload.locale === 'string' ? payload.locale.slice(0, 8) : 'pt'
+}));
 
 
 const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault']);
@@ -1897,6 +1911,9 @@ async function buildWindowsExe(event, payload) {
       throw new Error('Sem projeto para exportar. Guarde primeiro pelo menos uma definição no Construtor.');
     }
 
+    const courseConfig = iptvCipher.sanitizeConfigForCourse(readConfig());
+    androidRuntime.assertAPKExport(courseConfig);
+
     for (const mod of readConfig().content || []) {
       if (mod.type !== 'portable') continue;
       const portable = portableApps.assertPortableTarget({ data: mod.data, assetsDir: ASSETS_DIR, target: 'windows' });
@@ -1932,10 +1949,21 @@ async function buildWindowsExe(event, payload) {
     /* 1. Stage = copy Viewer template (LaunchBox Viewer.exe + DLLs + asar). */
     send('A copiar template do Viewer…');
     if (fs.existsSync(templateZip)) {
-      await projectExport.extractWindowsTemplate(templateZip, stagingRoot);
+      await projectExport.extractWindowsTemplate(templateZip, stagingRoot, { config: courseConfig, assetsDir: ASSETS_DIR,
+        sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources') });
     } else {
       fs.mkdirSync(stagingRoot, { recursive: true });
       copyDirRecursive(templateDir, stagingRoot);
+      const required = projectExport.projectRuntimeRequirements({ config: courseConfig, assetsDir: ASSETS_DIR });
+      for (const runtime of ['ffmpeg', 'php']) {
+        if (!required[runtime]) fs.rmSync(path.join(stagingRoot, 'resources', runtime), { recursive: true, force: true });
+        else {
+          const executable = path.join(stagingRoot, 'resources', runtime, runtime + '.exe');
+          if (!fs.existsSync(executable) || !fs.statSync(executable).isFile()) {
+            throw new Error('O template Windows antigo não inclui o runtime ' + runtime + ' necessário. Reinstale o construtor com os modelos atuais.');
+          }
+        }
+      }
     }
 
     /* O template guarda o código do Viewer como resources/app.asar.bin (ver
@@ -1964,7 +1992,6 @@ async function buildWindowsExe(event, payload) {
     // remove metadados só-do-Builder (xtreamUrl/playlistUrl) para que nenhuma
     // credencial fique em texto simples dentro do curso. O Viewer decifra os
     // canais em memória no config:load. Módulos não-IPTV ficam inalterados.
-    const courseConfig = iptvCipher.sanitizeConfigForCourse(readConfig());
     fs.writeFileSync(path.join(stageData, 'project-config.json'), JSON.stringify(courseConfig, null, 2), 'utf-8');
     for (const mod of courseConfig.content || []) {
       if (mod.type !== 'local-web') continue;
@@ -2044,6 +2071,8 @@ handleTrustedIpc('export:targets', () => { assertBuilder(); return exportTargets
 
 async function exportProject(event, payload = {}) {
   assertBuilder();
+  if (exportBusy) throw new Error('Já existe uma exportação em curso.');
+  androidRuntime.assertAPKExport(readConfig());
   const target = payload.target;
   if (!['windows', 'mac'].includes(target)) throw new Error('Escolha Windows ou Mac.');
   const selected = exportTargets().targets.find((entry) => entry.id === target);
@@ -2072,7 +2101,8 @@ async function exportProject(event, payload = {}) {
     const outputPath = /\.zip$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.zip';
     let lastProgress = -1;
     const result = await projectExport.exportProject({ target, templatePath: getExportTemplatePath(target),
-      outputPath, projectName: name, config, assetsDir: ASSETS_DIR, onProgress: ({ completed, total }) => {
+      outputPath, projectName: name, config, assetsDir: ASSETS_DIR,
+      sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources'), onProgress: ({ completed, total }) => {
         const progress = Math.floor(10 * completed / Math.max(total, 1));
         if (progress !== lastProgress) { lastProgress = progress; send('A empacotar a aplicação: ' + progress * 10 + '%'); }
       } });

@@ -1,4 +1,4 @@
-# IPTV — v2.1.1
+# IPTV — v2.5, com a correção de reprodução da v2.1.1
 
 ## Falha investigada
 
@@ -12,13 +12,13 @@ O leitor mantém as tentativas diretas HLS/TS e trata erros durante toda a repro
 
 Quando a reprodução direta falha, o FFmpeg incluído pode converter o vídeo para H.264 Main, nível 3.1, `yuv420p`, progressivo, até 1280×720 e 30 fps, com áudio AAC-LC estéreo a 48 kHz. O vídeo SD não é ampliado. A conversão usa o processador e pode reduzir resolução/frequência; exige capacidade suficiente para acompanhar um canal em direto.
 
-Os instaladores e os modelos de exportação Windows/Mac incluem o FFmpeg físico e as fontes/licenças correspondentes. Não é necessário instalar um FFmpeg externo. PHP continua independente desta funcionalidade.
+Os instaladores incluem o FFmpeg físico e as fontes/licenças correspondentes. Na v2.5, os projetos exportados incluem esse runtime apenas quando contêm IPTV; as fontes partilhadas no Builder são repostas e verificadas em cada exportação IPTV. Não é necessário instalar um FFmpeg externo. PHP continua independente desta funcionalidade.
 
 Uma ligação indisponível, expirada, bloqueada pelo fornecedor ou um fluxo protegido/incompatível pode continuar a falhar. A conversão não substitui uma ligação válida nem garante todos os canais.
 
 ## Atualização e diagnóstico
 
-1. Instale o Builder **v2.1.1**.
+1. Instale o Builder **v2.5.0**.
 2. Abra o projeto e teste o módulo IPTV.
 3. Volte a exportar para Windows e/ou Mac. Os produtos antigos conservam o leitor antigo.
 4. Se falhar, use o diagnóstico do leitor e indique sistema operativo, versão instalada e se ocorre no Builder ou num produto exportado.

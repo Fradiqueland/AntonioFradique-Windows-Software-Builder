@@ -14,8 +14,10 @@ function runtimeDirectory(runtime, target) {
   return candidates.find((relative) => fs.existsSync(path.join(root, relative, executable))) || null;
 }
 
-function runtimeResources(target) {
+function runtimeResources(target, { exclude = [] } = {}) {
+  if (!Array.isArray(exclude) || exclude.some(runtime => !['php', 'ffmpeg'].includes(runtime))) throw new Error('Unsupported runtime exclusion.');
   return ['php', 'ffmpeg'].flatMap((runtime) => {
+    if (exclude.includes(runtime)) return [];
     const from = runtimeDirectory(runtime, target);
     if (!from && runtime === 'ffmpeg') throw new Error('Required FFmpeg runtime absent for ' + target + '. Build/install the pinned runtime before packaging.');
     return from ? [{ from, to: runtime, filter: ['**/*', '!**/*.pdb', '!**/*.lib', '!**/*.zip', '!windows-x64/**', '!mac-universal/**'] }] : [];

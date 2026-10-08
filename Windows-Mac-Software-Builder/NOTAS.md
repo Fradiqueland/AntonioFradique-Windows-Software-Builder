@@ -1,10 +1,10 @@
-# Notas técnicas — Windows & Mac Software Builder v2.0.1
+# Notas técnicas — Windows & Mac Software Builder v2.5
 
 Documento de manutenção do Builder e do Viewer. Para compilar, instalar ou distribuir, siga [BUILD-V2.md](BUILD-V2.md). A auditoria datada em [AUDITORIA-2026-10-04.md](AUDITORIA-2026-10-04.md) conserva a análise da base antiga e as atualizações v2; não deve ser lida como uma certificação de segurança da versão atual.
 
 ## Arquitetura atual
 
-O projeto usa Electron 32 e electron-builder. `resources/app-mode.json` distingue os modos `builder` e `viewer`, que partilham o processo principal e os módulos em `src/shared/`.
+O projeto usa Electron 44.6.0 e electron-builder. `resources/app-mode.json` distingue os modos `builder` e `viewer`, que partilham o processo principal e os módulos em `src/shared/`.
 
 | Componente | Função |
 | --- | --- |
@@ -105,20 +105,20 @@ O IPTV tenta os motores definidos em `renderIptv`/`buildAttempts`:
 
 O diagnóstico usa frames apresentados, quando disponíveis, e não apenas o evento `playing`: um stream pode anunciar reprodução e continuar com ecrã preto. A compatibilidade de canais entrelaçados foi uma fonte de falhas nas versões anteriores.
 
-O proxy ffmpeg retransmite para MP4 fragmentado, copia o vídeo e converte o áudio para AAC. Preserve o ciclo de vida do pipe: chamar `res.end()` manualmente ao terminar o processo já causou `write after end` ao trocar de canal. O código encerra conexões e processos ao mudar de conteúdo.
+O proxy FFmpeg converte vídeo para H.264 Main progressivo, até 720p/30 fps, e áudio para AAC, servindo MP4 fragmentado. Consulte [IPTV.md](IPTV.md). Preserve o ciclo de vida do pipe: chamar `res.end()` manualmente ao terminar o processo já causou `write after end` ao trocar de canal. O código encerra conexões e processos ao mudar de conteúdo.
 
 As alterações IPTV de cabeçalhos e CORS têm âmbito restrito. Não as aplicar indiscriminadamente aos webviews ou aos serviços Google: isso já interferiu com pedidos autenticados do YouTube. `stageGeneration` impede renderers assíncronos de substituírem um módulo aberto entretanto.
 
 ## Runtimes opcionais e distribuição
 
-PHP e ffmpeg não estão incluídos no Git e não são descarregados automaticamente pelo workflow. Os caminhos preferidos são específicos da plataforma:
+Os binários PHP e FFmpeg não estão incluídos no Git. O workflow compila FFmpeg a partir de fontes fixadas e verificadas e inclui-o no Builder. PHP precisa de preparação própria. Os caminhos preferidos são específicos da plataforma:
 
 | Plataforma | PHP | ffmpeg |
 | --- | --- | --- |
 | Windows x64 | `vendor/php/windows-x64/php.exe` | `vendor/ffmpeg/windows-x64/ffmpeg.exe` |
 | Mac universal | `vendor/php/mac-universal/php` | `vendor/ffmpeg/mac-universal/ffmpeg` |
 
-Os antigos caminhos `vendor/php/php.exe` e `vendor/ffmpeg/ffmpeg.exe` são aceites no Windows. No Mac, os binários principais devem incluir Intel e Apple Silicon, com dependências relocáveis. Inclua as licenças e avisos aplicáveis e teste numa máquina sem esses runtimes instalados.
+O caminho antigo `vendor/php/php.exe` continua aceite no Windows. No Mac, os binários principais devem incluir Intel e Apple Silicon, com dependências relocáveis. Na v2.5, os produtos exportados incluem FFmpeg apenas com IPTV e PHP apenas com páginas que o exijam. Os runtimes Mac ficam na pasta `.data`, fora do bundle assinado; os modelos antigos mantêm os runtimes internos. As fontes FFmpeg/x264 são partilhadas dentro do Builder e repostas por inteiro nas exportações IPTV. Consulte [PACKAGING-V2.5.md](PACKAGING-V2.5.md) para o layout e as verificações. Inclua as licenças e avisos aplicáveis e teste numa máquina sem esses runtimes instalados.
 
 O instalador Windows não tem assinatura de editor. As aplicações Mac usam assinatura ad-hoc, sem identidade Developer ID nem notarização Apple. Esta assinatura permite verificar a integridade do bundle, mas não identifica o editor perante a Apple. Não é necessário desativar globalmente as proteções do sistema para seguir o procedimento individual do guia.
 
@@ -127,7 +127,8 @@ O instalador Windows não tem assinatura de editor. As aplicações Mac usam ass
 - O bloqueio de módulos por palavra-passe não cifra os recursos; o destinatário pode extrair os conteúdos e a configuração.
 - A ofuscação das credenciais IPTV não garante segredo, porque o produto inclui os meios de descodificação.
 - O formulário de contactos pode enviar um pedido sem confirmar uma inscrição no fornecedor; não o tratar como prova de subscrição.
-- A atualização do Electron e a revisão de vulnerabilidades continuam necessárias; esta versão mantém Electron 32.
+- A atualização do Electron e a revisão de vulnerabilidades continuam necessárias; esta versão utiliza Electron 44.6.0.
+- APK continua indisponível: o cartão experimental apresenta informação, sem importar ou executar aplicações Android. Consulte [ANDROID-APK.md](ANDROID-APK.md).
 - Não há exportação iOS, atualização automática dos produtos nem backup/recuperação completos dos projetos.
 - A versão de distribuição vem de `package.json`; mantenha o lockfile, os textos de fallback da interface e a documentação coerentes.
 - Novas chaves de interface devem existir nos 10 ficheiros `locales/*.json`. As novas mensagens v2 têm PT/EN; as restantes línguas usam inglês nessas mensagens.
@@ -143,3 +144,5 @@ O instalador Windows não tem assinatura de editor. As aplicações Mac usam ass
 - **Importação HTML/PHP:** cópia de recursos, serviço local isolado, validação de ficheiros e melhorias na gravação/exportação.
 - **v2.0.0:** nome Windows & Mac Software Builder, Builder para os dois sistemas, seleção do destino, modelos portáteis e bundle Mac universal com dados externos.
 - **v2.0.1:** escrita física de `app.asar` com `original-fs`, tratamento das entradas de diretório nos ZIPs Mac e abertura autorizada de links externos de páginas importadas. Produtos antigos precisam de ser reexportados para incorporar estas correções.
+- **v2.1:** módulo portable e correções de gravação e navegação. **v2.1.1:** FFmpeg incorporado e conversão real IPTV.
+- **v2.5:** compressão sem perdas, seleção dos runtimes nas exportações, deduplicação verificada de fontes no Builder e informação experimental sobre Android/APK. Os instaladores são publicados numa Release depois das verificações nativas.

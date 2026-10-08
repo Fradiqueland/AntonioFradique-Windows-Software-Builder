@@ -17,9 +17,11 @@ const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
 const { pipeline } = require('node:stream/promises');
 const { Readable } = require('node:stream');
+const yauzl = require('yauzl');
 const execFileP = promisify(execFile);
 const root = path.resolve(__dirname, '..');
 const pkg = require('../package.json');
+const ffmpegSources = require('../build-configs/ffmpeg-sources.json').sources;
 const packaged = process.argv.includes('--packaged');
 const nodeOnly = process.argv.includes('--node-only');
 const mode = packaged ? 'packaged' : 'source';
@@ -33,7 +35,7 @@ let window;
 let finishing = false;
 const children = new Set();
 const tokens = [];
-const deadline = setTimeout(() => finish(new Error('IPTV smoke exceeded three minutes.')), 180000);
+const deadline = setTimeout(() => finish(new Error('IPTV smoke exceeded six minutes.')), 360000);
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -82,6 +84,83 @@ function streamSummary(stream) {
     'field_order', 'r_frame_rate', 'avg_frame_rate', 'sample_rate', 'channels'].filter(key => key in stream).map(key => [key, stream[key]]));
 }
 
+function archiveFileHash(archive, filename) {
+  return new Promise((resolve, reject) => {
+    yauzl.open(archive, { lazyEntries: true, strictFileNames: true }, (error, zip) => {
+      if (error) return reject(error);
+      let found = false;
+      zip.on('error', reject);
+      zip.on('end', () => { if (!found) reject(new Error('Exported runtime is absent: ' + filename)); });
+      zip.on('entry', entry => {
+        if (entry.fileName !== filename) return zip.readEntry();
+        found = true;
+        zip.openReadStream(entry, async (streamError, stream) => {
+          if (streamError) { zip.close(); return reject(streamError); }
+          try {
+            const hash = crypto.createHash('sha256');
+            for await (const chunk of stream) hash.update(chunk);
+            zip.close();
+            resolve(hash.digest('hex'));
+          } catch (readError) { zip.close(); reject(readError); }
+        });
+      });
+      zip.readEntry();
+    });
+  });
+}
+
+async function exportedRuntime({ appRequire, resources, mac, sharedRuntimeSourcesDir }) {
+  const engine = appRequire('./src/shared/project-export');
+  const assetsDir = path.join(temporary, 'export-assets');
+  fs.mkdirSync(assetsDir);
+  const projectName = 'IPTV Smoke';
+  const config = { language: 'pt', brand: { title: projectName },
+    content: [{ id: 'offline-iptv', type: 'iptv', title: 'Offline fixture', data: {} }] };
+  const templates = packaged ? path.join(resources, 'export-templates') : path.join(root, 'dist/export-templates');
+  const target = mac ? 'mac' : 'windows';
+  const archive = path.join(temporary, 'exported-iptv.zip');
+  await engine.exportProject({ target, templatePath: path.join(templates, mac ? 'mac-universal.zip' : 'windows-x64.zip'),
+    outputPath: archive, projectName, config, assetsDir, sharedRuntimeSourcesDir });
+  const expanded = path.join(temporary, 'exported-viewer');
+  if (mac) {
+    await execFileP('/usr/bin/ditto', ['-x', '-k', archive, expanded]);
+    const bundle = path.join(expanded, projectName + '.app');
+    await execFileP('/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', bundle]);
+    await execFileP('/usr/bin/lipo', [path.join(bundle, 'Contents/MacOS/LaunchBox Viewer'), '-verify_arch', 'x86_64', 'arm64']);
+    assert.equal(fs.existsSync(path.join(bundle, 'Contents/Resources/ffmpeg')), false,
+      'An optional runtime must not be inserted into the signed Mac app');
+  } else {
+    const sfxDir = packaged ? path.join(resources, 'sfx') : path.join(root, 'src/builder/bin');
+    const sevenZip = path.join(sfxDir, '7za.exe');
+    await execFileP(sevenZip, ['x', archive, '-o' + expanded, '-y', '-bsp0', '-bso0'], { windowsHide: true });
+  }
+  const runtimeBase = mac ? projectName + '.data/ffmpeg' : 'resources/ffmpeg';
+  const ffmpeg = path.join(expanded, runtimeBase, mac ? 'ffmpeg' : 'ffmpeg.exe');
+  const ffprobe = path.join(expanded, runtimeBase, mac ? 'ffprobe' : 'ffprobe.exe');
+  for (const executable of [ffmpeg, ffprobe]) {
+    const entry = runtimeBase + '/' + path.basename(executable);
+    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex'), await archiveFileHash(archive, entry),
+      'Native extraction must preserve exported runtime bytes: ' + entry);
+    if (mac) {
+      assert.ok(fs.statSync(executable).mode & 0o111, 'Exported Mac runtime lost execution permission');
+      await execFileP('/usr/bin/lipo', [executable, '-verify_arch', 'x86_64', 'arm64']);
+    }
+  }
+  const base = mac ? projectName + '.data' : 'resources';
+  assert.equal(fs.existsSync(path.join(expanded, base, 'php')), false, 'IPTV-only exports must omit PHP');
+  assert.equal(fs.existsSync(path.join(expanded, runtimeBase, 'template-sources.json')), false, 'Export must contain actual corresponding sources, not a shared-source marker');
+  for (const source of ffmpegSources) {
+    const filename = path.join(expanded, runtimeBase, 'sources', source.file);
+    assert.equal(crypto.createHash('sha256').update(fs.readFileSync(filename)).digest('hex'), source.sha256,
+      'Export must include the exact corresponding source archive: ' + source.file);
+  }
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(expanded, base, 'data/project-config.json'), 'utf8')), config);
+  report.exportedViewer = { target, engine: appRequire.resolve('./src/shared/project-export'), archiveBytes: fs.statSync(archive).size,
+    runtime: runtimeBase, signatureVerified: mac, universalVerified: mac };
+  report.checks.push('real native IPTV export extracted with its complete runtime' + (mac ? ', intact Mac signature and universal binaries' : ''));
+  return { ffmpeg: fs.realpathSync(ffmpeg), ffprobe: fs.realpathSync(ffprobe) };
+}
+
 async function main() {
   assert.ok(isElectron || nodeOnly, 'Run with Electron; --node-only runs only the FFmpeg diagnostic subset.');
   assert.ok(!packaged || isElectron, 'Packaged ASAR code must be tested in real Electron.');
@@ -102,7 +181,7 @@ async function main() {
     ffmpeg = path.join(packaged ? resources : root, packaged ? 'ffmpeg' : relative, mac ? 'ffmpeg' : 'ffmpeg.exe');
   }
   ffmpeg = fs.realpathSync(ffmpeg);
-  const ffprobe = fs.realpathSync(option('--ffprobe') || path.join(path.dirname(ffmpeg), process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe'));
+  let ffprobe = fs.realpathSync(option('--ffprobe') || path.join(path.dirname(ffmpeg), process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe'));
   report.ffmpeg = { path: ffmpeg, sha256: crypto.createHash('sha256').update(fs.readFileSync(ffmpeg)).digest('hex') };
   report.ffprobe = ffprobe;
   temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'builder-iptv-smoke-')));
@@ -123,6 +202,13 @@ async function main() {
   assert.ok(['tt', 'bb', 'tb', 'bt'].includes(inputVideo.field_order), 'The regression source must really be interlaced.');
   report.fixture = input.streams.map(streamSummary);
   report.checks.push('offline H.264 High 1080i/AAC TS fixture verified by ffprobe');
+
+  if (isElectron && ['win32', 'darwin'].includes(process.platform) && !option('--ffmpeg')) {
+    report.builderFfmpeg = { ...report.ffmpeg };
+    ({ ffmpeg, ffprobe } = await exportedRuntime({ appRequire, resources, mac, sharedRuntimeSourcesDir: path.join(path.dirname(ffmpeg), 'sources') }));
+    report.ffmpeg = { path: ffmpeg, sha256: crypto.createHash('sha256').update(fs.readFileSync(ffmpeg)).digest('hex') };
+    report.ffprobe = ffprobe;
+  }
 
   const invocations = [];
   proxy = proxyModule.createIptvProxy({ getExecutable: () => ffmpeg, spawnImpl(executable, args, options) {

@@ -14,8 +14,12 @@ const yauzl = require('yauzl');
 const yazl = require('yazl');
 const { validateWebProject } = require('./local-web');
 const { assertPortableTarget, normalizePortableLink } = require('./portable-app');
+const { assertAPKExport } = require('./android-runtime');
+const { FFMPEG_SOURCE_LOCK } = require('./ffmpeg-source-lock');
 
 const MAC_BUNDLE = 'LaunchBox Viewer.app';
+const MAC_RUNTIME_DATA = 'LaunchBox Viewer.data';
+const OPTIONAL_RUNTIMES = Object.freeze(['ffmpeg', 'php']);
 const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, depth: 64 });
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   for (let i = 0; i < 8; i++) n = (n & 1) ? (0xedb88320 ^ (n >>> 1)) : (n >>> 1);
@@ -63,20 +67,23 @@ function registerPath(paths, name, kind) {
   }
 }
 
-function verifyStream(size, crc32, verifyFinal) {
+function verifyStream(size, crc32, verifyFinal, sha256) {
   let count = 0;
   let crc = 0xffffffff;
+  const hash = sha256 ? crypto.createHash('sha256') : null;
   return new Transform({
     transform(chunk, encoding, callback) {
       count += chunk.length;
       if (count > size) return callback(new Error('O tamanho do ficheiro ZIP excede o declarado.'));
       if (crc32 !== undefined) for (const byte of chunk) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+      if (hash) hash.update(chunk);
       callback(null, chunk);
     },
     flush(callback) {
       if (count !== size || (crc32 !== undefined && ((crc ^ 0xffffffff) >>> 0) !== crc32)) {
         return callback(new Error('Ficheiro ZIP corrompido: tamanho ou CRC inválido.'));
       }
+      if (hash && hash.digest('hex') !== sha256) return callback(new Error('Arquivo de código-fonte FFmpeg corrompido: SHA-256 inválido.'));
       if (verifyFinal) Promise.resolve().then(verifyFinal).then(() => callback(), callback);
       else callback();
     }
@@ -125,7 +132,12 @@ async function inspectTemplate(templatePath, target) {
           if (kind === 'directory' && entry.uncompressedSize) throw new Error('Diretório ZIP com conteúdo inválido.');
           registerPath(paths, name, kind);
           if (target === 'mac') {
-            if (name !== `${MAC_BUNDLE}/` && !name.startsWith(`${MAC_BUNDLE}/`)) throw new Error('O template Mac deve conter apenas LaunchBox Viewer.app.');
+            const bundle = name === `${MAC_BUNDLE}/` || name.startsWith(`${MAC_BUNDLE}/`);
+            const companionRoot = name === `${MAC_RUNTIME_DATA}/` && kind === 'directory';
+            const companionRuntime = OPTIONAL_RUNTIMES.some(runtime => name.startsWith(`${MAC_RUNTIME_DATA}/${runtime}/`));
+            // Only optional native runtimes may sit beside the signed app.
+            // Configuration/assets from an earlier project never enter a template.
+            if (!bundle && !companionRoot && !companionRuntime) throw new Error('O template Mac contém um ficheiro fora da aplicação ou dos runtimes permitidos.');
           } else {
             if (kind === 'symlink') throw new Error('O template Windows não pode conter ligações simbólicas.');
             if (/^resources\/(?:data|dist-assets)(?:\/|$)/i.test(name)) throw new Error('O template Windows contém dados de um projeto.');
@@ -143,6 +155,35 @@ async function inspectTemplate(templatePath, target) {
     if (target === 'mac' && !(entries.find(item => item.name === `${MAC_BUNDLE}/Contents/MacOS/LaunchBox Viewer`).mode & 0o111)) {
       throw new Error('O executável do template Mac não tem permissão de execução.');
     }
+    const markerPath = target === 'windows' ? 'resources/ffmpeg/template-sources.json' : `${MAC_RUNTIME_DATA}/ffmpeg/template-sources.json`;
+    let sharedSources = null;
+    for (const item of entries.filter(item => key(path.posix.basename(item.name)) === 'template-sources.json')) {
+      if (item.name !== markerPath || item.kind !== 'file' || item.entry.uncompressedSize > 4096) throw new Error('Marcador de código-fonte FFmpeg inválido no template.');
+      const chunks = [];
+      for await (const chunk of await entryStream(zip, item.entry)) chunks.push(chunk);
+      let marker;
+      try { marker = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+      catch (_) { throw new Error('Marcador de código-fonte FFmpeg inválido no template.'); }
+      const exactKeys = (object, expected) => object && typeof object === 'object' && !Array.isArray(object)
+        && Object.keys(object).length === expected.length && expected.every(name => Object.hasOwn(object, name));
+      if (!exactKeys(marker, ['schemaVersion', 'sources']) || marker.schemaVersion !== 1 || !Array.isArray(marker.sources) || marker.sources.length !== FFMPEG_SOURCE_LOCK.length) {
+        throw new Error('Marcador de código-fonte FFmpeg inválido no template.');
+      }
+      const used = new Set();
+      let bytes = 0;
+      for (const source of marker.sources) {
+        const locked = FFMPEG_SOURCE_LOCK.find(expected => source && source.file === expected.file);
+        if (!exactKeys(source, ['file', 'sha256', 'size']) || !locked || source.sha256 !== locked.sha256 || source.size !== locked.size
+            || used.has(source.file) || !Number.isSafeInteger(source.size) || source.size < 1 || source.size > 50 * 1024 ** 2 || (bytes += source.size) > 16 * 1024 ** 2) {
+          throw new Error('Marcador de código-fonte FFmpeg não corresponde aos arquivos fixados.');
+        }
+        used.add(source.file);
+      }
+      const runtimeRoot = path.posix.dirname(markerPath);
+      if (FFMPEG_SOURCE_LOCK.some(source => paths.has(key(`${runtimeRoot}/sources/${source.file}`)))) throw new Error('O template mistura arquivos de código-fonte FFmpeg com referências externas.');
+      for (const source of FFMPEG_SOURCE_LOCK) registerPath(paths, `${runtimeRoot}/sources/${source.file}`, 'file');
+      sharedSources = { markerPath, runtimeRoot, sources: FFMPEG_SOURCE_LOCK };
+    }
     const links = new Map();
     for (const item of entries.filter(item => item.kind === 'symlink')) {
       if (item.entry.uncompressedSize > 4096) throw new Error('Ligação simbólica ZIP demasiado longa.');
@@ -154,6 +195,8 @@ async function inspectTemplate(templatePath, target) {
       links.set(key(item.name), targetName);
     }
     function resolveLink(name) {
+      const linkRoot = name.split('/')[0];
+      const runtimeRoot = linkRoot === MAC_RUNTIME_DATA ? name.split('/')[1] : null;
       let pending = name.split('/');
       const resolved = [];
       let followed = 0;
@@ -161,7 +204,7 @@ async function inspectTemplate(templatePath, target) {
         const part = pending.shift();
         if (!part || part === '.') continue;
         if (part === '..') {
-          if (resolved.length <= 1) throw new Error('Ligação simbólica fora do bundle.');
+          if (resolved.length <= (runtimeRoot ? 2 : 1)) throw new Error('Ligação simbólica fora do bundle ou runtime.');
           resolved.pop();
           continue;
         }
@@ -174,11 +217,11 @@ async function inspectTemplate(templatePath, target) {
           resolved.push(part);
         }
       }
-      if (resolved[0] !== MAC_BUNDLE || resolved.length < 2) throw new Error('Ligação simbólica fora do bundle.');
+      if (resolved[0] !== linkRoot || resolved.length < 2 || (runtimeRoot && resolved[1] !== runtimeRoot)) throw new Error('Ligação simbólica fora do bundle ou runtime.');
     }
     for (const item of entries.filter(item => item.kind === 'symlink')) resolveLink(item.name);
     if (ioError) throw ioError;
-    return { zip, entries, paths, checkError() { if (ioError) throw ioError; } };
+    return { zip, entries, paths, sharedSources, checkError() { if (ioError) throw ioError; } };
   } catch (error) { zip.close(); throw error; }
 }
 
@@ -315,15 +358,86 @@ async function assetStream(asset, root) {
     const stream = handle.createReadStream({ autoClose: false });
     const checked = verifyStream(actual.size, undefined, async () => {
       if (!matches(await handle.stat())) throw new Error('Um recurso mudou durante a exportação.');
-    });
+    }, asset.sha256);
     stream.on('error', error => checked.destroy(error));
     checked.on('close', () => { stream.destroy(); handle.close().catch(() => {}); });
     return stream.pipe(checked);
   } catch (error) { await handle.close(); throw error; }
 }
 
-async function exportProject({ target, templatePath, outputPath, projectName, config, assetsDir, requiresPhp = false, onProgress }) {
+function projectRuntimeRequirements({ config, assetsDir, requiresPhp = false }) {
+  const requirements = { ffmpeg: false, php: requiresPhp === true };
+  for (const module of config.content || []) {
+    // Local media uses Electron's media decoder; only IPTV needs the native
+    // fallback transcoder. Keep its complete binaries/source/licence tree.
+    if (module.type === 'iptv') requirements.ffmpeg = true;
+    if (module.type === 'local-web') requirements.php = validateWebProject({ data: module.data, assetsDir }).requiresPhp || requirements.php;
+  }
+  return requirements;
+}
+
+function runtimeForEntry(name, target) {
+  const base = target === 'windows' ? 'resources' : MAC_RUNTIME_DATA;
+  return OPTIONAL_RUNTIMES.find(runtime => key(name) === key(`${base}/${runtime}`) || key(name).startsWith(key(`${base}/${runtime}`) + '/'));
+}
+
+function selectedTemplateEntries(template, target, requirements) {
+  // Runtimes in older sealed Mac app bundles stay byte-for-byte intact. New
+  // templates put them beside the bundle so Windows can filter them without
+  // modifying a Mac signature or requiring codesign on the creator's system.
+  return template.entries.filter(item => {
+    if (template.sharedSources && item.name === template.sharedSources.markerPath) return false;
+    const runtime = runtimeForEntry(item.name, target);
+    return !runtime || requirements[runtime];
+  });
+}
+
+async function inspectSharedRuntimeSources(template, requirements, sharedRuntimeSourcesDir) {
+  if (!requirements.ffmpeg || !template.sharedSources) return [];
+  if (typeof sharedRuntimeSourcesDir !== 'string' || !path.isAbsolute(sharedRuntimeSourcesDir)) {
+    throw new Error('O construtor não inclui a pasta comum de código-fonte FFmpeg necessária para esta exportação IPTV. Reinstale o construtor.');
+  }
+  const directoryStat = await fs.promises.lstat(sharedRuntimeSourcesDir);
+  if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) throw new Error('Pasta comum de código-fonte FFmpeg inválida.');
+  const root = await fs.promises.realpath(sharedRuntimeSourcesDir);
+  const restored = [];
+  for (const source of template.sharedSources.sources) {
+    const absolute = path.join(root, source.file);
+    const stat = await fs.promises.lstat(absolute);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== source.size) throw new Error('Arquivo comum de código-fonte FFmpeg inválido: ' + source.file);
+    const handle = await fs.promises.open(absolute, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+    try {
+      const unchanged = actual => actual.isFile() && actual.size === stat.size && actual.ino === stat.ino && actual.dev === stat.dev
+        && actual.mtimeMs === stat.mtimeMs && actual.ctimeMs === stat.ctimeMs;
+      if (!unchanged(await handle.stat())) throw new Error('O código-fonte FFmpeg mudou durante a exportação.');
+      const hash = crypto.createHash('sha256');
+      for await (const chunk of handle.createReadStream({ autoClose: false })) hash.update(chunk);
+      if (hash.digest('hex') !== source.sha256 || !unchanged(await handle.stat())) throw new Error('Arquivo comum de código-fonte FFmpeg corrompido: SHA-256 inválido.');
+    } finally { await handle.close(); }
+    restored.push({ absolute, root, stat, sha256: source.sha256,
+      destination: `${template.sharedSources.runtimeRoot}/sources/${source.file}`, mode: 0o100644 });
+  }
+  return restored;
+}
+
+function assertTemplateRuntimes(template, target, requirements) {
+  const base = target === 'windows' ? 'resources' : `${MAC_BUNDLE}/Contents/Resources`;
+  for (const runtime of OPTIONAL_RUNTIMES) {
+    if (!requirements[runtime]) continue;
+    const executable = runtime + (target === 'windows' ? '.exe' : '');
+    const candidates = [`${base}/${runtime}/${executable}`];
+    if (target === 'mac') candidates.push(`${MAC_RUNTIME_DATA}/${runtime}/${executable}`);
+    const included = template.entries.find(item => item.kind === 'file' && candidates.some(candidate => key(candidate) === key(item.name)));
+    if (!included) {
+      throw new Error(`O template ${target === 'mac' ? 'Mac' : 'Windows'} não inclui o runtime ${runtime === 'php' ? 'PHP' : 'FFmpeg'} necessário. Instale um runtime para essa plataforma e recrie o template.`);
+    }
+    if (target === 'mac' && !(included.mode & 0o111)) throw new Error(`O runtime ${runtime === 'php' ? 'PHP' : 'FFmpeg'} do template Mac não tem permissão de execução.`);
+  }
+}
+
+async function exportProject({ target, templatePath, outputPath, projectName, config, assetsDir, requiresPhp = false, sharedRuntimeSourcesDir, onProgress }) {
   if (!['windows', 'mac'].includes(target)) throw new Error('Selecione Windows ou Mac.');
+  assertAPKExport(config, { audience: 'creator', locale: config && config.language });
   if (!path.isAbsolute(templatePath) || !path.isAbsolute(outputPath) || path.resolve(templatePath) === path.resolve(outputPath)) throw new Error('Caminhos de exportação inválidos.');
   const name = safeProjectName(projectName);
   const configBytes = Buffer.from(JSON.stringify(config, null, 2));
@@ -343,13 +457,18 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     if (target === 'mac' && module.type === 'launch' && [module.data && module.data.file, module.data && module.data.fileName].some(value => typeof value === 'string' && /\.(?:exe|msi|bat|cmd|com|scr)$/i.test(value))) {
       throw new Error(`O módulo "${module.title || module.id || 'Launch'}" contém um programa Windows incompatível com Mac.`);
     }
-    if (module.type === 'local-web') requiresPhp = validateWebProject({ data: module.data, assetsDir }).requiresPhp || requiresPhp;
   }
+  const requirements = projectRuntimeRequirements({ config, assetsDir, requiresPhp });
   const template = await inspectTemplate(templatePath, target);
   let temporary;
   try {
-    const phpPath = target === 'windows' ? 'resources/php/php.exe' : `${MAC_BUNDLE}/Contents/Resources/php/php`;
-    if (requiresPhp && template.paths.get(key(phpPath)) !== 'file') throw new Error(`O template ${target === 'mac' ? 'Mac' : 'Windows'} não inclui o runtime PHP necessário. Instale um runtime para essa plataforma e recrie o template.`);
+    assertTemplateRuntimes(template, target, requirements);
+    const restoredSources = await inspectSharedRuntimeSources(template, requirements, sharedRuntimeSourcesDir);
+    const selectedEntries = selectedTemplateEntries(template, target, requirements);
+    const omittedRuntimeBytes = template.entries.reduce((sum, item) => {
+      const runtime = runtimeForEntry(item.name, target);
+      return sum + (runtime && !requirements[runtime] ? item.entry.uncompressedSize : 0);
+    }, 0);
     const outputParent = await fs.promises.realpath(path.dirname(outputPath));
     const relativeParent = path.relative(assets.root, outputParent);
     if (!relativeParent || (relativeParent !== '..' && !relativeParent.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeParent))) throw new Error('Guarde a exportação fora da pasta de recursos.');
@@ -363,7 +482,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     completion.catch(() => {});
     archive.on('error', error => archive.outputStream.destroy(error));
     let completed = 0;
-    const total = template.entries.length + assets.entries.length + 1;
+    const total = selectedEntries.length + assets.entries.length + restoredSources.length + 1;
     function progress() { if (onProgress) { try { onProgress({ completed, total }); } catch (_) { /* UI observers do not invalidate an export. */ } } }
     function addLazy(destination, options, getter) {
       archive.addReadStreamLazy(destination, options, callback => {
@@ -377,25 +496,34 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
       });
     }
     try {
-      for (const item of template.entries) {
-        const destination = target === 'mac' ? `${name}.app${item.name.slice(MAC_BUNDLE.length)}` : item.name;
+      for (const item of selectedEntries) {
+        let destination = item.name;
+        if (target === 'mac') {
+          destination = item.name.startsWith(`${MAC_RUNTIME_DATA}/`)
+            ? `${name}.data${item.name.slice(MAC_RUNTIME_DATA.length)}`
+            : `${name}.app${item.name.slice(MAC_BUNDLE.length)}`;
+        }
         // size belongs only to streamed files. yazl rejects it for directory
         // and buffer entries, including the explicit directories in real apps.
         const options = { mode: item.mode, mtime: item.entry.getLastModDate() };
         if (item.kind === 'directory') { archive.addEmptyDirectory(destination, options); completed++; }
         else if (item.kind === 'symlink') { archive.addBuffer(item.link, destination, options); completed++; }
-        else addLazy(destination, { ...options, size: item.entry.uncompressedSize }, () => entryStream(template.zip, item.entry));
+        else addLazy(destination, { ...options, size: item.entry.uncompressedSize, compressionLevel: 9 }, () => entryStream(template.zip, item.entry));
+      }
+      for (const source of restoredSources) {
+        const destination = target === 'mac' ? `${name}.data${source.destination.slice(MAC_RUNTIME_DATA.length)}` : source.destination;
+        addLazy(destination, { mode: source.mode, size: source.stat.size, mtime: source.stat.mtime, compressionLevel: 9 }, () => assetStream(source, source.root));
       }
       const base = target === 'windows' ? 'resources' : `${name}.data`;
       archive.addEmptyDirectory(`${base}/dist-assets/`, { mode: 0o040755 });
-      archive.addBuffer(configBytes, `${base}/data/project-config.json`, { mode: 0o100644 });
+      archive.addBuffer(configBytes, `${base}/data/project-config.json`, { mode: 0o100644, compressionLevel: 9 });
       completed++;
       for (const asset of assets.entries) {
         const destination = `${base}/dist-assets/${asset.relative}`;
         const options = { mode: asset.mode, mtime: asset.stat.mtime };
         if (asset.kind === 'directory') { archive.addEmptyDirectory(destination + '/', options); completed++; }
         else if (asset.kind === 'symlink') { archive.addBuffer(asset.link, destination, options); completed++; }
-        else addLazy(destination, { ...options, size: asset.stat.size }, () => assetStream(asset, assets.root));
+        else addLazy(destination, { ...options, size: asset.stat.size, compressionLevel: 9 }, () => assetStream(asset, assets.root));
       }
       archive.end();
       await completion;
@@ -412,27 +540,41 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     temporary = null;
     completed = total;
     progress();
-    return { path: outputPath, format: 'zip', target, projectName: name };
+    return { path: outputPath, format: 'zip', target, projectName: name, omittedRuntimeBytes };
   } finally {
     template.zip.close();
     if (temporary) await fs.promises.rm(temporary, { force: true });
   }
 }
 
-async function extractWindowsTemplate(templatePath, destination) {
+async function extractWindowsTemplate(templatePath, destination, options) {
   if (!path.isAbsolute(destination)) throw new Error('O destino do template deve ser absoluto.');
+  if (options && options.config) assertAPKExport(options.config, { audience: 'creator', locale: options.config.language });
   const template = await inspectTemplate(templatePath, 'windows');
   let created = false;
   try {
+    const requirements = options && options.config
+      ? projectRuntimeRequirements(options) : null;
+    if (requirements) assertTemplateRuntimes(template, 'windows', requirements);
+    // A compact template always needs its common archives restored when no
+    // project selection is supplied, preserving the old full-template API.
+    const restoredSources = await inspectSharedRuntimeSources(template, requirements || { ffmpeg: true }, options && options.sharedRuntimeSourcesDir);
+    const selectedEntries = requirements ? selectedTemplateEntries(template, 'windows', requirements)
+      : template.entries.filter(item => !template.sharedSources || item.name !== template.sharedSources.markerPath);
     await fs.promises.mkdir(destination); // never merge into an existing tree
     created = true;
-    for (const item of template.entries) {
+    for (const item of selectedEntries) {
       const filename = path.join(destination, ...item.name.replace(/\/$/, '').split('/'));
       if (item.kind === 'directory') await fs.promises.mkdir(filename, { recursive: true });
       else {
         await fs.promises.mkdir(path.dirname(filename), { recursive: true });
         await pipeline(await entryStream(template.zip, item.entry), fs.createWriteStream(filename, { flags: 'wx', mode: item.mode & 0o777 }));
       }
+    }
+    for (const source of restoredSources) {
+      const filename = path.join(destination, ...source.destination.split('/'));
+      await fs.promises.mkdir(path.dirname(filename), { recursive: true });
+      await pipeline(await assetStream(source, source.root), fs.createWriteStream(filename, { flags: 'wx', mode: 0o644 }));
     }
     template.checkError();
     return destination;
@@ -442,4 +584,4 @@ async function extractWindowsTemplate(templatePath, destination) {
   } finally { template.zip.close(); }
 }
 
-module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, safeProjectName };
+module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName };

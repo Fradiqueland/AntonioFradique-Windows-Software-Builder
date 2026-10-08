@@ -207,6 +207,30 @@ test('stage cleanup closes the gallery overlay and stops native audio/video', ()
   assert.equal(video.paused, true); assert.equal(video.src, '');
 });
 
+test('an unsupported APK project shows a safe notice without launching or resolving its file', async () => {
+  let files = 0, launches = 0;
+  const h = harness({
+    resolveAssetPath: async () => { files++; return '/untrusted.apk'; },
+    launchFile: async () => { launches++; },
+    openExternal: async () => { launches++; }
+  });
+  await h.run("handleModuleClick({id:'old',type:'article-reader',data:{text:'Old stage'}}, null)");
+  await h.run("handleModuleClick({id:'apk',title:'<img src=x onerror=alert(1)>',type:'apk',data:{file:'untrusted.apk'}}, null)");
+  assert.equal(files, 0); assert.equal(launches, 0);
+  assert.ok(h.stage.querySelector('[role="alert"]'));
+  assert.match(h.stage.textContent, /APK execution is unavailable/);
+  assert.doesNotMatch(h.stage.textContent, /Old stage|onerror/);
+});
+
+test('APK unavailability notices follow the selected language without launching an application', async () => {
+  const h = harness({ loadLocale: async lang => ({ lang, dict: { android: { viewer_title: 'APK indisponível', viewer_unavailable: 'O motor Android não está incluído.' } } }) });
+  await h.run("handleModuleClick({id:'apk',type:'apk',data:{}}, null)");
+  await h.run("setLanguage('pt')");
+  assert.match(h.stage.textContent, /APK indisponível/);
+  assert.match(h.stage.textContent, /O motor Android não está incluído/);
+  assert.deepEqual(h.opened, []);
+});
+
 test('malformed saved favourite entries cannot crash the IPTV channel list', async () => {
   const h = harness({ loadFavs: async () => ({ folders: [null, { id: 'bad', name: 'Bad', keys: null }, { id: 'good', name: 'Good', keys: [null, 'https://stream.example/live.m3u8'] }] }) });
   h.context.iptv = iptv; await h.run("renderIptv(iptv, 'tv')");

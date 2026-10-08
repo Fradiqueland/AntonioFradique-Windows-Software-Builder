@@ -6,12 +6,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const { createRequire } = require('node:module');
 const { pipeline } = require('stream/promises');
+const { Transform } = require('node:stream');
 const yazl = require('yazl');
 const yauzl = require('yauzl');
-const { exportProject, extractWindowsTemplate, inspectProjectAssets, safeProjectName } = require('../src/shared/project-export');
+const { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName } = require('../src/shared/project-export');
 const { importPortableProject } = require('../src/shared/portable-app');
+const { FFMPEG_SOURCE_LOCK } = require('../src/shared/ffmpeg-source-lock');
 
 const APP = 'LaunchBox Viewer.app';
 const WINDOWS = [
@@ -33,6 +36,61 @@ const MAC = [
   { name: `${APP}/Contents/Resources/`, mode: 0o040755 },
   { name: `${APP}/Contents/Resources/empty-directory/`, mode: 0o040750 }
 ];
+
+function runtimeEntries(target) {
+  const base = target === 'windows' ? 'resources' : 'LaunchBox Viewer.data';
+  const extension = target === 'windows' ? '.exe' : '';
+  return [
+    { name: `${base}/ffmpeg/`, mode: 0o040755 },
+    { name: `${base}/ffmpeg/ffmpeg${extension}`, data: crypto.randomBytes(96 * 1024), mode: 0o100755 },
+    { name: `${base}/ffmpeg/ffprobe${extension}`, data: 'PROBE', mode: 0o100755 },
+    { name: `${base}/ffmpeg/COPYING.GPLv2`, data: 'FULL RUNTIME LICENCE' },
+    { name: `${base}/ffmpeg/sources/ffmpeg-source.tar.xz`, data: crypto.randomBytes(128 * 1024) },
+    { name: `${base}/ffmpeg/sources/x264-source.tar.bz2`, data: 'X264 SOURCE' },
+    { name: `${base}/php/`, mode: 0o040755 },
+    { name: `${base}/php/php${extension}`, data: 'PHP RUNTIME', mode: 0o100755 },
+    { name: `${base}/php/LICENSE`, data: 'PHP LICENCE' }
+  ];
+}
+
+function sourceFixture(t) {
+  const f = fixture(t);
+  f.sharedRuntimeSourcesDir = path.join(f.root, 'shared-sources');
+  fs.mkdirSync(f.sharedRuntimeSourcesDir);
+  f.sourceBytes = [crypto.randomBytes(192 * 1024), crypto.randomBytes(32 * 1024)];
+  f.sourceLock = FFMPEG_SOURCE_LOCK.map((source, index) => ({ file: source.file,
+    sha256: crypto.createHash('sha256').update(f.sourceBytes[index]).digest('hex'), size: f.sourceBytes[index].length }));
+  for (let i = 0; i < f.sourceLock.length; i++) fs.writeFileSync(path.join(f.sharedRuntimeSourcesDir, f.sourceLock[i].file), f.sourceBytes[i]);
+  f.engine = loadSourceEngine(f.sourceLock);
+  f.config.content.push({ type: 'iptv', data: { channels: [] } });
+  return f;
+}
+
+function loadSourceEngine(sourceLock, physicalFs = fs) {
+  const filename = require.resolve('../src/shared/project-export');
+  const originalRequire = createRequire(filename);
+  const module = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
+    module, exports: module.exports, process, Buffer,
+    require(name) {
+      if (name === 'fs' || name === 'original-fs') return physicalFs;
+      if (name === './ffmpeg-source-lock') return { FFMPEG_SOURCE_LOCK: sourceLock };
+      return originalRequire(name);
+    }
+  }, { filename });
+  return module.exports;
+}
+
+function compactRuntimeEntries(target, sources, marker = { schemaVersion: 1, sources }) {
+  const base = target === 'windows' ? 'resources' : 'LaunchBox Viewer.data';
+  return [
+    { name: `${base}/ffmpeg/ffmpeg${target === 'windows' ? '.exe' : ''}`, data: 'NATIVE RUNTIME', mode: 0o100755 },
+    { name: `${base}/ffmpeg/ffprobe${target === 'windows' ? '.exe' : ''}`, data: 'NATIVE PROBE', mode: 0o100755 },
+    { name: `${base}/ffmpeg/COPYING.GPLv2`, data: 'FULL LICENSE' },
+    { name: `${base}/ffmpeg/sources/recipe/build.sh`, data: 'FULL BUILD RECIPE' },
+    { name: `${base}/ffmpeg/template-sources.json`, data: JSON.stringify(marker) }
+  ];
+}
 
 function fixture(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'builder-export-')));
@@ -147,6 +205,298 @@ test('Windows ZIP keeps the Viewer, configuration and nested Unicode assets', as
   assert.deepEqual(JSON.parse(entries.get('resources/data/project-config.json').data), f.config);
   assert.equal(entries.get('resources/dist-assets/páginas/olá.html').data.toString(), '<h1>Olá</h1>');
   assert.equal(progress.at(-1).completed, progress.at(-1).total);
+});
+
+test('ordinary exports omit optional native runtimes without changing local media or signed Mac bundle bytes', async t => {
+  const f = fixture(t);
+  const media = Buffer.from('ORIGINAL LOSSLESS MEDIA');
+  fs.writeFileSync(path.join(f.assetsDir, 'video.mp4'), media);
+  f.config.content.push({ type: 'local-video', data: { file: 'dist-assets/video.mp4' } });
+  for (const target of ['windows', 'mac']) {
+    const appEntries = target === 'windows' ? WINDOWS : MAC;
+    const runtimes = runtimeEntries(target);
+    await writeTemplate(f.templatePath, [...appEntries, ...runtimes]);
+    const result = await exportProject({ ...f, target });
+    const ordinarySize = fs.statSync(f.outputPath).size;
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : 'Curso António.data';
+    assert.equal([...entries.keys()].some(name => name.startsWith(`${base}/ffmpeg/`) || name.startsWith(`${base}/php/`)), false);
+    assert.deepEqual(entries.get(`${base}/dist-assets/video.mp4`).data, media);
+    assert.equal(result.omittedRuntimeBytes, runtimes.reduce((sum, item) => sum + Buffer.byteLength(item.data || ''), 0));
+    for (const original of appEntries) {
+      const name = target === 'windows' ? original.name : original.name.replace(APP, 'Curso António.app');
+      assert.deepEqual(entries.get(name).data, Buffer.from(original.data || ''));
+      assert.equal(entries.get(name).mode, original.mode || 0o100644);
+    }
+    f.config.content.push({ type: 'iptv', data: { channels: [] } });
+    await exportProject({ ...f, target });
+    assert.ok(fs.statSync(f.outputPath).size - ordinarySize > 200 * 1024, 'Unused source/binary bytes must actually be absent from the ZIP');
+    f.config.content.pop();
+  }
+});
+
+test('IPTV exports keep every FFmpeg binary, licence and matching source archive while omitting unused PHP', async t => {
+  const f = fixture(t);
+  f.config.content.push({ type: 'iptv', data: { channels: [] } });
+  for (const target of ['windows', 'mac']) {
+    const runtimes = runtimeEntries(target);
+    await writeTemplate(f.templatePath, [...(target === 'windows' ? WINDOWS : MAC), ...runtimes]);
+    await exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : 'Curso António.data';
+    for (const original of runtimes.filter(item => item.name.includes('/ffmpeg/'))) {
+      const name = target === 'windows' ? original.name : original.name.replace('LaunchBox Viewer.data', base);
+      assert.deepEqual(entries.get(name).data, Buffer.from(original.data || ''));
+      assert.equal(entries.get(name).mode, original.mode || 0o100644);
+    }
+    assert.equal([...entries.keys()].some(name => name.startsWith(`${base}/php/`)), false);
+    assert.equal([...entries.keys()].some(name => name.startsWith('LaunchBox Viewer.data/')), false);
+  }
+});
+
+test('PHP web exports retain their native runtime but a PHP download does not', async t => {
+  const f = fixture(t);
+  const dirname = 'web-12345678-1234-4234-8234-123456789abc';
+  fs.mkdirSync(path.join(f.assetsDir, dirname));
+  fs.writeFileSync(path.join(f.assetsDir, dirname, 'index.php'), '<?php echo "ok";');
+  f.config.content.push({ type: 'local-web', data: { root: `dist-assets/${dirname}`, entry: 'index.php', requiresPhp: false } });
+  assert.deepEqual(projectRuntimeRequirements(f), { ffmpeg: false, php: true });
+  for (const target of ['windows', 'mac']) {
+    const runtimes = runtimeEntries(target);
+    await writeTemplate(f.templatePath, [...(target === 'windows' ? WINDOWS : MAC), ...runtimes]);
+    await exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : 'Curso António.data';
+    assert.equal(entries.get(`${base}/php/php${target === 'windows' ? '.exe' : ''}`).data.toString(), 'PHP RUNTIME');
+    assert.equal(entries.get(`${base}/php/LICENSE`).data.toString(), 'PHP LICENCE');
+    assert.equal([...entries.keys()].some(name => name.startsWith(`${base}/ffmpeg/`)), false);
+  }
+  f.config.content[0] = { type: 'download-vault', data: { file: `dist-assets/${dirname}/index.php` } };
+  assert.deepEqual(projectRuntimeRequirements(f), { ffmpeg: false, php: false });
+  await exportProject({ ...f, target: 'mac' });
+  const entries = await readZip(f.outputPath);
+  assert.equal([...entries.keys()].some(name => name.startsWith('Curso António.data/php/')), false);
+  assert.equal(entries.get(`Curso António.data/dist-assets/${dirname}/index.php`).data.toString(), '<?php echo "ok";');
+});
+
+test('older sealed Mac templates retain optional resources and signatures even when no module needs them', async t => {
+  const f = fixture(t);
+  const runtimes = runtimeEntries('mac').map(item => ({ ...item, name: item.name.replace('LaunchBox Viewer.data', `${APP}/Contents/Resources`) }));
+  await writeTemplate(f.templatePath, [...MAC, ...runtimes]);
+  const result = await exportProject({ ...f, target: 'mac' });
+  assert.equal(result.omittedRuntimeBytes, 0);
+  const entries = await readZip(f.outputPath);
+  for (const original of [...MAC, ...runtimes]) {
+    assert.deepEqual(entries.get(original.name.replace(APP, 'Curso António.app')).data, Buffer.from(original.data || ''));
+  }
+});
+
+test('Mac templates reject project injection and links that escape a companion runtime', async t => {
+  const f = fixture(t);
+  const externalBase = 'LaunchBox Viewer.data';
+  for (const additions of [
+    [{ name: `${externalBase}/data/project-config.json`, data: 'PREVIOUS PROJECT' }],
+    [{ name: `${externalBase}/dist-assets/secret.txt`, data: 'PREVIOUS ASSET' }],
+    [{ name: `${externalBase}/ffmpeg/file`, data: 'FILE' }, { name: `${externalBase}/php/php`, data: 'PHP' }, { name: `${externalBase}/ffmpeg/link`, data: '../php/php', mode: 0o120777 }],
+    [{ name: `${externalBase}/ffmpeg/link`, data: `../../${APP}/Contents/Info.plist`, mode: 0o120777 }]
+  ]) {
+    await writeTemplate(f.templatePath, [...MAC, ...additions]);
+    await assert.rejects(exportProject({ ...f, target: 'mac' }), /permitidos|fora do bundle|runtime/);
+    assert.equal(fs.existsSync(f.outputPath), false);
+  }
+});
+
+test('IPTV export fails atomically if its target template lacks the bundled FFmpeg runtime', async t => {
+  const f = fixture(t);
+  f.config.content.push({ type: 'iptv', data: { channels: [] } });
+  for (const target of ['windows', 'mac']) {
+    await writeTemplate(f.templatePath, target === 'windows' ? WINDOWS : MAC);
+    fs.writeFileSync(f.outputPath, 'PREVIOUS GOOD EXPORT');
+    await assert.rejects(exportProject({ ...f, target }), /runtime FFmpeg/);
+    assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS GOOD EXPORT');
+    assert.equal(fs.readdirSync(f.root).some(name => name.endsWith('.tmp')), false);
+  }
+  await writeTemplate(f.templatePath, [...MAC, { name: 'LaunchBox Viewer.data/ffmpeg/ffmpeg', data: 'NATIVE RUNTIME', mode: 0o100644 }]);
+  await assert.rejects(exportProject({ ...f, target: 'mac' }), /FFmpeg.*permissão de execução/);
+  assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS GOOD EXPORT');
+});
+
+test('Windows SFX extraction can select runtimes, preserving the default full-template compatibility route', async t => {
+  const f = fixture(t);
+  await writeTemplate(f.templatePath, [...WINDOWS, ...runtimeEntries('windows')]);
+  const full = path.join(f.root, 'full-template');
+  await extractWindowsTemplate(f.templatePath, full);
+  assert.equal(fs.existsSync(path.join(full, 'resources/ffmpeg/sources/ffmpeg-source.tar.xz')), true);
+  assert.equal(fs.existsSync(path.join(full, 'resources/php/php.exe')), true);
+  const ordinary = path.join(f.root, 'ordinary-template');
+  await extractWindowsTemplate(f.templatePath, ordinary, f);
+  assert.equal(fs.existsSync(path.join(ordinary, 'resources/ffmpeg')), false);
+  assert.equal(fs.existsSync(path.join(ordinary, 'resources/php')), false);
+  assert.equal(fs.readFileSync(path.join(ordinary, 'resources/app.asar'), 'utf8'), 'VIEWER SOURCE');
+  f.config.content.push({ type: 'iptv', data: { channels: [] } });
+  const iptv = path.join(f.root, 'iptv-template');
+  await extractWindowsTemplate(f.templatePath, iptv, f);
+  assert.equal(fs.existsSync(path.join(iptv, 'resources/ffmpeg/sources/ffmpeg-source.tar.xz')), true);
+  assert.equal(fs.existsSync(path.join(iptv, 'resources/ffmpeg/COPYING.GPLv2')), true);
+  assert.equal(fs.existsSync(path.join(iptv, 'resources/php')), false);
+});
+
+test('APK references cannot produce an export or stage without a validated included Android runtime', async t => {
+  const f = fixture(t);
+  f.config.content.push({ type: 'android-apk', data: { file: 'dist-assets/mobile.apk' } });
+  fs.writeFileSync(f.outputPath, 'PREVIOUS GOOD EXPORT');
+  for (const target of ['windows', 'mac']) {
+    // The guard must run before reading assets/templates or creating output.
+    await assert.rejects(exportProject({ ...f, target }), error => error.code === 'ANDROID_RUNTIME_NOT_INCLUDED');
+    assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS GOOD EXPORT');
+  }
+  const staging = path.join(f.root, 'apk-stage');
+  await assert.rejects(extractWindowsTemplate(f.templatePath, staging, f), error => error.code === 'ANDROID_RUNTIME_NOT_INCLUDED');
+  assert.equal(fs.existsSync(staging), false);
+});
+
+test('the production source lock matches the pinned native build hashes and bounded exact archive sizes', () => {
+  const buildLock = require('../build-configs/ffmpeg-sources.json');
+  assert.deepEqual(FFMPEG_SOURCE_LOCK.map(({ file, sha256 }) => ({ file, sha256 })), buildLock.sources.map(({ file, sha256 }) => ({ file, sha256 })));
+  assert.equal(FFMPEG_SOURCE_LOCK.reduce((sum, source) => sum + source.size, 0), 12580755);
+  assert.equal(Object.isFrozen(FFMPEG_SOURCE_LOCK), true);
+  assert.ok(FFMPEG_SOURCE_LOCK.every(Object.isFrozen));
+});
+
+test('compact Builder templates restore exact common FFmpeg archives into IPTV ZIPs and SFX staging', async t => {
+  const f = sourceFixture(t);
+  for (const target of ['windows', 'mac']) {
+    await writeTemplate(f.templatePath, [...(target === 'windows' ? WINDOWS : MAC), ...compactRuntimeEntries(target, f.sourceLock)]);
+    await f.engine.exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : 'Curso António.data';
+    for (let i = 0; i < f.sourceLock.length; i++) {
+      const restored = entries.get(`${base}/ffmpeg/sources/${f.sourceLock[i].file}`);
+      assert.deepEqual(restored.data, f.sourceBytes[i]);
+      assert.equal(restored.mode, 0o100644);
+    }
+    assert.equal(entries.has(`${base}/ffmpeg/template-sources.json`), false);
+    assert.equal(entries.get(`${base}/ffmpeg/sources/recipe/build.sh`).data.toString(), 'FULL BUILD RECIPE');
+    if (target === 'mac') {
+      for (const original of MAC) assert.deepEqual(entries.get(original.name.replace(APP, 'Curso António.app')).data, Buffer.from(original.data || ''));
+    } else {
+      const stage = path.join(f.root, 'restored-stage');
+      await f.engine.extractWindowsTemplate(f.templatePath, stage, f);
+      for (let i = 0; i < f.sourceLock.length; i++) assert.deepEqual(fs.readFileSync(path.join(stage, 'resources/ffmpeg/sources', f.sourceLock[i].file)), f.sourceBytes[i]);
+      assert.equal(fs.existsSync(path.join(stage, 'resources/ffmpeg/template-sources.json')), false);
+      const fullStage = path.join(f.root, 'full-restored-stage');
+      await f.engine.extractWindowsTemplate(f.templatePath, fullStage, { sharedRuntimeSourcesDir: f.sharedRuntimeSourcesDir });
+      assert.deepEqual(fs.readFileSync(path.join(fullStage, 'resources/ffmpeg/sources', f.sourceLock[0].file)), f.sourceBytes[0]);
+    }
+  }
+});
+
+test('non-IPTV exports from compact templates need no shared archive folder and contain no native marker or source bytes', async t => {
+  const f = sourceFixture(t);
+  f.config.content = [];
+  for (const target of ['windows', 'mac']) {
+    await writeTemplate(f.templatePath, [...(target === 'windows' ? WINDOWS : MAC), ...compactRuntimeEntries(target, f.sourceLock)]);
+    await f.engine.exportProject({ ...f, target, sharedRuntimeSourcesDir: undefined });
+    const entries = await readZip(f.outputPath);
+    assert.equal([...entries.keys()].some(name => name.includes('/ffmpeg/')), false);
+    if (target === 'windows') {
+      const stage = path.join(f.root, 'no-runtime-stage');
+      await f.engine.extractWindowsTemplate(f.templatePath, stage, { config: f.config, assetsDir: f.assetsDir });
+      assert.equal(fs.existsSync(path.join(stage, 'resources/ffmpeg')), false);
+    }
+  }
+});
+
+test('missing, wrong-size and same-size corrupt shared sources fail before ZIP replacement or SFX staging', async t => {
+  const f = sourceFixture(t);
+  await writeTemplate(f.templatePath, [...WINDOWS, ...compactRuntimeEntries('windows', f.sourceLock)]);
+  fs.writeFileSync(f.outputPath, 'PREVIOUS GOOD EXPORT');
+  await assert.rejects(f.engine.exportProject({ ...f, target: 'windows', sharedRuntimeSourcesDir: undefined }), /pasta comum/);
+  const sourcePath = path.join(f.sharedRuntimeSourcesDir, f.sourceLock[0].file);
+  for (const invalid of [null, Buffer.from('TRUNCATED'), Buffer.alloc(f.sourceBytes[0].length)]) {
+    if (invalid === null) fs.unlinkSync(sourcePath); else fs.writeFileSync(sourcePath, invalid);
+    await assert.rejects(f.engine.exportProject({ ...f, target: 'windows' }), /ENOENT|inválido|corrompido/);
+    const stage = path.join(f.root, 'invalid-source-stage');
+    await assert.rejects(f.engine.extractWindowsTemplate(f.templatePath, stage, f), /ENOENT|inválido|corrompido/);
+    assert.equal(fs.existsSync(stage), false);
+    assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS GOOD EXPORT');
+    assert.equal(fs.readdirSync(f.root).some(name => name.endsWith('.tmp')), false);
+  }
+});
+
+test('streamed common archive bytes are hashed again even when their source stat has not changed', async t => {
+  const f = sourceFixture(t);
+  await writeTemplate(f.templatePath, [...WINDOWS, ...compactRuntimeEntries('windows', f.sourceLock)]);
+  fs.writeFileSync(f.outputPath, 'PREVIOUS GOOD EXPORT');
+  // Native realpath can expand Windows TEMP short names or normalize casing,
+  // unlike the synchronous JavaScript realpath used by the fixture. Match the
+  // production descriptor path so the corruption is injected on every host.
+  const sourcePath = path.join(await fs.promises.realpath(f.sharedRuntimeSourcesDir), f.sourceLock[0].file);
+  let opens = 0;
+  let corruptedStreams = 0;
+  const mockedPromises = new Proxy(fs.promises, {
+    get(target, property) {
+      if (property !== 'open') return Reflect.get(target, property);
+      return async (filename, ...args) => {
+        const handle = await fs.promises.open(filename, ...args);
+        if (filename !== sourcePath || ++opens < 2) return handle;
+        return new Proxy(handle, {
+          get(original, field) {
+            if (field !== 'createReadStream') {
+              const value = Reflect.get(original, field);
+              return typeof value === 'function' ? value.bind(original) : value;
+            }
+            return options => {
+              const incoming = original.createReadStream(options);
+              let corrupted = false;
+              const transform = new Transform({ transform(chunk, encoding, callback) {
+                const copy = Buffer.from(chunk);
+                if (!corrupted && copy.length) { copy[0] ^= 1; corrupted = true; corruptedStreams++; }
+                callback(null, copy);
+              } });
+              incoming.on('error', error => transform.destroy(error));
+              transform.on('close', () => incoming.destroy());
+              return incoming.pipe(transform);
+            };
+          }
+        });
+      };
+    }
+  });
+  const mockedFs = new Proxy(fs, { get(target, property) { return property === 'promises' ? mockedPromises : Reflect.get(target, property); } });
+  const engine = loadSourceEngine(f.sourceLock, mockedFs);
+  await assert.rejects(engine.exportProject({ ...f, target: 'windows' }), /SHA-256/);
+  assert.equal(opens, 2, 'The selected source must be opened for validation and again for ZIP streaming.');
+  assert.equal(corruptedStreams, 1, 'The second read must actually emit corrupted bytes.');
+  assert.deepEqual(fs.readFileSync(sourcePath), f.sourceBytes[0], 'Only emitted stream bytes change; the source file stays valid.');
+  assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS GOOD EXPORT');
+  assert.equal(fs.readdirSync(f.root).some(name => name.endsWith('.tmp')), false);
+});
+
+test('common-source markers reject changed schemas, traversal, duplicates and unlocked hashes or sizes', async t => {
+  const f = sourceFixture(t);
+  f.config.content = [];
+  const first = f.sourceLock[0];
+  const invalidMarkers = [
+    { schemaVersion: 2, sources: f.sourceLock },
+    { schemaVersion: 1, sources: f.sourceLock, directory: '/outside' },
+    { schemaVersion: 1, sources: [first, first] },
+    { schemaVersion: 1, sources: [{ ...first, file: '../outside.tar.xz' }, f.sourceLock[1]] },
+    { schemaVersion: 1, sources: [{ ...first, sha256: '0'.repeat(64) }, f.sourceLock[1]] },
+    { schemaVersion: 1, sources: [{ ...first, size: first.size + 1 }, f.sourceLock[1]] },
+    { schemaVersion: 1, sources: [{ ...first, url: 'https://example.invalid' }, f.sourceLock[1]] }
+  ];
+  for (const marker of invalidMarkers) {
+    await writeTemplate(f.templatePath, [...WINDOWS, ...compactRuntimeEntries('windows', f.sourceLock, marker)]);
+    await assert.rejects(f.engine.exportProject({ ...f, target: 'windows', sharedRuntimeSourcesDir: undefined }), /Marcador/);
+    assert.equal(fs.existsSync(f.outputPath), false);
+  }
+  const misplaced = compactRuntimeEntries('windows', f.sourceLock).map(item => ({ ...item, name: item.name.replace('/ffmpeg/template-sources.json', '/php/template-sources.json') }));
+  await writeTemplate(f.templatePath, [...WINDOWS, ...misplaced]);
+  await assert.rejects(f.engine.exportProject({ ...f, target: 'windows' }), /Marcador/);
+  const duplicateArchive = { name: `resources/ffmpeg/sources/${first.file}`, data: f.sourceBytes[0] };
+  await writeTemplate(f.templatePath, [...WINDOWS, ...compactRuntimeEntries('windows', f.sourceLock), duplicateArchive]);
+  await assert.rejects(f.engine.exportProject({ ...f, target: 'windows' }), /mistura arquivos/);
 });
 
 test('Mac ZIP preserves all bundle bytes, executable modes and framework symlink chains', async t => {
