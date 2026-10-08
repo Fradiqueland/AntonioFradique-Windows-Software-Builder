@@ -9,6 +9,17 @@ const asar = require('@electron/asar');
 const { builderOnlyDependencies } = require('../build-configs/viewer-files.cjs');
 const root = path.resolve(__dirname, '..');
 
+function normalizeAsarEntry(name) {
+  // ASAR's listPackage uses the host path.join, including backslashes on Windows.
+  return name.replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
+function validateViewerDependencies(asarFile) {
+  const appEntries = new Set(asar.listPackage(asarFile).map(normalizeAsarEntry));
+  for (const name of ['yauzl', 'yazl']) if (!appEntries.has('node_modules/' + name + '/package.json')) throw new Error('Viewer lost required ZIP dependency: ' + name);
+  for (const name of builderOnlyDependencies) if (appEntries.has('node_modules/' + name + '/package.json')) throw new Error('Viewer still contains a Builder-only dependency: ' + name);
+}
+
 async function main() {
   const target = process.argv[2];
   const layout = layouts[target];
@@ -17,9 +28,7 @@ async function main() {
   const source = path.join(root, 'dist/viewer', layout.folder);
   const appResources = path.join(source, target === 'mac-universal' ? 'Contents/Resources' : 'resources');
   const asarFile = path.join(appResources, 'app.asar');
-  const appEntries = new Set(asar.listPackage(asarFile).map(name => name.replace(/^\//, '')));
-  for (const name of ['yauzl', 'yazl']) if (!appEntries.has('node_modules/' + name + '/package.json')) throw new Error('Viewer lost required ZIP dependency: ' + name);
-  for (const name of builderOnlyDependencies) if (appEntries.has('node_modules/' + name + '/package.json')) throw new Error('Viewer still contains a Builder-only dependency: ' + name);
+  validateViewerDependencies(asarFile);
   const packagedVersion = JSON.parse(asar.extractFile(asarFile, 'package.json').toString()).version;
   if (packagedVersion !== require('../package.json').version) throw new Error('Viewer package version mismatch: ' + packagedVersion);
   const companions = [];
@@ -73,4 +82,5 @@ async function main() {
     fs.rmSync(temporary, { force: true });
   }
 }
-main().catch((error) => { console.error(error.message); process.exitCode = 1; });
+if (require.main === module) main().catch((error) => { console.error(error.message); process.exitCode = 1; });
+module.exports = { normalizeAsarEntry, validateViewerDependencies };
