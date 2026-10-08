@@ -850,6 +850,60 @@ const typeChosenEl = document.getElementById('type-chosen');
 const typeChipEl = document.getElementById('type-chip');
 const typePickHint = document.getElementById('type-pick-hint');
 const contentEditorSave = document.getElementById('content-editor-save');
+const androidInfoPanel = document.getElementById('android-info-panel');
+const androidInfoStatus = document.getElementById('android-info-status');
+const androidImportBtn = document.getElementById('android-import-btn');
+let androidInfoRequest = 0;
+
+function setAndroidInformationStatus(key) {
+  if (androidInfoStatus) {
+    androidInfoStatus.setAttribute('data-i18n', key);
+    androidInfoStatus.textContent = t(key);
+  }
+  // There is no validated execution adapter in this release. An optimistic
+  // runtime response must never enable an importer that cannot run its APK.
+  if (androidImportBtn) androidImportBtn.disabled = true;
+}
+
+function hideAndroidInformation() {
+  androidInfoRequest++;
+  if (androidInfoPanel) androidInfoPanel.classList.add('hidden');
+  const card = typeCardsEl && typeCardsEl.querySelector('[data-android-info]');
+  if (card) card.setAttribute('aria-expanded', 'false');
+  setAndroidInformationStatus('android.unavailable');
+}
+
+async function showAndroidInformation() {
+  if (!androidInfoPanel) return;
+  const request = ++androidInfoRequest;
+  androidInfoPanel.classList.remove('hidden');
+  const card = typeCardsEl && typeCardsEl.querySelector('[data-android-info]');
+  if (card) card.setAttribute('aria-expanded', 'true');
+  if (typeof androidInfoPanel.scrollIntoView === 'function') androidInfoPanel.scrollIntoView({ block: 'nearest' });
+  const api = window.icurator || {};
+  if (typeof api.getAndroidRuntimeStatus !== 'function') {
+    setAndroidInformationStatus('android.unavailable');
+    return;
+  }
+  setAndroidInformationStatus('android.checking');
+  try {
+    const status = await api.getAndroidRuntimeStatus();
+    if (request !== androidInfoRequest || androidInfoPanel.classList.contains('hidden')) return;
+    setAndroidInformationStatus(status && status.available === true
+      ? 'android.adapter_unavailable' : 'android.unavailable');
+  } catch (_) {
+    if (request === androidInfoRequest && !androidInfoPanel.classList.contains('hidden')) {
+      setAndroidInformationStatus('android.unavailable');
+    }
+  }
+}
+
+const androidInfoClose = document.getElementById('android-info-close');
+if (androidInfoClose) androidInfoClose.addEventListener('click', () => {
+  hideAndroidInformation();
+  const card = typeCardsEl && typeCardsEl.querySelector('[data-android-info]');
+  if (card) card.focus();
+});
 
 function renderTypeCards() {
   if (!typeCardsEl) return;
@@ -873,6 +927,7 @@ function renderTypeCards() {
       card.querySelector('.type-card-name').textContent = typeLabel(type);
       card.querySelector('.type-card-desc').textContent = typeDesc(type);
       card.addEventListener('click', () => {
+        hideAndroidInformation();
         moduleType.value = type;
         showDynamicGroup(type);
         const first = document.querySelector('[data-dyn="' + type + '"] input:not([type=hidden]), [data-dyn="' + type + '"] textarea, [data-dyn="' + type + '"] select');
@@ -880,6 +935,20 @@ function renderTypeCards() {
       });
       row.appendChild(card);
     });
+    if (g.key === 'files') {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'type-card android-info-card';
+      card.dataset.androidInfo = 'true';
+      card.setAttribute('aria-controls', 'android-info-panel');
+      card.setAttribute('aria-expanded', String(!!androidInfoPanel && !androidInfoPanel.classList.contains('hidden')));
+      card.innerHTML = '<span class="type-card-icon" aria-hidden="true">🤖</span><span class="type-card-name"></span><span class="type-card-desc"></span>';
+      card.querySelector('.type-card-name').textContent = t('android.card_title');
+      card.querySelector('.type-card-desc').textContent = t('android.card_description');
+      // Information only: no APK type is assigned and no project is changed.
+      card.addEventListener('click', showAndroidInformation);
+      row.appendChild(card);
+    }
     grp.appendChild(row);
     typeCardsEl.appendChild(grp);
   });
@@ -916,6 +985,7 @@ function setFileCurrentText(type, text, hasFile) {
 }
 
 function clearEditor() {
+  hideAndroidInformation();
   editorGeneration++;
   editorRevision++;
   iptvRequest++;

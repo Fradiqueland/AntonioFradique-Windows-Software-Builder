@@ -79,7 +79,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v2.1.1</div>
+          <div class="version">v2.5.0</div>
         </div>
       </aside>
 
@@ -159,6 +159,17 @@
                   </div>
                   <p class="type-pick-hint" id="type-pick-hint" data-i18n="content.type_pick_hint">Escolha o que este botão vai abrir:</p>
                   <div class="type-cards" id="type-cards"></div>
+                  <section class="android-info-panel hidden" id="android-info-panel" aria-labelledby="android-info-heading">
+                    <h4 id="android-info-heading" data-i18n="android.info_title">Android / APK — integração experimental</h4>
+                    <p data-i18n="android.goal">A integração planeada inclui o motor Android no construtor e nas aplicações exportadas, apenas quando o projeto utiliza APK. Ainda não está disponível.</p>
+                    <p data-i18n="android.package_help">Os pacotes ficam maiores e consomem mais memória e espaço. A compatibilidade depende do APK, da arquitetura e dos serviços Android exigidos; nem todas as aplicações serão suportadas.</p>
+                    <p data-i18n="android.requirements">Alguns computadores Windows podem exigir ativar a virtualização e uma funcionalidade do sistema. Sem aceleração, a execução pode ser lenta. Estes requisitos também se aplicam a quem recebe a aplicação exportada.</p>
+                    <p class="android-info-status" id="android-info-status" role="status" aria-live="polite" data-i18n="android.unavailable">Motor Android ainda não incluído. Importação e execução indisponíveis nesta versão.</p>
+                    <div class="android-info-actions">
+                      <button type="button" class="btn btn-primary btn-sm" id="android-import-btn" disabled aria-describedby="android-info-status" data-i18n="android.import_button">Importar APK — indisponível</button>
+                      <button type="button" class="btn btn-ghost btn-sm" id="android-info-close" data-i18n="android.close_information">Fechar informação</button>
+                    </div>
+                  </section>
                   <!-- Fonte de verdade do tipo (preenchido pelos cartões acima) -->
                   <select id="module-type" class="hidden" tabindex="-1" aria-hidden="true">
                     <option value=""></option>

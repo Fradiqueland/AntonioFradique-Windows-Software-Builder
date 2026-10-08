@@ -464,5 +464,20 @@
     "viewer_unavailable": "此版本的查看器不支持便携程序。",
     "viewer_invalid_result": "系统未确认进程已启动。",
     "wine_ready": "Wine 已配置。如有需要，请先保存模块，然后点击“测试程序”。"
+  },
+  "android": {
+    "card_title": "Android / APK — Experimental",
+    "card_description": "Integration information; import unavailable.",
+    "info_title": "Android / APK — experimental integration",
+    "goal": "The planned integration includes the Android engine in the Builder and exported applications only when a project uses APK. It is not available yet.",
+    "package_help": "Packages will be larger and need more memory and storage. Compatibility depends on the APK, its architecture and required Android services; not every application will be supported.",
+    "requirements": "Some Windows computers may require virtualization and a system feature to be enabled. Execution can be slow without acceleration. These requirements also apply to recipients of exported applications.",
+    "unavailable": "Android engine not included yet. Import and execution are unavailable in this version.",
+    "adapter_unavailable": "An engine was detected, but APK import and execution are not implemented in this version.",
+    "checking": "Checking the bundled Android engine…",
+    "import_button": "Import APK — unavailable",
+    "close_information": "Close information",
+    "viewer_title": "Android application unavailable",
+    "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
   }
 }

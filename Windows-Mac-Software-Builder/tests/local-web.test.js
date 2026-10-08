@@ -212,6 +212,26 @@ test('PHP requires an explicit installed runtime; HTML never needs PHP', async t
   }
 });
 
+test('PHP runtime paths are resolved lazily after relocation while HTML never requests one', async t => {
+  const f = fixture(t);
+  const html = importWebProject({ sourcePath: f.write('index.html', '<h1>HTML</h1>'), assetsDir: f.assetsDir });
+  const php = importWebProject({ sourcePath: f.write('index.php', '<?php echo "ok";'), assetsDir: f.assetsDir });
+  let phpPath = path.join(f.root, 'old-data', 'php', 'php');
+  const requested = [];
+  const runtime = createWebRuntime({ getPhpPath: () => { requested.push(phpPath); return phpPath; } });
+  t.after(() => runtime.closeAll());
+  const session = await runtime.open({ data: html, assetsDir: f.assetsDir });
+  assert.equal((await request(session.url)).status, 200);
+  assert.deepEqual(requested, []);
+  phpPath = path.join(f.root, 'relocated-data', 'php', 'php');
+  await assert.rejects(runtime.open({ data: php, assetsDir: f.assetsDir }), /PHP/);
+  assert.deepEqual(requested, [phpPath]);
+  phpPath = path.join(f.root, 'second-location', 'php', 'php');
+  await assert.rejects(runtime.open({ data: php, assetsDir: f.assetsDir }), /PHP/);
+  assert.equal(requested.at(-1), phpPath);
+  assert.equal(requested.length, 2, 'The provider must resolve the current path separately for each PHP session');
+});
+
 test('a failed PHP process does not leave a live session', async t => {
   const f = fixture(t);
   const data = importWebProject({ sourcePath: f.write('index.php', '<?php echo "ok";'), assetsDir: f.assetsDir });

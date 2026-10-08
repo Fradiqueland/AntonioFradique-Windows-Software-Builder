@@ -1,6 +1,8 @@
-# Windows & Mac Software Builder — v2.1.1
+# Windows & Mac Software Builder — v2.5.0
 
 Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Builder permite gerir projetos, personalizar a apresentação e exportar produtos independentes para os dois sistemas.
+
+Consulte [as alterações da v2.5](V2.5.md). **A importação e execução APK ainda não estão disponíveis**; o cartão experimental apresenta o estado e os requisitos.
 
 ## Builder e produtos exportados
 
@@ -14,7 +16,7 @@ Os dois instaladores incluem os dois modelos de exportação. O destinatário de
 
 O ícone personalizado aplica-se ao EXE auto-extraível gerado no Windows. Os ZIPs mantêm o ícone do modelo. O novo módulo **Software portable** permite incluir a pasta completa e selecionar entradas Windows e Mac. Pode autorizar Wine externo para tentar programas Windows no Mac. A exportação Mac rejeita programas Windows do módulo antigo **Lançar ficheiro**; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
 
-Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e as [compilações v2.1](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) estão disponíveis no GitHub Actions. Cada pacote contém o instalador e um ficheiro de checksums. Os artefactos requerem sessão GitHub e têm retenção de 30 dias.
+Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e as [compilações v2.5](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) estão disponíveis no GitHub Actions. Cada pacote contém o instalador e um ficheiro de checksums. Os artefactos requerem sessão GitHub e têm retenção de 30 dias.
 
 ## Criar um produto
 
@@ -27,7 +29,7 @@ Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e
 
 A importação HTML/PHP pode copiar a pasta da página inicial com CSS, JavaScript, imagens e subpastas. Guarde nessa pasta apenas os recursos que pretende distribuir. Para atualizar a cópia importada, volte a selecionar o ficheiro principal.
 
-FFmpeg é compilado a partir de fontes fixadas e incluído no Builder e nos produtos exportados. Quando a reprodução direta IPTV falha, o leitor tenta converter o canal para H.264/AAC compatível. A conversão usa o processador e limita o vídeo a 720p/30 fps. Consulte [IPTV.md](IPTV.md).
+FFmpeg é compilado a partir de fontes fixadas, incluído no Builder e apenas nos produtos exportados com IPTV. Quando a reprodução direta IPTV falha, o leitor tenta converter o canal para H.264/AAC compatível. A conversão usa o processador e limita o vídeo a 720p/30 fps. Consulte [IPTV.md](IPTV.md).
 
 PHP continua opcional. HTML funciona sem PHP. Projetos PHP exigem um runtime incluído para a plataforma do Builder e para cada destino utilizado; consulte os guias abaixo.
 
@@ -61,6 +63,6 @@ npm test
 npm start
 ```
 
-O workflow **Build v2 Windows and Mac installers**, na pasta `.github/workflows/` da raiz, compila os dois modelos Viewer e os dois instaladores Builder em máquinas nativas. Para builds locais, reúna os modelos Windows e Mac da **mesma versão do código** antes de criar qualquer instalador, conforme [BUILD-V2.md](BUILD-V2.md).
+O workflow **Build Windows and Mac installers**, na pasta `.github/workflows/` da raiz, compila os dois modelos Viewer e os dois instaladores Builder em máquinas nativas. Para builds locais, reúna os modelos Windows e Mac da **mesma versão do código** antes de criar qualquer instalador, conforme [BUILD-V2.md](BUILD-V2.md).
 
 Depois de alterar o Viewer ou atualizar o Builder, reconstrua os modelos e volte a exportar os projetos. Os produtos já distribuídos conservam a versão que foi incluída na sua exportação.

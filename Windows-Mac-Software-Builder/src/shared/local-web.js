@@ -360,7 +360,7 @@ async function startPhp(record, phpPath) {
   child.on('error', () => {});
 }
 
-function createWebRuntime({ phpPath } = {}) {
+function createWebRuntime({ phpPath, getPhpPath } = {}) {
   const sessions = new Map();
 
   async function dispose(record) {
@@ -376,7 +376,7 @@ function createWebRuntime({ phpPath } = {}) {
     const record = { project, token, cancelled: false };
     sessions.set(token, record);
     record.started = (async () => {
-      if (project.requiresPhp) await startPhp(record, phpPath);
+      if (project.requiresPhp) await startPhp(record, typeof getPhpPath === 'function' ? getPhpPath() : phpPath);
       if (record.cancelled) throw new Error('A abertura do módulo web foi cancelada.');
       record.server = http.createServer((request, response) => {
         response.setHeader('X-Content-Type-Options', 'nosniff');

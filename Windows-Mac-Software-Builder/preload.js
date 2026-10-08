@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('icurator', {
   buildExe: (data) => ipcRenderer.invoke('export:buildExe', data),
   exportProject: (data) => ipcRenderer.invoke('export:project', data),
   getExportTargets: () => ipcRenderer.invoke('export:targets'),
+  getAndroidRuntimeStatus: (locale) => ipcRenderer.invoke('android:status', { locale }),
   revealInFolder: (filePath) => ipcRenderer.invoke('export:revealInFolder', filePath),
   onExportLog: (cb) => {
     const listener = (_e, payload) => cb(payload);

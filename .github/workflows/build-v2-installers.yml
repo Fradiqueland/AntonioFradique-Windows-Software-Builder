@@ -1,4 +1,4 @@
-name: Build v2 Windows and Mac installers
+name: Build Windows and Mac installers
 
 on:
   workflow_dispatch:
@@ -191,6 +191,8 @@ jobs:
           pattern: export-template-*
           path: Windows-Mac-Software-Builder/dist/export-templates
           merge-multiple: true
+      - name: Share identical FFmpeg source archives across Builder templates
+        run: node scripts/deduplicate-template-sources.js 2>&1 | tee build-template-sources.log
       - name: Exercise real Electron exports and link navigation
         run: npm run test:electron 2>&1 | tee build-electron-smoke-source.log
       - name: Play transcoded IPTV in real Electron from source
@@ -205,12 +207,14 @@ jobs:
         run: npm run test:electron:packaged 2>&1 | tee build-electron-smoke-packaged.log
       - name: Play transcoded IPTV using packaged code and FFmpeg
         run: npm run test:electron:iptv:packaged 2>&1 | tee build-iptv-smoke-packaged.log
+      - name: Measure package sizes
+        run: node scripts/report-package-size.js 2>&1 | tee build-package-size.log
       - name: Write installer checksums
         run: npm run checksums 2>&1 | tee build-checksums.log
       - name: Upload installer
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Windows-Mac-Software-Builder-2.1.1-${{ matrix.target }}
+          name: Windows-Mac-Software-Builder-2.5.0-${{ matrix.target }}
           path: |
             Windows-Mac-Software-Builder/dist/builder/*.exe
             Windows-Mac-Software-Builder/dist/builder/*.dmg
@@ -227,5 +231,6 @@ jobs:
             Windows-Mac-Software-Builder/build-*.log
             Windows-Mac-Software-Builder/build-electron-smoke-*.json
             Windows-Mac-Software-Builder/build-iptv-smoke-*.json
+            Windows-Mac-Software-Builder/dist/package-size-report.json
           if-no-files-found: ignore
           retention-days: 14

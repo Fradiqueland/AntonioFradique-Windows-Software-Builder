@@ -9,7 +9,9 @@ try {
   if (!['darwin', 'win32'].includes(process.platform)) throw new Error('Check packaged runtimes on their native platform.');
   const mac = process.platform === 'darwin';
   const appName = kind === 'viewer' ? 'LaunchBox Viewer' : require('../package.json').build.productName;
-  const resources = mac ? path.join(root, 'dist', kind, 'mac-universal', appName + '.app/Contents/Resources') : path.join(root, 'dist', kind, 'win-unpacked/resources');
+  const resources = mac
+    ? path.join(root, 'dist', kind, 'mac-universal', kind === 'viewer' ? appName + '.data' : appName + '.app/Contents/Resources')
+    : path.join(root, 'dist', kind, 'win-unpacked/resources');
   // Ad-hoc signing legitimately changes Mach-O bytes after the native manifest
   // was created. The signed app itself is verified separately by packaging.
   checkFFmpeg(path.join(resources, 'ffmpeg'), { target: mac ? 'mac-universal' : 'windows-x64', smoke: true, verifyBinaryHashes: !mac });
