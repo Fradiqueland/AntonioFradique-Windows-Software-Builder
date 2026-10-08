@@ -16,7 +16,7 @@ Os dois instaladores incluem os dois modelos de exportação. O destinatário de
 
 O ícone personalizado aplica-se ao EXE auto-extraível gerado no Windows. Os ZIPs mantêm o ícone do modelo. O novo módulo **Software portable** permite incluir a pasta completa e selecionar entradas Windows e Mac. Pode autorizar Wine externo para tentar programas Windows no Mac. A exportação Mac rejeita programas Windows do módulo antigo **Lançar ficheiro**; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
 
-Os [downloads dos instaladores](../README.md#descarregar-e-instalar-o-builder) e as [compilações v2.5](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) estão disponíveis no GitHub Actions. Cada pacote contém o instalador e um ficheiro de checksums. Os artefactos requerem sessão GitHub e têm retenção de 30 dias.
+Os [instaladores v2.5.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.5.0) são publicados em **Releases → Assets**, acompanhados por `SHA256SUMS.txt` e relatórios dos tamanhos medidos. A publicação exige sucesso das [compilações e verificações nativas](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) dos dois instaladores. O repositório privado exige acesso autorizado para descarregar.
 
 ## Criar um produto
 

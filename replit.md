@@ -1,4 +1,4 @@
-# Windows & Mac Software Builder — v2.0.1
+# Windows & Mac Software Builder — v2.5
 
 Aplicação desktop Electron para editar conteúdos e exportar produtos independentes para Windows e macOS. A apresentação do produto e os downloads atuais estão em [README.md](README.md).
 
@@ -20,7 +20,8 @@ Electron precisa de uma sessão gráfica. Os instaladores e os modelos de export
 - O Builder é distribuído como Setup EXE Windows e DMG universal Mac.
 - Os produtos exportados incorporam o Viewer e os conteúdos. Windows gera EXE SFX para Windows; Mac gera ZIP portátil para Windows. Ambos geram ZIP para Mac.
 - Os dados dos produtos Mac ficam numa pasta `.data` junto da `.app`, preservando a assinatura do bundle.
-- PHP e ffmpeg são runtimes opcionais preparados antes da compilação; não são descarregados automaticamente.
+- FFmpeg é compilado pelo workflow a partir de fontes verificadas, incorporado no Builder e nos projetos com IPTV. PHP é opcional e precisa de preparação própria. Os projetos que não usam estes runtimes não os incluem na exportação.
+- Android/APK apresenta apenas informação experimental; a importação e execução não estão disponíveis nesta versão.
 - Não há exportação para iOS.
 
 Consulte [BUILD-V2.md](Windows-Mac-Software-Builder/BUILD-V2.md), [NOTAS.md](Windows-Mac-Software-Builder/NOTAS.md) e a [auditoria](Windows-Mac-Software-Builder/AUDITORIA-2026-10-04.md).

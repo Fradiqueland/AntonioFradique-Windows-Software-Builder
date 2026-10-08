@@ -13,13 +13,15 @@ O Setup Windows usa NSIS. O DMG contém uma aplicação universal. Windows não 
 
 ## Gerar os dois instaladores no GitHub
 
-1. Abra **Actions → Build v2 Windows and Mac installers**.
-2. Use a execução correspondente ao commit v2. O workflow inicia-se em pushes para main, master e branches codex/**, e em pull requests. Depois de integrado na branch predefinida, também pode usar **Run workflow**.
-3. Aguarde os sete jobs: FFmpeg Windows x64, Mac Intel e Mac ARM64, dois modelos Viewer e dois instaladores Builder. Todos devem terminar com sucesso.
-4. Em **Artifacts**, descarregue **Windows-Mac-Software-Builder-2.5.0-Windows** e **Windows-Mac-Software-Builder-2.5.0-macOS**.
-5. Extraia cada ZIP de artefacto. Contém o instalador e SHA256SUMS.txt. Disponibilidade: 30 dias.
+1. Abra **Actions → Build Windows and Mac installers**.
+2. Use a execução correspondente ao código v2.5. O workflow inicia-se em pushes para main, master e branches codex/**, e em pull requests. Depois de integrado na branch predefinida, também pode usar **Run workflow**.
+3. Aguarde os sete jobs de compilação: FFmpeg Windows x64, Mac Intel e Mac ARM64, dois modelos Viewer e dois instaladores Builder. Todos devem terminar com sucesso.
+4. Nas pull requests do próprio repositório ou numa execução manual, o job final valida os dois pacotes e publica a [Release v2.5.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.5.0), inicialmente como prerelease. Os pushes executam as compilações e testes, sem voltar a publicar. A publicação não substitui uma tag ou Release já existente.
+5. Em **Releases → v2.5.0 → Assets**, descarregue o Setup `.exe`, o `.dmg` e `SHA256SUMS.txt`. Não é necessário extrair ZIPs de artefactos. No repositório privado, é necessário ter acesso autorizado.
 
-O workflow instala dependências pelo lockfile, executa testes, compila e verifica os modelos incorporados. Valida a conversão IPTV com FFmpeg e a apresentação de vários fotogramas no Electron, utilizando um vídeo sintético servido localmente, tanto no código fonte como no pacote. No Mac, valida a assinatura e as duas arquiteturas. Os logs são publicados mesmo em falha. Estas verificações não substituem testar manualmente os instaladores e os projetos nos computadores de destino.
+O workflow instala dependências pelo lockfile, executa testes, compila e verifica os modelos incorporados. Valida a conversão IPTV com FFmpeg e a apresentação de vários fotogramas no Electron, utilizando um vídeo sintético servido localmente, tanto no código fonte como no pacote. No Mac, valida a assinatura e as duas arquiteturas. Os logs ficam na execução do Actions, incluindo em caso de falha. Os ficheiros intermédios são transferidos por caches exatas da mesma execução; os instaladores finais ficam na Release. Estas verificações não substituem testar manualmente os instaladores e os projetos nos computadores de destino.
+
+Para repetir uma execução, use **Re-run all jobs**. As caches são específicas de cada tentativa; repetir apenas os jobs que falharam não reutiliza os ficheiros de uma tentativa anterior.
 
 Para comparar com SHA256SUMS.txt:
 
@@ -76,7 +78,7 @@ npm ci
 npm test
 ```
 
-Antes de compilar os modelos, prepare o FFmpeg obrigatório conforme a secção abaixo ou instale os artefactos `ffmpeg-native-*` da mesma execução do workflow.
+Antes de compilar os modelos, prepare o FFmpeg obrigatório conforme a secção abaixo. As caches internas do workflow não são os downloads de distribuição.
 
 No Windows:
 
@@ -90,7 +92,7 @@ No Mac:
 npm run build:viewer:mac
 ```
 
-Reúna estes quatro ficheiros em **dist/export-templates/** de cada máquina que vai criar um instalador, ou descarregue os artefactos export-template-* da mesma execução:
+Reúna estes quatro ficheiros em **dist/export-templates/** de cada máquina que vai criar um instalador, copiando os resultados das compilações nativas da mesma versão:
 
 - windows-x64.zip
 - windows-x64.manifest.json

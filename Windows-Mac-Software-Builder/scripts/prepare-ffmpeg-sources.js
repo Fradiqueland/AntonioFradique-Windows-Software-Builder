@@ -36,10 +36,15 @@ function downloadSource(source, archiveDir, { spawn = spawnSync } = {}) {
       command('git', ['-c', 'core.autocrlf=false', '-c', 'http.lowSpeedLimit=1024', '-c', 'http.lowSpeedTime=30', 'fetch', '--quiet', '--depth=1', source.gitRepository, source.gitCommit], { cwd: gitDir });
       const tar = path.join(gitDir, 'source.tar');
       const tarFd = fs.openSync(tar, 'w');
-      try { command('git', ['archive', '--format=tar', '--prefix=' + source.directory + '/', source.gitCommit], { cwd: gitDir, stdio: ['ignore', tarFd, 'pipe'] }); }
+      // Archive applies worktree conversion too. Fetch's -c flags do not carry
+      // into this separate process: Windows autocrlf or a user tar.umask can
+      // otherwise change the pinned source bytes without changing the commit.
+      // Keep the original commit timestamp/PAX header and archive prefix.
+      try { command('git', ['-c', 'core.autocrlf=false', '-c', 'core.eol=lf', '-c', 'tar.umask=0002',
+        'archive', '--format=tar', '--prefix=' + source.directory + '/', source.gitCommit], { cwd: gitDir, stdio: ['ignore', tarFd, 'pipe'] }); }
       finally { fs.closeSync(tarFd); }
       const archiveFd = fs.openSync(partial, 'w');
-      try { command('bzip2', ['-c', 'source.tar'], { cwd: gitDir, stdio: ['ignore', archiveFd, 'pipe'] }); }
+      try { command('bzip2', ['-9', '-c', 'source.tar'], { cwd: gitDir, stdio: ['ignore', archiveFd, 'pipe'] }); }
       finally { fs.closeSync(archiveFd); }
     }
     if (hashFile(partial) !== source.sha256) throw new Error('Source SHA-256 mismatch: ' + source.name);

@@ -38,7 +38,11 @@ These tar archives preserve Unix executable permissions when transferred via CI.
 Sources already placed in `dist/ffmpeg-sources/` are reused after hash validation.
 Downloads use curl. If VideoLAN's archive endpoint rejects the request, the
 recipe fetches the exact pinned commit from official VideoLAN Git and recreates
-the archive with `git archive` and bzip2. Its bytes must match the same SHA-256;
+the archive with `git archive` and bzip2. The archive command explicitly fixes
+LF line endings and `tar.umask=0002`; bzip2 uses level 9. Windows or user Git
+settings therefore cannot change archive line endings or permission bits. The
+original commit timestamp, PAX header and archive prefix are retained.
+Its bytes must match the same SHA-256;
 the fallback cannot silently change the source version or accepted content.
 
 Install the Windows artifact, or copy both Mac archives to `dist/runtime-native/`

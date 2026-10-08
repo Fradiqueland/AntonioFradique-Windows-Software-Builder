@@ -14,14 +14,14 @@ Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md
 
 ## Descarregar e instalar o Builder
 
-Na [compilação v2.5 do GitHub Actions](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml), abra uma execução concluída com sucesso e descarregue os artefactos correspondentes:
+Na [Release v2.5.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.5.0), descarregue o instalador correspondente ao seu computador em **Assets**:
 
-| Computador | Artefacto v2.5 | Instalador incluído |
-| --- | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.5.0-Windows` | Setup `.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.5.0-macOS` | `.dmg` universal |
+| Computador | Instalador v2.5 |
+| --- | --- |
+| Windows x64 | `Windows-Mac-Software-Builder-2.5.0-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.5.0-mac-universal.dmg` |
 
-Os downloads requerem uma sessão GitHub e ficam disponíveis durante 30 dias após a execução. Extraia o ZIP do artefacto para obter o instalador e `SHA256SUMS.txt`. Certifique-se de que a execução e o instalador são da versão 2.5.0. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
+A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
 
 No Windows, execute o Setup. No Mac, abra o DMG e arraste **Windows & Mac Software Builder.app** para **Aplicações**. O instalador Windows não tem assinatura de editor; a aplicação Mac tem assinatura ad-hoc e não está notarizada pela Apple. O [guia de instalação](Windows-Mac-Software-Builder/BUILD-V2.md) explica a verificação dos ficheiros e as autorizações individuais do sistema.
 

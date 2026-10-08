@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
+const { spawnSync } = require('node:child_process');
 const { downloadSource } = require('../scripts/prepare-ffmpeg-sources');
 
 function fixture(t) {
@@ -38,7 +39,7 @@ function simulatedTransport(f, { challenge = false, corruptGit = false } = {}) {
       assert.equal(args[args.length - 2], f.source.gitRepository);
       assert.equal(args[args.length - 1], f.source.gitCommit);
     }
-    if (command === 'git' && args[0] === 'archive') fs.writeSync(options.stdio[1], Buffer.from('pinned git tar'));
+    if (command === 'git' && args.includes('archive')) fs.writeSync(options.stdio[1], Buffer.from('pinned git tar'));
     if (command === 'bzip2') fs.writeSync(options.stdio[1], corruptGit ? Buffer.from('wrong source bytes') : f.bytes);
     return { status: 0 };
   } };
@@ -77,4 +78,56 @@ test('fallback does not fetch another repository or a mutable branch', (t) => {
     assert.throws(() => downloadSource({ ...f.source, ...change }, f.directory, transport), /source transport failed/);
     assert.deepEqual(transport.calls.map(call => call.command), ['curl']);
   }
+});
+
+test('real Git fallback ignores Windows CRLF and a user archive permission mask', (t) => {
+  const f = fixture(t);
+  const repository = path.join(f.directory, 'official-commit-fixture');
+  const globalConfig = path.join(f.directory, 'hostile-global-config');
+  fs.writeFileSync(globalConfig, '[core]\n\tautocrlf = true\n\teol = crlf\n[tar]\n\tumask = 0077\n');
+  const env = { ...process.env, GIT_CONFIG_GLOBAL: globalConfig, GIT_CONFIG_NOSYSTEM: '1' };
+  function git(args, options = {}) {
+    const result = spawnSync('git', args, { encoding: 'utf8', env, windowsHide: true, ...options });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr || 'Real Git fixture command failed');
+    return result;
+  }
+  git(['init', '--quiet', repository]);
+  fs.writeFileSync(path.join(repository, 'configure'), '#!/bin/sh\nprintf "source bytes stay LF\\n"\n');
+  git(['-c', 'core.autocrlf=false', 'add', 'configure'], { cwd: repository });
+  git(['update-index', '--chmod=+x', 'configure'], { cwd: repository });
+  git(['-c', 'user.name=Source fixture', '-c', 'user.email=source@example.invalid', 'commit', '--quiet', '-m', 'Immutable fixture'], { cwd: repository });
+  const commit = git(['rev-parse', 'HEAD'], { cwd: repository }).stdout.trim();
+  f.source.version = f.source.gitCommit = commit;
+  f.source.directory = 'x264-' + commit;
+  f.source.url = 'https://code.videolan.org/videolan/x264/-/archive/' + commit + '/' + f.source.directory + '.tar.bz2';
+  const archiveArgs = ['archive', '--format=tar', '--prefix=' + f.source.directory + '/', commit];
+  const reference = git(['-c', 'core.autocrlf=false', '-c', 'core.eol=lf', '-c', 'tar.umask=0002', ...archiveArgs],
+    { cwd: repository, encoding: null }).stdout;
+  const inherited = git(archiveArgs, { cwd: repository, encoding: null }).stdout;
+  assert.notDeepEqual(inherited, reference, 'The fixture must reproduce changed line endings/permissions before exercising the production fallback');
+  let archived = false;
+  const transport = { spawn(command, args, options) {
+    if (command === 'curl') return { status: 22, stderr: 'HTTP406' };
+    if (command === 'bzip2') {
+      // Git, its configuration and the actual tar bytes remain real. Replacing
+      // only compression keeps this regression independent of bzip2 on hosts
+      // that run the unit suite without the native compiler toolchain.
+      assert.deepEqual(fs.readFileSync(path.join(options.cwd, 'source.tar')), reference);
+      assert.deepEqual(args, ['-9', '-c', 'source.tar']);
+      archived = true;
+      fs.writeSync(options.stdio[1], f.bytes);
+      return { status: 0 };
+    }
+    const actualArgs = [...args];
+    if (actualArgs.includes('fetch')) {
+      assert.equal(actualArgs[actualArgs.length - 2], f.source.gitRepository);
+      assert.equal(actualArgs[actualArgs.length - 1], commit);
+      actualArgs[actualArgs.length - 2] = repository;
+    }
+    return spawnSync(command, actualArgs, { ...options, env });
+  } };
+  assert.deepEqual(fs.readFileSync(downloadSource(f.source, f.directory, transport)), f.bytes);
+  assert.equal(archived, true);
+  assert.equal(fs.readdirSync(f.directory).some(name => name.startsWith('.x264-git-')), false);
 });
