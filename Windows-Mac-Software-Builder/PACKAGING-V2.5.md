@@ -56,3 +56,18 @@ Os testes nativos verificam as dependências, o avanço de reprodução IPTV,
 exportações com e sem os motores opcionais, permissões, ligações simbólicas e
 assinaturas Mac. Nenhuma percentagem de redução é prometida antes de medir os
 ficheiros finais.
+
+O CI pode reutilizar uma compilação nativa de FFmpeg quando os seis ficheiros
+da receita e do bloqueio de fontes forem exatamente iguais. A chave da cache
+inclui o conteúdo destes ficheiros e a arquitetura. Antes de reutilizar, o
+arquivo é extraído para uma pasta temporária, as receitas são comparadas byte
+a byte com o checkout e repetem-se, no sistema nativo, as verificações SHA-256
+das fontes e executáveis, licenças GPL, arquitetura, dependências Mac e a
+conversão real CPU H.264/AAC. Os registos conservam o compilador original.
+
+Uma receita diferente no candidato inicial obriga a compilar de novo; arquivos
+corrompidos, verificações falhadas ou uma receita diferente numa chave de
+conteúdo exata interrompem a execução. Sem cache válida, a compilação normal
+mantém-se. Os transfers para Viewer, Builder e publicação continuam ligados ao
+commit, execução e tentativa atuais, sem reutilizar modelos ou instaladores
+de outra tentativa. A opção «Re-run all jobs» continua obrigatória.

@@ -19,8 +19,9 @@ defaults:
     shell: bash
     working-directory: Windows-Mac-Software-Builder
 
-# Cache transfers are isolated to the exact commit, run, attempt and target.
-# Re-run all jobs together: no fallback to outputs from an earlier attempt.
+# Runtime/template/installer transfers remain isolated to this commit/run/attempt.
+# Only unchanged native compilation inputs can reuse a separately verified cache.
+# Re-run all jobs together: downstream jobs never consume an earlier attempt.
 env:
   CSC_IDENTITY_AUTO_DISCOVERY: 'false'
   # Only the explicit ad-hoc signing hook runs; no signing credentials exist.
@@ -48,8 +49,36 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
+      - name: Identify the exact native recipe inputs
+        id: native_inputs
+        env:
+          RECIPE_HASH: ${{ hashFiles('Windows-Mac-Software-Builder/scripts/build-ffmpeg.sh', 'Windows-Mac-Software-Builder/scripts/prepare-ffmpeg-sources.js', 'Windows-Mac-Software-Builder/scripts/package-ffmpeg-runtime.js', 'Windows-Mac-Software-Builder/scripts/check-ffmpeg.js', 'Windows-Mac-Software-Builder/build-configs/ffmpeg-sources.json', 'Windows-Mac-Software-Builder/build-configs/runtime-resources.cjs') }}
+        run: node -e "if (!/^[a-f0-9]{64}$/.test(process.env.RECIPE_HASH)) throw new Error('Native recipe hash missing'); require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, 'hash=' + process.env.RECIPE_HASH + '\n')"
+      - name: Restore only an exact native input cache
+        id: native_cache
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          key: wsmb-native-inputs-v1-${{ matrix.target }}-${{ steps.native_inputs.outputs.hash }}
+          path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
+          enableCrossOsArchive: true
+      # Seed this new cache scheme only from the three successful native jobs in
+      # this repository's own PR #4. No prefix search or external PR seed exists.
+      - name: Restore the known verified native build for this PR
+        if: steps.native_cache.outputs.cache-hit != 'true' && github.event_name == 'pull_request' && github.event.pull_request.number == 4 && github.event.pull_request.head.repo.full_name == github.repository
+        id: native_seed
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          key: wsmb-runtime-v1-993b271c93cb8737039cbc850b433dbdf4a3b80b-37841956806-1-${{ matrix.target }}
+          path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
+          enableCrossOsArchive: true
+      - name: Verify cached recipe and repeat every native runtime check
+        if: steps.native_cache.outputs.cache-hit == 'true' || steps.native_seed.outputs.cache-hit == 'true'
+        id: cached_runtime
+        # An exact content-key mismatch is corruption. Only the old verified
+        # seed may differ legitimately and fall back to compilation.
+        run: node scripts/verify-native-ffmpeg-cache.js '${{ matrix.target }}' 'dist/runtime-native/${{ matrix.target }}.tar.gz' '${{ steps.native_cache.outputs.cache-hit == 'true' && '--require-current-recipe' || '' }}'
       - name: Install native Windows build tools
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && steps.cached_runtime.outputs.reusable != 'true'
         uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
         with:
           msystem: MINGW64
@@ -61,17 +90,27 @@ jobs:
             mingw-w64-x86_64-nasm
             mingw-w64-x86_64-pkgconf
       - name: Install native Mac build tools
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && steps.cached_runtime.outputs.reusable != 'true'
         run: brew install nasm pkg-config
       - name: Compile and transcode with native Windows FFmpeg
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && steps.cached_runtime.outputs.reusable != 'true'
         shell: msys2 {0}
         run: |
           set -o pipefail
           bash scripts/build-ffmpeg.sh '${{ matrix.target }}' 2>&1 | tee build-ffmpeg.log
       - name: Compile and transcode with native Mac FFmpeg
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && steps.cached_runtime.outputs.reusable != 'true'
         run: bash scripts/build-ffmpeg.sh '${{ matrix.target }}' 2>&1 | tee build-ffmpeg.log
+      - name: Verify the new archive against the current recipe and native host
+        if: steps.cached_runtime.outputs.reusable != 'true'
+        run: node scripts/verify-native-ffmpeg-cache.js '${{ matrix.target }}' 'dist/runtime-native/${{ matrix.target }}.tar.gz' --require-current-recipe
+      - name: Save the fully verified native input cache
+        if: steps.native_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          key: wsmb-native-inputs-v1-${{ matrix.target }}-${{ steps.native_inputs.outputs.hash }}
+          path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
+          enableCrossOsArchive: true
       - name: Transfer verified native runtime through cache
         uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:

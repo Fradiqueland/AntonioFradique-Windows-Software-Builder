@@ -49,7 +49,8 @@ test('Viewer checker accepts a real ASAR with working production ZIP dependencie
   assert.doesNotThrow(() => validateViewerDependencies(f.archive));
   for (const name of ['yauzl', 'yazl']) {
     const source = require.resolve(name);
-    const entry = path.relative(projectRoot, source).split(path.sep).join('/');
+    // Unlike the rootless comparison keys, extractFile expects host separators.
+    const entry = path.relative(projectRoot, source);
     assert.deepEqual(asar.extractFile(f.archive, entry), fs.readFileSync(source));
   }
   const extracted = path.join(f.directory, 'extracted');
