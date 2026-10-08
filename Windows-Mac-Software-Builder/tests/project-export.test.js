@@ -428,8 +428,12 @@ test('streamed common archive bytes are hashed again even when their source stat
   const f = sourceFixture(t);
   await writeTemplate(f.templatePath, [...WINDOWS, ...compactRuntimeEntries('windows', f.sourceLock)]);
   fs.writeFileSync(f.outputPath, 'PREVIOUS GOOD EXPORT');
-  const sourcePath = path.join(f.sharedRuntimeSourcesDir, f.sourceLock[0].file);
+  // Native realpath can expand Windows TEMP short names or normalize casing,
+  // unlike the synchronous JavaScript realpath used by the fixture. Match the
+  // production descriptor path so the corruption is injected on every host.
+  const sourcePath = path.join(await fs.promises.realpath(f.sharedRuntimeSourcesDir), f.sourceLock[0].file);
   let opens = 0;
+  let corruptedStreams = 0;
   const mockedPromises = new Proxy(fs.promises, {
     get(target, property) {
       if (property !== 'open') return Reflect.get(target, property);
@@ -447,7 +451,7 @@ test('streamed common archive bytes are hashed again even when their source stat
               let corrupted = false;
               const transform = new Transform({ transform(chunk, encoding, callback) {
                 const copy = Buffer.from(chunk);
-                if (!corrupted && copy.length) { copy[0] ^= 1; corrupted = true; }
+                if (!corrupted && copy.length) { copy[0] ^= 1; corrupted = true; corruptedStreams++; }
                 callback(null, copy);
               } });
               incoming.on('error', error => transform.destroy(error));
@@ -462,6 +466,9 @@ test('streamed common archive bytes are hashed again even when their source stat
   const mockedFs = new Proxy(fs, { get(target, property) { return property === 'promises' ? mockedPromises : Reflect.get(target, property); } });
   const engine = loadSourceEngine(f.sourceLock, mockedFs);
   await assert.rejects(engine.exportProject({ ...f, target: 'windows' }), /SHA-256/);
+  assert.equal(opens, 2, 'The selected source must be opened for validation and again for ZIP streaming.');
+  assert.equal(corruptedStreams, 1, 'The second read must actually emit corrupted bytes.');
+  assert.deepEqual(fs.readFileSync(sourcePath), f.sourceBytes[0], 'Only emitted stream bytes change; the source file stays valid.');
   assert.equal(fs.readFileSync(f.outputPath, 'utf8'), 'PREVIOUS GOOD EXPORT');
   assert.equal(fs.readdirSync(f.root).some(name => name.endsWith('.tmp')), false);
 });
