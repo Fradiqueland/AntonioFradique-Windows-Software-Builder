@@ -9,7 +9,9 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
   const html = fs.readFileSync(path.join(applicationRoot, 'src/builder/index.html'), 'utf8')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
   const main = fs.readFileSync(path.join(applicationRoot, 'main.js'), 'utf8');
-  const config = vm.runInNewContext('(' + main.match(/const DEFAULT_CONFIG = ([\s\S]*?);\n/)[1] + ')');
+  const defaults = main.match(/const DEFAULT_CONFIG = ([\s\S]*?);\r?\n/);
+  assert.ok(defaults, 'The shipped main process must define DEFAULT_CONFIG (LF or CRLF).');
+  const config = vm.runInNewContext('(' + defaults[1] + ')');
   config.content = [{ id: 'first', type: 'html', title: 'Test', data: { html: '<h1>Test</h1>' } }];
   const dict = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'locales/pt.json'), 'utf8'));
   const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true,
