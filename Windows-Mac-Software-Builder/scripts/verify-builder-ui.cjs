@@ -88,7 +88,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
         win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...point});
         win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,...point});
         await until(`qa.config.marketing.banners.${slot}.enabled === ${enabled} && settingsWrites.size === 0`);
-        assert.equal(await evaluate("document.getElementById('banner-status').textContent"), dict.common.saved);
+        assert.equal(await evaluate('settingsFailures.size'), 0, 'A completed save must not leave a failure; transient toast text may already have expired');
         assert.equal(await evaluate("document.scrollingElement.scrollTop"), 0, 'Toggling a banner must not scroll the whole application out of view');
         assert.ok(await evaluate("document.querySelector('.sidebar').getBoundingClientRect().right > 0"));
       }

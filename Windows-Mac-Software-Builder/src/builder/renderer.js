@@ -327,14 +327,14 @@ if (previewBtn) {
 /* -------- Shared helpers -------- */
 
 function makeStatus(el) {
-  let lastMsg = '';
+  let expiry = null;
   return function showStatus(message, kind) {
-    lastMsg = message;
+    clearTimeout(expiry);
     el.textContent = message;
     el.className = 'save-status ' + (kind || '');
     if (message) {
-      setTimeout(() => {
-        if (el.textContent === lastMsg) {
+      expiry = setTimeout(() => {
+        if (el.textContent === message) {
           el.textContent = '';
           el.className = 'save-status';
         }
