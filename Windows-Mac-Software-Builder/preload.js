@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('icurator', {
   platform: process.platform,
   loadConfig: () => ipcRenderer.invoke('config:load'),
   projectsList: () => ipcRenderer.invoke('projects:list'),
+  projectsExportArchive: (id) => ipcRenderer.invoke('projects:exportArchive', { id }),
+  projectsImportArchive: () => ipcRenderer.invoke('projects:importArchive'),
   projectsCreate: (name) => ipcRenderer.invoke('projects:create', { name }),
   projectsOpen: (id) => ipcRenderer.invoke('projects:open', { id }),
   projectsRename: (id, name) => ipcRenderer.invoke('projects:rename', { id, name }),

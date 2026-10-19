@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: file:; font-src 'self' https://cdn.jsdelivr.net;" />
+      content="default-src 'self'; form-action 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: file:; font-src 'self' https://cdn.jsdelivr.net;" />
     <title>Windows &amp; Mac Software Builder</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -79,7 +79,7 @@
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v2.5.0</div>
+          <div class="version">v2.6.0</div>
         </div>
       </aside>
 
@@ -97,7 +97,7 @@
             </div>
             <div class="header-actions" id="header-actions">
               <button type="button" class="btn btn-ghost" id="header-preview" data-i18n="sidebar.preview_btn">Pré-visualizar Produto</button>
-              <button type="button" class="btn btn-primary" id="header-export" data-i18n="header.export_btn">Exportar projeto</button>
+              <button type="button" class="btn btn-primary" id="header-export" data-i18n="header.export_btn">Criar aplicação</button>
             </div>
           </div>
         </header>
@@ -114,6 +114,10 @@
             <div class="status-line" id="projects-status" aria-live="polite"></div>
           </form>
 
+          <div class="form-card project-transfer-card">
+            <button type="button" class="btn btn-primary" id="project-import" data-i18n="projects.import_archive">Importar projeto</button>
+            <p data-i18n="projects.archive_help">Transfira uma cópia editável num ficheiro .wsmb, com módulos, imagens e restantes recursos. A importação cria um novo projeto e preserva os existentes.</p>
+          </div>
           <ul class="projects-list" id="projects-list"></ul>
         </section>
 

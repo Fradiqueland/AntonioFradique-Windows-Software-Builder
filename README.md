@@ -1,12 +1,14 @@
-# Windows & Mac Software Builder — v2.5
+# Windows & Mac Software Builder — v2.6
 
 Crie aplicações de conteúdos para **Windows e Mac**: cursos, bibliotecas, apresentações, páginas HTML/PHP, documentos e multimédia. Organize os módulos, personalize o aspeto e escolha a plataforma ao exportar.
 
 O **Builder** é o programa de edição instalado no seu computador. As **aplicações exportadas** são os produtos que cria e distribui; os destinatários não precisam de instalar o Builder.
 
-## Novidades da v2.5
+## Novidades da v2.6
 
-Compressão máxima sem perdas e remoção de ferramentas usadas apenas pelo editor dos modelos de visualização. Os projetos exportados incluem FFmpeg apenas quando têm IPTV e PHP apenas quando o site importado necessita dele. Os ficheiros de imagem, áudio e vídeo do utilizador não são recomprimidos.
+Em **Projetos**, use **Exportar projeto** para guardar uma cópia editável `.wsmb` e **Importar projeto** para abrir uma cópia independente. As alterações de aparência são gravadas antes de mudar de projeto, pré-visualizar ou criar a aplicação. A atualização reforça a gravação dos banners e a recuperação do editor. Consulte [os detalhes da v2.6](Windows-Mac-Software-Builder/V2.6.md).
+
+Mantém a compressão máxima sem perdas e remoção de ferramentas usadas apenas pelo editor dos modelos de visualização. Os projetos exportados incluem FFmpeg apenas quando têm IPTV e PHP apenas quando o site importado necessita dele. Os ficheiros de imagem, áudio e vídeo do utilizador não são recomprimidos.
 
 **Android / APK — Experimental:** existe um painel informativo, mas a importação e execução continuam indisponíveis. Não há um motor Android incorporado e validado nesta versão. A opção não descarrega nem abre emuladores externos e não permite exportar um produto APK que não funcione no computador do destinatário. iOS/IPA não é suportado.
 
@@ -14,12 +16,12 @@ Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md
 
 ## Descarregar e instalar o Builder
 
-Na [Release v2.5.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.5.0), descarregue o instalador correspondente ao seu computador em **Assets**:
+Na [Release v2.6.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.0), descarregue o instalador correspondente ao seu computador em **Assets**:
 
 | Computador | Instalador v2.5 |
 | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.5.0-windows-x64-setup.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.5.0-mac-universal.dmg` |
+| Windows x64 | `Windows-Mac-Software-Builder-2.6.0-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.0-mac-universal.dmg` |
 
 A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
 

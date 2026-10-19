@@ -76,6 +76,8 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
     '',
     '**APK execution is unavailable in this release.** The Android option is an information panel; there is no bundled tested Android engine. Existing modules remain usable without an Android emulator.',
     '',
+    'Editable project import/export (.wsmb) includes configuration and assets, creates independent copies and verifies archive integrity. Pending appearance edits are saved before project changes, previews and exports. Failed content imports roll back copied files. Banner autosave cannot navigate the editor, and renderer crashes offer recovery. The reported white screen was not reproduced on the original user machine; native UI checks cover both banner toggles and failed-save recovery.',
+    '',
     'Lossless package compression, removal of Builder-only Viewer dependencies and project-specific FFmpeg/PHP payloads reduce unnecessary package content. Every IPTV export includes the exact FFmpeg/x264 sources and GPL notices.',
     '',
     'Windows: Windows 10+ x64. Mac: macOS 13+ Intel or Apple Silicon. The Windows installer is unsigned; the Mac application is ad-hoc signed, without Apple notarization.',

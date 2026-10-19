@@ -59,7 +59,7 @@
       "title": "النشر",
       "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export project"
+    "export_btn": "إنشاء التطبيق"
   },
   "sidebar": {
     "preview_btn": "معاينة المنتج",
@@ -405,7 +405,14 @@
     "name_required": "أدخل اسمًا للمشروع.",
     "clone_btn": "استنساخ",
     "cloned_ok": "تم استنساخ المشروع.",
-    "delete_yes": "نعم، احذف"
+    "delete_yes": "نعم، احذف",
+    "import_archive": "استيراد مشروع",
+    "export_archive": "تصدير المشروع",
+    "archive_help": "انقل نسخة قابلة للتعديل في ملف .wsmb مع الوحدات والصور والموارد. ينشئ الاستيراد مشروعًا جديدًا ويحافظ على المشاريع الحالية. احتفظ بالنسخ بشكل خاص: فهي تتضمن المحتوى وكلمات المرور والروابط المحفوظة.",
+    "importing_archive": "جارٍ استيراد المشروع…",
+    "exporting_archive": "جارٍ تصدير المشروع…",
+    "imported_archive": "تم استيراد المشروع. يمكنك فتحه وتعديله الآن.",
+    "exported_archive": "تم حفظ المشروع في: "
   },
   "social": {
     "help": "املأ الشبكات التي تريدها فقط. تظهر الأيقونات في القائمة الجانبية للمنتج النهائي وتُفتح في متصفح الطالب.",

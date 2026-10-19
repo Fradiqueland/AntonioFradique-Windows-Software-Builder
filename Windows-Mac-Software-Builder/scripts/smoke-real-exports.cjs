@@ -257,6 +257,27 @@ async function verifyRealPortableLaunch(applicationRoot, assetsDir) {
   fs.writeFileSync(settingsPath, 'keep between launches');
   // Exported resources may be in a different SFX temporary folder on each run.
   // The existing local revision is usable after its original payload is gone.
+  const archiveEngine = appRequire('./src/shared/project-archive');
+  const archiveRoot = path.join(temporary, 'editable-project');
+  const restoredRoot = path.join(temporary, 'restored-project');
+  fs.mkdirSync(path.join(archiveRoot, 'data'), { recursive: true });
+  fs.mkdirSync(path.join(archiveRoot, 'dist-assets'));
+  const archiveData = portable.importPortableProject({ sourcePath: workingDirectory,
+    assetsDir: path.join(archiveRoot, 'dist-assets'), entries: data.entries, allowWine: false });
+  const archiveConfig = {content:[{id:'portable',type:'portable',data:archiveData}]};
+  fs.writeFileSync(path.join(archiveRoot, 'data/project-config.json'), JSON.stringify(archiveConfig));
+  const archivePath = path.join(temporary, 'editable-project.wsmb');
+  const readArchiveConfig = filename => JSON.parse(fs.readFileSync(filename, 'utf8'));
+  await archiveEngine.exportArchive({ projectRoot: archiveRoot, outputPath: archivePath,
+    name:'Portable archive', appVersion:pkg.version, readConfig:readArchiveConfig });
+  const restored = await archiveEngine.importArchive({ archivePath, destination:restoredRoot, readConfig:readArchiveConfig });
+  const restoredData = restored.config.content[0].data;
+  assert.equal(await fileHash(path.join(restoredRoot, restoredData.root, 'resources/app.asar')), asarHash);
+  assert.notEqual(restoredData.revision, archiveData.revision);
+  await runtime.launchPortableProject({data:restoredData, assetsDir:path.join(restoredRoot,'dist-assets'),storageDir,spawnImpl});
+  await completed;
+  assert.notEqual(launched.options.cwd, workingDirectory);
+  report.checks.push('editable project archive: real ASAR round trip, independent portable revision and native execution');
   portable.removePortableProject({ data, assetsDir });
   await runtime.launchPortableProject({ data, assetsDir, storageDir, spawnImpl });
   await completed;
@@ -370,6 +391,8 @@ async function main() {
   if (!mac) await verifyRealWindowsSfx({ applicationRoot, resources, engine, config, assetsDir, templates, expectedAsar: expectedWindowsAsar, sharedRuntimeSourcesDir });
   await verifyRealPortableLaunch(applicationRoot, assetsDir);
   await verifyAndroidInformation(applicationRoot);
+  report.builderUI = await require('./verify-builder-ui.cjs').verifyBuilderUI({ BrowserWindow, applicationRoot });
+  report.checks.push('full shipped Builder UI in Chromium: banner toggles, failed saves, pending settings, editable import/export, no navigation');
   if (!packaged) {
     report.links = await require('../tests/electron-links.cjs').runElectronLinkTests({ app, BrowserWindow });
     report.checks.push('real Electron webview link navigation');

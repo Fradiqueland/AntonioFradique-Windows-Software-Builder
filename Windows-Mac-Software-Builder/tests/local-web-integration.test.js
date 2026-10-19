@@ -124,6 +124,7 @@ function fixture(t) {
   vm.runInContext([
     sourceSection('const SINGLE_FILE_TYPES =', 'const LOCALES_DIR ='),
     sourceFunction('writeConfig'),
+    sourceFunction('cleanupFiles'),
     sourceSection('function sanitizeModule(', '/* -------- IPTV: obtenção/parse de canais')
   ].join('\n'), context, { filename: 'main.js [content integration]' });
   const save = (modules) => plain(handlers.get('content:save')({}, { modules }));

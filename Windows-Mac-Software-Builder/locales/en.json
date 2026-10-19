@@ -59,7 +59,7 @@
       "title": "Publish",
       "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export project"
+    "export_btn": "Build application"
   },
   "sidebar": {
     "preview_btn": "Preview Product",
@@ -405,7 +405,14 @@
     "name_required": "Enter a name for the project.",
     "clone_btn": "Clone",
     "cloned_ok": "Project cloned.",
-    "delete_yes": "Yes, delete"
+    "delete_yes": "Yes, delete",
+    "import_archive": "Import project",
+    "export_archive": "Export project",
+    "archive_help": "Transfer an editable copy in a .wsmb file, including modules, images and other assets. Import creates a new project and preserves existing projects. Keep backups private: they include your content, passwords and configured links.",
+    "importing_archive": "Importing project…",
+    "exporting_archive": "Exporting project…",
+    "imported_archive": "Project imported. You can now open and edit it.",
+    "exported_archive": "Project saved to: "
   },
   "social": {
     "help": "Fill in only the networks you want. The icons appear in the final product's side menu and open in the student's browser.",

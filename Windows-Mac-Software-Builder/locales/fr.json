@@ -59,7 +59,7 @@
       "title": "Publier",
       "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export project"
+    "export_btn": "Créer l’application"
   },
   "sidebar": {
     "preview_btn": "Aperçu du Produit",
@@ -405,7 +405,14 @@
     "name_required": "Saisissez un nom pour le projet.",
     "clone_btn": "Dupliquer",
     "cloned_ok": "Projet dupliqué.",
-    "delete_yes": "Oui, supprimer"
+    "delete_yes": "Oui, supprimer",
+    "import_archive": "Importer un projet",
+    "export_archive": "Exporter le projet",
+    "archive_help": "Transférez une copie modifiable dans un fichier .wsmb, avec les modules, images et ressources. L’importation crée un nouveau projet et conserve les projets existants. Gardez les copies privées : elles contiennent les contenus, mots de passe et liens configurés.",
+    "importing_archive": "Importation du projet…",
+    "exporting_archive": "Exportation du projet…",
+    "imported_archive": "Projet importé. Vous pouvez l’ouvrir et le modifier.",
+    "exported_archive": "Projet enregistré dans : "
   },
   "social": {
     "help": "Remplissez uniquement les réseaux souhaités. Les icônes apparaissent dans le menu latéral du produit final et s'ouvrent dans le navigateur de l'élève.",

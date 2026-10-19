@@ -884,7 +884,11 @@ select.select:focus {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   color: #fff; background: var(--primary); padding: 2px 8px; border-radius: 999px; white-space: nowrap;
 }
-.project-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.project-item { flex-wrap: wrap; }
+.project-info { flex: 1 1 180px; }
+.project-transfer-card { display: block; margin-top: 16px; }
+.project-transfer-card p { margin: 10px 0 0; line-height: 1.5; }
 .project-rename { display: flex; gap: 8px; align-items: center; }
 .project-rename input { min-width: 180px; }
 .btn-danger { background: var(--danger, #dc2626); color: #fff; }

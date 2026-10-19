@@ -49,7 +49,7 @@ function fixture(t) {
     localWeb: { removeWebProject() {} }, stopWebModules() {},
     deleteAssetIfInside() { throw new Error('unexpected single file cleanup'); }
   });
-  vm.runInContext(section('const SINGLE_FILE_TYPES =', 'const LOCALES_DIR =') + '\n' +
+  vm.runInContext(productionFunction('cleanupFiles') + '\n' + section('const SINGLE_FILE_TYPES =', 'const LOCALES_DIR =') + '\n' +
     section('function sanitizeModule(', '/* -------- IPTV: obtenção/parse de canais'), context);
   return { base, assetsDir, input, writes, handlers, context,
     config: () => JSON.parse(JSON.stringify(config)), failWrite: (value) => { failWrite = value; },
