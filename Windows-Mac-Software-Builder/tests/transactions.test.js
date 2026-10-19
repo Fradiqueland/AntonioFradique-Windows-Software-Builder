@@ -80,6 +80,8 @@ function fixture(t) {
   const saved = [];
   const ctx = vm.createContext({
     fs: observedFs, path, crypto, structuredClone,
+    projectArchive: require('../src/shared/project-archive'),
+    projectExport: require('../src/shared/project-export'), app: { getVersion: () => '2.6.0' },
     console: { warn() {}, error() {} }, isViewer: false, exportBusy: false,
     WRITE_BASE: root, PROJECTS_ROOT: projects, PROJECTS_INDEX: index,
     DATA_DIR: data, ASSETS_DIR: assets, CONFIG_PATH: config, ICON_DEST_PATH: path.join(data, 'icon.ico'),
@@ -94,10 +96,11 @@ function fixture(t) {
     'createProjectFolder', 'readProjectsIndex', 'writeProjectsIndex', 'projectsState', 'touchActiveProject', 'initProjects',
     'deepMerge', 'migrateConfig', 'validateConfigShape', 'readConfig', 'writeConfig', 'sanitizeFilename', 'copyAssetToProject',
     'cleanupFiles', 'commitConfigFiles', 'relToAbs', 'deleteAssetIfInside', 'resolveProjectFile', 'copyDirRecursive',
-    'copyProjectAssets', 'storedIconPaths', 'assertBuilder'];
+    'copyProjectAssets', 'storedIconPaths', 'assertBuilder', 'sanitizeModule', 'findModuleById', 'moduleAssetFiles'];
   const channels = ['projects:create', 'projects:open', 'projects:rename', 'projects:delete', 'projects:duplicate',
-    'brand:save', 'marketing:saveBanners', 'export:saveIcon', 'shell:launchFile', 'dialog:saveFileAs'];
+    'projects:exportArchive', 'projects:importArchive', 'content:save', 'brand:save', 'marketing:saveBanners', 'export:saveIcon', 'shell:launchFile', 'dialog:saveFileAs'];
   vm.runInContext([
+    source.slice(source.indexOf('const SINGLE_FILE_TYPES ='), source.indexOf('const LOCALES_DIR =')),
     source.slice(source.indexOf('const DEFAULT_CONFIG ='), source.indexOf('let builderWindow =')),
     "const ICON_ALLOWED_EXTS=['.ico','.png','.jpg','.jpeg']; const ICON_SOURCE_NAMES=ICON_ALLOWED_EXTS.map(ext=>'icon-source'+ext);",
     ...names.map(productionFunction), ...channels.map(productionHandler)
@@ -294,4 +297,66 @@ test('launch and download reject symlinks outside assets and non-files before ca
   };
   await assert.rejects(f.run('dialog:saveFileAs', { file: 'dist-assets/old-logo.png' }), /ficheiro mudou/);
   assert.equal(fs.readFileSync(path.join(f.root, 'download.bin'), 'utf8'), 'ORIGINAL old-logo.png');
+});
+
+
+test('editable export/import IPC commits a separate project and preserves the original', async t => {
+  const f = fixture(t), original = snapshot(f.project);
+  const output = path.join(f.root, 'transfer.wsmb');
+  f.ctx.dialog.showSaveDialog = async () => ({ filePath: output });
+  const exported = await f.run('projects:exportArchive', { id: 'p-original' });
+  assert.equal(exported.path, output); assert.equal(f.ctx.exportBusy, false);
+  f.ctx.dialog.showOpenDialog = async () => ({ filePaths: [output] });
+  const restored = await f.run('projects:importArchive');
+  assert.equal(restored.state.projects.length, 2);
+  assert.notEqual(restored.state.activeId, 'p-original');
+  assert.equal(restored.config.brand.logo, 'dist-assets/old-logo.png');
+  assert.deepEqual(snapshot(f.project), original);
+  assert.equal(f.ctx.exportBusy, false);
+});
+
+test('failed archive index commit and canceled dialogs leave project selection and files intact', async t => {
+  const f = fixture(t), output = path.join(f.root, 'transfer.wsmb');
+  f.ctx.dialog.showSaveDialog = async () => ({ filePath: output });
+  await f.run('projects:exportArchive', { id: 'p-original' });
+  const original = snapshot(f.projects), index = fs.readFileSync(f.index, 'utf8');
+  f.ctx.dialog.showOpenDialog = async () => ({ filePaths: [output] });
+  f.failure.indexRename = true;
+  await assert.rejects(f.run('projects:importArchive'), /Injected/);
+  assert.deepEqual(snapshot(f.projects), original);
+  assert.equal(fs.readFileSync(f.index, 'utf8'), index);
+  assert.equal(f.ctx.ASSETS_DIR, f.assets);
+  assert.equal(f.ctx.exportBusy, false);
+  f.ctx.dialog.showOpenDialog = async () => ({ canceled: true });
+  assert.equal((await f.run('projects:importArchive')).cancelled, true);
+  assert.equal(f.ctx.exportBusy, false);
+});
+
+test('an open archive dialog locks mutations and prevents overlapping archive operations', async t => {
+  const f = fixture(t); let closeDialog;
+  f.ctx.dialog.showOpenDialog = () => new Promise(resolve => { closeDialog = resolve; });
+  const operation = f.run('projects:importArchive');
+  assert.equal(f.ctx.exportBusy, true);
+  assert.throws(() => f.run('brand:save', { title: 'Blocked' }), /Aguarde/);
+  await assert.rejects(f.run('projects:exportArchive', {id:'p-original'}), /Aguarde/);
+  closeDialog({canceled:true}); await operation;
+  assert.equal(f.ctx.exportBusy, false);
+});
+
+test('failed single-file and gallery saves remove only new assets and retain the previous configuration', t => {
+  for (const type of ['local-video', 'image-gallery']) {
+    const f = fixture(t), original = snapshot(f.project);
+    const data = type === 'image-gallery' ? {items:[{sourcePath:f.image}]} : {sourcePath:f.image};
+    f.failure.configRename = true;
+    assert.throws(() => f.run('content:save', { modules:[{id:'new',type,data}] }), /Injected/);
+    assert.deepEqual(snapshot(f.project), original);
+  }
+});
+
+test('missing gallery sources and duplicate module IDs reject the whole save', t => {
+  const f = fixture(t), original = snapshot(f.project);
+  assert.throws(() => f.run('content:save', { modules:[{id:'gallery',type:'image-gallery',data:{items:[{sourcePath:f.image},{sourcePath:path.join(f.root,'absent.png')}]}}] }), /Imagem não encontrada/);
+  assert.deepEqual(snapshot(f.project), original);
+  assert.throws(() => f.run('content:save', { modules:[{id:'same',type:'html'},{id:'same',type:'html'}] }), /repetido/);
+  assert.deepEqual(snapshot(f.project), original);
 });

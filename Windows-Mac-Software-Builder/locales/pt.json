@@ -59,7 +59,7 @@
       "title": "Publicar",
       "subtitle": "Reveja o projeto e escolha Windows ou Mac para a aplicação que vai entregar."
     },
-    "export_btn": "Exportar projeto"
+    "export_btn": "Criar aplicação"
   },
   "sidebar": {
     "preview_btn": "Pré-visualizar Produto",
@@ -405,7 +405,14 @@
     "name_required": "Escreva um nome para o projeto.",
     "clone_btn": "Clonar",
     "cloned_ok": "Projeto clonado.",
-    "delete_yes": "Sim, apagar"
+    "delete_yes": "Sim, apagar",
+    "import_archive": "Importar projeto",
+    "export_archive": "Exportar projeto",
+    "archive_help": "Transfira uma cópia editável num ficheiro .wsmb, com módulos, imagens e restantes recursos. A importação cria um novo projeto e preserva os existentes. Guarde as cópias em privado: incluem os conteúdos, palavras-passe e ligações configuradas.",
+    "importing_archive": "A importar o projeto…",
+    "exporting_archive": "A exportar o projeto…",
+    "imported_archive": "Projeto importado. Já o pode abrir e editar.",
+    "exported_archive": "Projeto guardado em: "
   },
   "social": {
     "help": "Preencha apenas as redes que quiser. Os ícones aparecem no menu lateral do produto final e abrem no navegador do aluno.",

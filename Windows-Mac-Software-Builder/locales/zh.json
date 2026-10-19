@@ -59,7 +59,7 @@
       "title": "发布",
       "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export project"
+    "export_btn": "创建应用"
   },
   "sidebar": {
     "preview_btn": "预览产品",
@@ -405,7 +405,14 @@
     "name_required": "请输入项目名称。",
     "clone_btn": "克隆",
     "cloned_ok": "项目已克隆。",
-    "delete_yes": "是的，删除"
+    "delete_yes": "是的，删除",
+    "import_archive": "导入项目",
+    "export_archive": "导出项目",
+    "archive_help": "将可编辑的副本保存为 .wsmb 文件，其中包含模块、图片和资源。导入会创建新项目并保留现有项目。请妥善保管副本：其中包含内容、密码和已配置的链接。",
+    "importing_archive": "正在导入项目…",
+    "exporting_archive": "正在导出项目…",
+    "imported_archive": "项目已导入，可以打开并编辑。",
+    "exported_archive": "项目已保存至："
   },
   "social": {
     "help": "只需填写您想要的网络。图标会出现在最终产品的侧边菜单中，并在学员的浏览器中打开。",

@@ -13,7 +13,7 @@ const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
 const yazl = require('yazl');
 const { validateWebProject } = require('./local-web');
-const { assertPortableTarget, normalizePortableLink } = require('./portable-app');
+const { assertPortableTarget, normalizePortableLink, validatePortableProject } = require('./portable-app');
 const { assertAPKExport } = require('./android-runtime');
 const { FFMPEG_SOURCE_LOCK } = require('./ffmpeg-source-lock');
 
@@ -327,12 +327,12 @@ async function inspectAssets(assetsDir, portableRoots = []) {
 // Shared with the SFX route: callers can inspect links before choosing a format.
 // Only validated portable modules grant permission to archive asset symlinks.
 async function inspectProjectAssets({ config, assetsDir, target }) {
-  if (!['windows', 'mac'].includes(target)) throw new Error('Selecione Windows ou Mac.');
+  if (!['windows', 'mac', 'project'].includes(target)) throw new Error('Selecione Windows ou Mac.');
   const assetRoot = await fs.promises.realpath(assetsDir);
   const portableRoots = [];
   for (const module of config.content || []) {
     if (module.type !== 'portable') continue;
-    const validated = assertPortableTarget({ data: module.data, assetsDir, target });
+    const validated = target === 'project' ? validatePortableProject({ data: module.data, assetsDir }) : assertPortableTarget({ data: module.data, assetsDir, target });
     const rootPath = await fs.promises.realpath(validated.rootPath);
     if (rootPath === assetRoot || !inside(assetRoot, rootPath)) throw new Error('Pasta de programa portátil fora dos recursos.');
     const relative = path.relative(assetRoot, rootPath).split(path.sep).join('/');
@@ -584,4 +584,5 @@ async function extractWindowsTemplate(templatePath, destination, options) {
   } finally { template.zip.close(); }
 }
 
-module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName };
+module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName,
+  archiveIO: { LIMITS, validPath, registerPath, verifyStream, openZip, entryStream, assetStream, inspectAssets } };

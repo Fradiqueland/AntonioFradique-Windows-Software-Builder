@@ -10,6 +10,7 @@ const execFileP = promisify(execFile);
 const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
+const projectArchive = require('./src/shared/project-archive');
 const portableApps = require('./src/shared/portable-app');
 const portableRuntime = require('./src/shared/portable-runtime');
 const androidRuntime = require('./src/shared/android-runtime');
@@ -781,6 +782,24 @@ function createBuilderWindow() {
   secureEmbeddedContent(builderWindow);
   builderWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   builderWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  // A renderer crash must provide recovery instead of trapping the user in a
+  // blank window. Recovery reloads the editor; committed project files survive.
+  const window = builderWindow;
+  window.webContents.on('render-process-gone', async (_event, details) => {
+    if (window.isDestroyed() || details.reason === 'clean-exit') return;
+    console.error('[builder] renderer terminated:', details.reason, details.exitCode);
+    try {
+    const result = await dialog.showMessageBox(window, {
+      type: 'error', title: 'Recuperar o editor',
+      message: 'O editor deixou de responder. Os projetos guardados foram preservados.',
+      detail: 'Pode reabrir o editor sem fechar a aplicação. Alterações que ainda não tinham sido guardadas poderão ter de ser repetidas.',
+      buttons: ['Reabrir editor', 'Fechar'], defaultId: 0, cancelId: 1
+    });
+    if (window.isDestroyed()) return;
+    if (result.response === 0) await window.loadFile(path.join(__dirname, 'src/builder/index.html'));
+    else window.close();
+    } catch (error) { console.error('[builder] recovery failed:', error.message); }
+  });
   builderWindow.setMenuBarVisibility(false);
   attachContextMenu(builderWindow.webContents);
   builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
@@ -1236,6 +1255,59 @@ handleTrustedIpc('projects:duplicate', (_event, payload) => {
   return { state: projectsState(), config: readConfig() };
 });
 
+/* Editable project archives are separate from distributable Viewer exports. */
+handleTrustedIpc('projects:exportArchive', async (_event, payload) => {
+  assertBuilder();
+  const idx = readProjectsIndex();
+  const project = idx.projects.find(p => p.id === payload?.id);
+  if (!project) throw new Error('Projeto não encontrado.');
+  exportBusy = true;
+  try {
+    const chosen = await dialog.showSaveDialog(builderWindow, {
+      title: 'Exportar projeto editável',
+      defaultPath: projectExport.safeProjectName(project.name) + '.wsmb',
+      filters: [{ name: 'Projeto Windows & Mac Software Builder', extensions: ['wsmb'] }]
+    });
+    if (chosen.canceled || !chosen.filePath) return { cancelled: true };
+    const parent = fs.realpathSync(path.dirname(chosen.filePath));
+    const relative = path.relative(fs.realpathSync(PROJECTS_ROOT), parent);
+    if (!relative || (relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative))) {
+      throw new Error('Guarde o arquivo fora das pastas internas dos projetos.');
+    }
+    return await projectArchive.exportArchive({ projectRoot: projectDir(project.id), outputPath: chosen.filePath,
+      name: project.name, appVersion: app.getVersion(), readConfig });
+  } finally { exportBusy = false; }
+});
+
+handleTrustedIpc('projects:importArchive', async () => {
+  assertBuilder();
+  exportBusy = true;
+  const id = genProjectId();
+  let imported = false;
+  try {
+    const chosen = await dialog.showOpenDialog(builderWindow, {
+      title: 'Importar projeto editável', properties: ['openFile'],
+      filters: [{ name: 'Projeto Windows & Mac Software Builder', extensions: ['wsmb', 'zip'] }]
+    });
+    if (chosen.canceled || !chosen.filePaths?.[0]) return { cancelled: true };
+    const result = await projectArchive.importArchive({ archivePath: chosen.filePaths[0], destination: projectDir(id), readConfig });
+    imported = true;
+    const idx = readProjectsIndex();
+    const now = Date.now();
+    let name = sanitizeProjectName(result.name);
+    if (idx.projects.some(p => p.name === name)) name = sanitizeProjectName(name.slice(0, 65) + ' (importado)');
+    idx.projects.push({ id, name, createdAt: now, updatedAt: now });
+    idx.activeId = id;
+    writeProjectsIndex(idx);
+    imported = false; // Index committed: a later UI error must not delete data.
+    applyActiveProjectPaths(id);
+    return { state: projectsState(), config: result.config };
+  } catch (error) {
+    if (imported) { try { fs.rmSync(projectDir(id), { recursive: true, force: true }); } catch (_) {} }
+    throw error;
+  } finally { exportBusy = false; }
+});
+
 /* -------- IPC: brand (Builder only) -------- */
 
 function assertBuilder() {
@@ -1389,7 +1461,13 @@ handleTrustedIpc('content:save', (_event, payload) => {
   const current = readConfig();
   const previous = Array.isArray(current.content) ? current.content : [];
   const incoming = payload.modules;
+  const incomingIds = new Set();
+  for (const raw of incoming) {
+    if (!raw || typeof raw.id !== 'string' || !raw.id || incomingIds.has(raw.id)) throw new Error('Identificador de módulo inválido ou repetido.');
+    incomingIds.add(raw.id);
+  }
   const nextModules = [];
+  const importedFiles = [];
   const importedWeb = [];
   const importedPortable = [];
   try {
@@ -1428,6 +1506,7 @@ handleTrustedIpc('content:save', (_event, payload) => {
           : mod.type === 'local-audio' ? 'audio'
           : mod.type === 'download-vault' ? 'download' : 'file';
         file = copyAssetToProject(sourcePath, prefix);
+        importedFiles.push(relToAbs(file));
         fileName = path.basename(sourcePath);
       } else {
         file = (prev && prev.data && prev.data.file) || null;
@@ -1451,8 +1530,9 @@ handleTrustedIpc('content:save', (_event, payload) => {
       for (const it of items) {
         if (!it) continue;
         if (typeof it.sourcePath === 'string' && it.sourcePath) {
-          if (!fs.existsSync(it.sourcePath)) continue;
+          if (!fs.existsSync(it.sourcePath)) throw new Error('Imagem não encontrada: ' + it.sourcePath);
           const rel = copyAssetToProject(it.sourcePath, 'img');
+          importedFiles.push(relToAbs(rel));
           images.push({ file: rel, fileName: path.basename(it.sourcePath) });
         } else if (typeof it.file === 'string' && it.file) {
           images.push({ file: it.file, fileName: it.fileName || path.basename(it.file) });
@@ -1499,6 +1579,7 @@ handleTrustedIpc('content:save', (_event, payload) => {
   const updated = { ...current, content: nextModules };
   writeConfig(updated);
   } catch (err) {
+    cleanupFiles(importedFiles);
     for (const data of importedWeb) {
       try { localWeb.removeWebProject({ data, assetsDir: ASSETS_DIR }); } catch (_) {}
     }

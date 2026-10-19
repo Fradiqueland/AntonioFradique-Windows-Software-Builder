@@ -57,6 +57,7 @@ async function setLanguage(lang, { persist = true } = {}) {
     I18N.ready = true;
     applyI18n();
     renderExportTarget();
+    renderProjectsList();
     renderPortableEditor();
     if (lastExportConfig) updateExportSummary(lastExportConfig);
     // Os cartões de tipo de módulo são gerados por JS: refazê-los no novo idioma.
@@ -160,21 +161,60 @@ document.querySelectorAll('.panel.collapsible .section-head h2').forEach((h) => 
 /* Gravação automática: os formulários de aparência/publicação gravam ao sair
  * de cada campo (evento change), sem botão "Guardar". O submit existente é
  * reutilizado tal e qual, por isso as validações e mensagens mantêm-se. */
-const autosaveTimers = new WeakMap();
+const autosaveTimers = new Map();
+const pendingSettings = new Set();
+const settingsTasks = new Map();
+const settingsFailures = new Set();
+let settingsFlush = null;
+
+// This is a desktop editor. A save must never perform a browser form navigation,
+// even if another handler fails. Synthetic submit events reuse our IPC handlers
+// without requestSubmit's native navigation/default-submit behaviour.
+document.addEventListener('submit', event => event.preventDefault(), true);
 function queueAutosave(form) {
-  if (!form) return;
+  if (!form || projectTransition) return;
+  pendingSettings.add(form);
   const generation = projectGeneration;
   clearTimeout(autosaveTimers.get(form));
   autosaveTimers.set(form, setTimeout(() => {
+    autosaveTimers.delete(form);
     if (generation !== projectGeneration || projectTransition) return;
-    if (typeof form.reportValidity === 'function' && !form.checkValidity()) { form.reportValidity(); return; }
-    form.requestSubmit();
+    if (contentMutation || settingsWrites.has(form)) { queueAutosave(form); return; }
+    submitSettings(form);
   }, 250));
 }
 
+function revealSettingsForm(form) {
+  const panel = form?.closest('.panel');
+  if (panel) {
+    goToTab(panel.dataset.step || panel.dataset.panel);
+    setSectionCollapsed(panel.dataset.panel, false);
+    panel.inert = false;
+  }
+  if (form) form.inert = false;
+}
+
+function submitSettings(form) {
+  clearTimeout(autosaveTimers.get(form));
+  autosaveTimers.delete(form);
+  if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+    revealSettingsForm(form);
+    form.reportValidity();
+    return Promise.resolve(false);
+  }
+  if (form === iconSaveBtn?.closest('.form-card')) iconSaveBtn.click();
+  else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  return settingsTasks.get(form)?.promise || Promise.resolve(false);
+}
+
 function beginSettingsSave(form) {
-  if (projectTransition || settingsWrites.has(form)) return false;
+  if (projectTransition || settingsWrites.has(form) || exportInProgress) return false;
   if (contentMutation) { queueAutosave(form); return false; }
+  pendingSettings.delete(form);
+  settingsFailures.delete(form);
+  let finish;
+  const promise = new Promise(resolve => { finish = resolve; });
+  settingsTasks.set(form, { promise, finish });
   settingsWrites.add(form);
   form.inert = true;
   updateBuilderBusyUI();
@@ -184,7 +224,25 @@ function beginSettingsSave(form) {
 function endSettingsSave(form) {
   settingsWrites.delete(form);
   form.inert = !!projectTransition;
+  const task = settingsTasks.get(form);
+  settingsTasks.delete(form);
+  task?.finish(!settingsFailures.has(form));
   updateBuilderBusyUI();
+}
+
+async function flushPendingSettings() {
+  if (projectTransition || contentMutation || exportInProgress) return false;
+  if (settingsFlush) return settingsFlush;
+  settingsFlush = (async () => {
+    for (const timer of autosaveTimers.values()) clearTimeout(timer);
+    autosaveTimers.clear();
+    const results = await Promise.all([...settingsTasks.values()].map(task => task.promise));
+    if (results.some(ok => !ok)) { revealSettingsForm([...settingsFailures][0]); return false; }
+    for (const form of [...pendingSettings]) if (!await submitSettings(form)) { revealSettingsForm(form); return false; }
+    return settingsFailures.size === 0;
+  })();
+  try { updateBuilderBusyUI(); return await settingsFlush; }
+  finally { settingsFlush = null; updateBuilderBusyUI(); }
 }
 
 async function pickForCurrentProject(pick, showStatus) {
@@ -201,16 +259,18 @@ async function pickForCurrentProject(pick, showStatus) {
 
 function updateBuilderBusyUI() {
   const writing = !!contentMutation || settingsWrites.size > 0;
-  document.querySelectorAll('.panel').forEach((panel) => { panel.inert = !!projectTransition; });
+  document.querySelectorAll('.panel').forEach((panel) => { panel.inert = !!projectTransition || exportInProgress || !!settingsFlush; });
   if (projectsListEl) projectsListEl.inert = writing || !!projectTransition || exportInProgress;
   if (projectNewForm) projectNewForm.inert = writing || !!projectTransition || exportInProgress;
-  contentList.inert = writing || !!projectTransition;
-  contentAddBtn.disabled = !!projectTransition;
-  if (contentEditorSave) contentEditorSave.disabled = writing || !!projectTransition || !TYPE_KEYS.includes(moduleType.value)
+  if (projectImportBtn) projectImportBtn.disabled = writing || !!projectTransition || exportInProgress;
+  contentList.inert = writing || !!projectTransition || exportInProgress;
+  contentAddBtn.disabled = !!projectTransition || exportInProgress;
+  if (contentEditorSave) contentEditorSave.disabled = writing || !!projectTransition || exportInProgress || !TYPE_KEYS.includes(moduleType.value)
     || (moduleType.value === 'portable' && !!portableOperation);
   updateExportButton();
 }
 document.querySelectorAll('form.autosave').forEach((form) => {
+  form.addEventListener('input', () => { if (!projectTransition) pendingSettings.add(form); });
   form.addEventListener('change', () => queueAutosave(form));
 });
 
@@ -252,6 +312,7 @@ const previewBtn = document.getElementById('preview-btn');
 if (previewBtn) {
   previewBtn.disabled = false;
   previewBtn.addEventListener('click', async () => {
+    if (!await flushPendingSettings()) return;
     previewBtn.disabled = true;
     try {
       await window.icurator.openViewer();
@@ -383,6 +444,8 @@ brandForm.addEventListener('submit', async (e) => {
     updateExportSummary(updated);
     showBrandStatus(t('common.saved'), 'success');
   } catch (err) {
+    settingsFailures.add(brandForm);
+    pendingSettings.add(brandForm);
     console.error(err);
     showBrandStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
@@ -432,6 +495,8 @@ if (socialForm) {
       fillSocialInputs(updated.marketing && updated.marketing.social);
       showSocialStatus(t('common.saved'), 'success');
     } catch (err) {
+      settingsFailures.add(socialForm);
+      pendingSettings.add(socialForm);
       console.error(err);
       showSocialStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
     } finally {
@@ -465,6 +530,8 @@ leadsForm.addEventListener('submit', async (e) => {
     updateExportSummary(updated);
     showLeadsStatus(t('common.saved'), 'success');
   } catch (err) {
+    settingsFailures.add(leadsForm);
+    pendingSettings.add(leadsForm);
     console.error(err);
     showLeadsStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
@@ -575,6 +642,8 @@ bannerForm.addEventListener('submit', async (e) => {
     updateExportSummary(updated);
     showBannerStatus(t('common.saved'), 'success');
   } catch (err) {
+    settingsFailures.add(bannerForm);
+    pendingSettings.add(bannerForm);
     console.error(err);
     showBannerStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
@@ -1739,6 +1808,8 @@ contentForm.addEventListener('submit', async (e) => {
  * Initial load
  * ========================================================= */
 async function applyConfig(config) {
+  for (const timer of autosaveTimers.values()) clearTimeout(timer);
+  autosaveTimers.clear(); pendingSettings.clear(); settingsFailures.clear();
   editorGeneration++;
   iptvRequest++;
   portableOperation = null;
@@ -1827,6 +1898,7 @@ async function loadInitialConfig() {
 const projectsListEl = document.getElementById('projects-list');
 const projectNewForm = document.getElementById('project-new-form');
 const projectNewName = document.getElementById('project-new-name');
+const projectImportBtn = document.getElementById('project-import');
 const showProjectsStatus = makeStatus(document.getElementById('projects-status'));
 const activeProjectName = document.getElementById('active-project-name');
 const activeProjectCloseBtn = document.getElementById('active-project-close');
@@ -1912,12 +1984,42 @@ function renderProjectsList() {
     delBtn.textContent = t('projects.delete_btn');
     delBtn.addEventListener('click', () => askDeleteProject(li, p));
 
-    actions.append(openBtn, renameBtn, cloneBtn, delBtn);
+    const archiveBtn = document.createElement('button');
+    archiveBtn.type = 'button';
+    archiveBtn.className = 'btn btn-sm btn-ghost';
+    archiveBtn.textContent = t('projects.export_archive');
+    archiveBtn.addEventListener('click', () => exportEditableProject(p.id));
+    actions.append(openBtn, renameBtn, cloneBtn, archiveBtn, delBtn);
     li.append(info, actions);
     projectsListEl.appendChild(li);
   });
   updateActiveProjectBar();
 }
+
+async function exportEditableProject(id) {
+  if (!await flushPendingSettings() || !beginProjectTransition()) return;
+  showProjectsStatus(t('projects.exporting_archive'), '');
+  try {
+    const result = await window.icurator.projectsExportArchive(id);
+    showProjectsStatus(result?.cancelled ? '' : t('projects.exported_archive') + result.path, result?.cancelled ? '' : 'success');
+  } catch (err) { showProjectsStatus(t('common.error_prefix') + err.message, 'error'); }
+  finally { endProjectTransition(); }
+}
+
+if (projectImportBtn) projectImportBtn.addEventListener('click', async () => {
+  if (!await flushPendingSettings() || !beginProjectTransition()) return;
+  showProjectsStatus(t('projects.importing_archive'), '');
+  try {
+    const result = await window.icurator.projectsImportArchive();
+    if (result?.cancelled) { showProjectsStatus('', ''); return; }
+    projectsCache = result.state;
+    await applyConfig(result.config);
+    await loadExportTargets();
+    renderProjectsList();
+    showProjectsStatus(t('projects.imported_archive'), 'success');
+  } catch (err) { showProjectsStatus(t('common.error_prefix') + err.message, 'error'); }
+  finally { endProjectTransition(); }
+});
 
 async function refreshProjects() {
   const generation = projectGeneration;
@@ -1934,7 +2036,7 @@ async function refreshProjects() {
 async function openProject(id) {
   if (projectTransition) return;
   if (id === projectsCache.activeId) { goToTab('content'); return; }
-  if (!beginProjectTransition()) return;
+  if (!await flushPendingSettings() || !beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsOpen(id);
     projectsCache = res.state;
@@ -1973,7 +2075,7 @@ function startRename(li, project) {
   const commit = async () => {
     const newName = input.value.trim();
     if (!newName || newName === project.name) { renderProjectsList(); return; }
-    if (!beginProjectTransition()) return;
+    if (!await flushPendingSettings() || !beginProjectTransition()) return;
     try {
       projectsCache = await window.icurator.projectsRename(project.id, newName);
       renderProjectsList();
@@ -2021,7 +2123,7 @@ function askDeleteProject(li, project) {
 }
 
 async function performDeleteProject(project) {
-  if (!beginProjectTransition()) return;
+  if (!await flushPendingSettings() || !beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsDelete(project.id);
     projectsCache = res.state;
@@ -2040,7 +2142,7 @@ async function performDeleteProject(project) {
 }
 
 async function duplicateProject(id) {
-  if (!beginProjectTransition()) return;
+  if (!await flushPendingSettings() || !beginProjectTransition()) return;
   try {
     const res = await window.icurator.projectsDuplicate(id);
     projectsCache = res.state;
@@ -2059,7 +2161,7 @@ if (projectNewForm) {
     e.preventDefault();
     const name = (projectNewName.value || '').trim();
     if (!name) { showProjectsStatus(t('projects.name_required'), 'error'); return; }
-    if (!beginProjectTransition()) return;
+    if (!await flushPendingSettings() || !beginProjectTransition()) return;
     try {
       const res = await window.icurator.projectsCreate(name);
       projectsCache = res.state;
@@ -2243,7 +2345,7 @@ if (iconPickBtn) iconPickBtn.addEventListener('click', async () => {
   const picked = await pickForCurrentProject(() => window.icurator.pickFile('icon'), showIconStatus);
   if (!picked) return;
   if (!/\.(ico|png|jpe?g)$/i.test(picked.name)) {
-    alert(t('export.icon_must_be_image'));
+    showIconStatus(t('export.icon_must_be_image'), 'error');
     return;
   }
   iconState.pendingSourcePath = picked.path;
@@ -2264,6 +2366,7 @@ if (iconRemoveBtn) iconRemoveBtn.addEventListener('click', () => {
 });
 
 if (iconSaveBtn) iconSaveBtn.addEventListener('click', async () => {
+  if (!beginSettingsSave(iconSaveBtn.closest('.form-card'))) return;
   iconSaveBtn.disabled = true;
   showIconStatus(t('common.saving'), '');
   try {
@@ -2281,9 +2384,12 @@ if (iconSaveBtn) iconSaveBtn.addEventListener('click', async () => {
     updateExportSummary(updated);
     showIconStatus(t('common.saved'), 'success');
   } catch (err) {
+    settingsFailures.add(iconSaveBtn.closest('.form-card'));
+    pendingSettings.add(iconSaveBtn.closest('.form-card'));
     showIconStatus(t('common.error_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     iconSaveBtn.disabled = false;
+    endSettingsSave(iconSaveBtn.closest('.form-card'));
   }
 });
 
@@ -2308,6 +2414,7 @@ if (window.icurator && window.icurator.onExportLog) {
 let lastExportedPath = null;
 
 exportBuildBtn.addEventListener('click', async () => {
+  if (!await flushPendingSettings()) return;
   const target = selectedExportTarget();
   if (exportInProgress || contentMutation || projectTransition || settingsWrites.size > 0 || !target || !target.available) return;
   exportInProgress = true;

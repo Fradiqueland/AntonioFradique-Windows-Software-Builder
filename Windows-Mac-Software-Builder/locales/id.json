@@ -59,7 +59,7 @@
       "title": "Terbitkan",
       "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export project"
+    "export_btn": "Buat aplikasi"
   },
   "sidebar": {
     "preview_btn": "Pratinjau Produk",
@@ -405,7 +405,14 @@
     "name_required": "Masukkan nama proyek.",
     "clone_btn": "Klon",
     "cloned_ok": "Proyek diklon.",
-    "delete_yes": "Ya, hapus"
+    "delete_yes": "Ya, hapus",
+    "import_archive": "Impor proyek",
+    "export_archive": "Ekspor proyek",
+    "archive_help": "Pindahkan salinan yang dapat diedit dalam berkas .wsmb beserta modul, gambar, dan sumber daya. Impor membuat proyek baru dan mempertahankan proyek yang ada. Simpan salinan secara pribadi: salinan memuat konten, kata sandi, dan tautan yang dikonfigurasi.",
+    "importing_archive": "Mengimpor proyek…",
+    "exporting_archive": "Mengekspor proyek…",
+    "imported_archive": "Proyek diimpor. Anda dapat membuka dan mengeditnya.",
+    "exported_archive": "Proyek disimpan di: "
   },
   "social": {
     "help": "Isi hanya jaringan yang Anda inginkan. Ikon muncul di menu samping produk akhir dan terbuka di browser siswa.",

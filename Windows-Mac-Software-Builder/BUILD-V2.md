@@ -1,23 +1,23 @@
-# Guia v2.5 — instalar o Builder e criar softwares Windows/Mac
+# Guia v2.6 — instalar o Builder e criar softwares Windows/Mac
 
 ## Os dois produtos
 
-**Windows & Mac Software Builder v2.5.0** é o editor instalado no seu computador. Os **projetos exportados** são aplicações independentes que os destinatários abrem sem instalar o Builder.
+**Windows & Mac Software Builder v2.6.0** é o editor instalado no seu computador. Os **projetos exportados** são aplicações independentes que os destinatários abrem sem instalar o Builder.
 
 | Instalador do Builder | Computador |
 | --- | --- |
-| Windows-Mac-Software-Builder-2.5.0-windows-x64-setup.exe | Windows x64 |
-| Windows-Mac-Software-Builder-2.5.0-mac-universal.dmg | Mac Intel ou Apple Silicon com macOS 13 ou posterior |
+| Windows-Mac-Software-Builder-2.6.0-windows-x64-setup.exe | Windows x64 |
+| Windows-Mac-Software-Builder-2.6.0-mac-universal.dmg | Mac Intel ou Apple Silicon com macOS 13 ou posterior |
 
 O Setup Windows usa NSIS. O DMG contém uma aplicação universal. Windows não tem assinatura de editor; Mac usa assinatura ad-hoc, sem notarização Apple. Podem surgir avisos do sistema: confirme a origem e o checksum. Não é necessário desativar globalmente as proteções.
 
 ## Gerar os dois instaladores no GitHub
 
 1. Abra **Actions → Build Windows and Mac installers**.
-2. Use a execução correspondente ao código v2.5. O workflow inicia-se em pushes para main, master e branches codex/**, e em pull requests. Depois de integrado na branch predefinida, também pode usar **Run workflow**.
+2. Use a execução correspondente ao código v2.6. O workflow inicia-se em pushes para main, master e branches codex/**, e em pull requests. Depois de integrado na branch predefinida, também pode usar **Run workflow**.
 3. Aguarde os sete jobs de compilação: FFmpeg Windows x64, Mac Intel e Mac ARM64, dois modelos Viewer e dois instaladores Builder. Todos devem terminar com sucesso.
-4. Nas pull requests do próprio repositório ou numa execução manual, o job final valida os dois pacotes e publica a [Release v2.5.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.5.0), inicialmente como prerelease. Os pushes executam as compilações e testes, sem voltar a publicar. A publicação não substitui uma tag ou Release já existente.
-5. Em **Releases → v2.5.0 → Assets**, descarregue o Setup `.exe`, o `.dmg` e `SHA256SUMS.txt`. Não é necessário extrair ZIPs de artefactos. No repositório privado, é necessário ter acesso autorizado.
+4. Nas pull requests do próprio repositório ou numa execução manual, o job final valida os dois pacotes e publica a [Release v2.6.0](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.0), inicialmente como prerelease. Os pushes executam as compilações e testes, sem voltar a publicar. A publicação não substitui uma tag ou Release já existente.
+5. Em **Releases → v2.6.0 → Assets**, descarregue o Setup `.exe`, o `.dmg` e `SHA256SUMS.txt`. Não é necessário extrair ZIPs de artefactos. No repositório privado, é necessário ter acesso autorizado.
 
 O workflow instala dependências pelo lockfile, executa testes, compila e verifica os modelos incorporados. Valida a conversão IPTV com FFmpeg e a apresentação de vários fotogramas no Electron, utilizando um vídeo sintético servido localmente, tanto no código fonte como no pacote. No Mac, valida a assinatura e as duas arquiteturas. Os logs ficam na execução do Actions, incluindo em caso de falha. Os ficheiros intermédios são transferidos por caches exatas da mesma execução; os instaladores finais ficam na Release. Estas verificações não substituem testar manualmente os instaladores e os projetos nos computadores de destino.
 
@@ -26,11 +26,11 @@ Para repetir uma execução, use **Re-run all jobs**. As caches são específica
 Para comparar com SHA256SUMS.txt:
 
 ```powershell
-Get-FileHash .\Windows-Mac-Software-Builder-2.5.0-windows-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Windows-Mac-Software-Builder-2.6.0-windows-x64-setup.exe -Algorithm SHA256
 ```
 
 ```bash
-shasum -a 256 Windows-Mac-Software-Builder-2.5.0-mac-universal.dmg
+shasum -a 256 Windows-Mac-Software-Builder-2.6.0-mac-universal.dmg
 ```
 
 ## Instalar
@@ -41,7 +41,7 @@ A v2.5 utiliza Electron 44.6.0. Requer Windows 10 ou posterior (x64) ou macOS 13
 
 **Mac:** abra o DMG, arraste **Windows & Mac Software Builder.app** para **Aplicações**, ejete o DMG e abra a aplicação. Se o macOS pedir autorização por não estar notarizada, use a opção individual em **Definições do Sistema → Privacidade e Segurança**, depois de confirmar a origem. A assinatura ad-hoc não identifica um editor perante a Apple.
 
-## Atualizar para a v2.5.0
+## Atualizar para a v2.6.0
 
 Instale o novo Builder e volte a exportar os projetos. Os softwares já exportados
 incluem a cópia antiga do Viewer e não recebem esta correção automaticamente.

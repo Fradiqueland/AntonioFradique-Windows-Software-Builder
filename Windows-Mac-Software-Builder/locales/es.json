@@ -59,7 +59,7 @@
       "title": "Publicar",
       "subtitle": "Review the project and choose Windows or Mac for the application you will deliver."
     },
-    "export_btn": "Export project"
+    "export_btn": "Crear aplicación"
   },
   "sidebar": {
     "preview_btn": "Previsualizar Producto",
@@ -405,7 +405,14 @@
     "name_required": "Escriba un nombre para el proyecto.",
     "clone_btn": "Clonar",
     "cloned_ok": "Proyecto clonado.",
-    "delete_yes": "Sí, eliminar"
+    "delete_yes": "Sí, eliminar",
+    "import_archive": "Importar proyecto",
+    "export_archive": "Exportar proyecto",
+    "archive_help": "Transfiere una copia editable en un archivo .wsmb, con módulos, imágenes y recursos. La importación crea un proyecto nuevo y conserva los existentes. Guarda las copias en privado: incluyen contenidos, contraseñas y enlaces configurados.",
+    "importing_archive": "Importando proyecto…",
+    "exporting_archive": "Exportando proyecto…",
+    "imported_archive": "Proyecto importado. Ya puedes abrirlo y editarlo.",
+    "exported_archive": "Proyecto guardado en: "
   },
   "social": {
     "help": "Rellene solo las redes que desee. Los iconos aparecen en el menú lateral del producto final y se abren en el navegador del alumno.",
