@@ -660,24 +660,24 @@ bannerForm.addEventListener('submit', async (e) => {
 // `content.type.<key>` so the list stays in the user's chosen language
 // (PT/EN/ES/FR). `typeLabel(type)` falls back to the raw type if no key.
 const TYPE_KEYS = ['youtube', 'html', 'local-web', 'portable', 'pdf', 'webview', 'external', 'launch',
-  'local-video', 'local-audio', 'download-vault', 'image-gallery',
+  'local-video', 'local-audio', 'download-vault', 'archive-download', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv'];
 // Chaves de tradução por tipo (o id do tipo usa '-', a chave usa '_').
 const TYPE_I18N = {
   youtube: 'youtube', html: 'html', 'local-web': 'local_web', portable: 'portable', pdf: 'pdf', webview: 'webview', external: 'external', launch: 'launch',
-  'local-video': 'local_video', 'local-audio': 'local_audio', 'download-vault': 'download',
+  'local-video': 'local_video', 'local-audio': 'local_audio', 'download-vault': 'download', 'archive-download': 'archives',
   'image-gallery': 'gallery', 'article-reader': 'article', 'smart-embed': 'embed', iptv: 'iptv'
 };
 const TYPE_ICON = {
   youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
-  'download-vault': '⬇️', launch: '🚀', portable: '💼', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'download-vault': '⬇️', 'archive-download': '📦', launch: '🚀', portable: '💼', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
 // Cartões agrupados por intenção (o que o aluno vai fazer), não por tecnologia.
 const TYPE_GROUPS = [
   { key: 'video', types: ['youtube', 'local-video'] },
   { key: 'read',  types: ['pdf', 'article-reader', 'html'] },
-  { key: 'files', types: ['download-vault', 'launch', 'portable'] },
+  { key: 'files', types: ['archive-download', 'download-vault', 'launch', 'portable'] },
   { key: 'web',   types: ['local-web', 'webview', 'external', 'smart-embed'] },
   { key: 'media', types: ['image-gallery', 'local-audio', 'iptv'] }
 ];
@@ -778,6 +778,10 @@ const dyn = {
   }
 };
 
+// Archive downloads share the single-file editor; the distinct card/type keeps
+// encrypted archive distribution discoverable without a second copy of the UI.
+dyn['archive-download'] = dyn['download-vault'];
+
 // In-memory mirror of the saved content array. Always kept in sync with disk.
 let contentModules = [];
 // Editor state
@@ -813,7 +817,14 @@ function showDynamicGroup(type) {
     iptvRequest++;
     dyn.iptv.load.disabled = false;
   }
-  dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== type));
+  dynGroups.forEach((g) => g.classList.toggle('hidden', g.dataset.dyn !== (type === 'archive-download' ? 'download-vault' : type)));
+  if (type === 'download-vault' || type === 'archive-download') {
+    const saved = contentModules.find(mod => mod.id === editingId && mod.type === type);
+    const file = saved && saved.data && saved.data.file;
+    setFileNameForInput(dyn[type].file, pendingFileName);
+    setFileCurrentText(type, pendingFileName ? t('content.file_new_prefix') + pendingFileName
+      : file ? t('content.file_current_prefix') + (saved.data.fileName || file) : t('content.file_none'), !!(pendingFileName || file));
+  }
   syncTypeUI(type);
   updatePortableActions();
 }
@@ -1105,12 +1116,12 @@ function clearEditor() {
   renderIptvManualList();
   updateIptvSourceUI();
   setIptvStatus(t('content.iptv.no_channels'), '');
-  ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault'].forEach((k) => {
+  ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault', 'archive-download'].forEach((k) => {
     setFileCurrentText(k, t('content.file_none'), false);
   });
   // Reset visible filename labels for the dynamic file pickers — otherwise
   // the previous module's name would linger when reopening / editing.
-  ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault'].forEach((k) => {
+  ['pdf', 'launch', 'local-video', 'local-audio', 'download-vault', 'archive-download'].forEach((k) => {
     if (dyn[k] && dyn[k].file) setFileNameForInput(dyn[k].file, null);
   });
   renderGalleryList();
@@ -1177,13 +1188,13 @@ function openEditorForEdit(id) {
     renderGalleryList();
   } else if (mod.type === 'pdf' || mod.type === 'launch'
              || mod.type === 'local-video' || mod.type === 'local-audio'
-             || mod.type === 'download-vault') {
+             || mod.type === 'download-vault' || mod.type === 'archive-download') {
     if (d.file) {
       setFileCurrentText(mod.type, t('content.file_current_prefix') + (d.fileName || d.file), true);
     } else {
       setFileCurrentText(mod.type, t('content.file_none'), false);
     }
-    if (mod.type === 'download-vault') dyn['download-vault'].btn.value = d.buttonLabel || '';
+    if (mod.type === 'download-vault' || mod.type === 'archive-download') dyn['download-vault'].btn.value = d.buttonLabel || '';
   } else if (mod.type === 'iptv') {
     const src = ['xtream', 'm3u8', 'm3u', 'manual'].includes(d.source) ? d.source : 'manual';
     dyn.iptv.source.value = src;
@@ -1487,12 +1498,13 @@ async function pickForCurrentEditor(pick, type) {
   }
 }
 
-function bindFilePicker(type) {
-  const input = dyn[type].file;
+function bindFilePicker(boundType) {
+  const input = dyn[boundType].file;
   const label = document.querySelector('label[for="' + input.id + '"]');
-  const category = FILE_PICK_CATEGORY[type] || 'launch';
   if (label) label.addEventListener('click', async (e) => {
     e.preventDefault();
+    const type = boundType === 'download-vault' && moduleType.value === 'archive-download' ? 'archive-download' : boundType;
+    const category = type === 'archive-download' ? 'archives' : (FILE_PICK_CATEGORY[type] || 'launch');
     const picked = await pickForCurrentEditor(() => window.icurator.pickFile(category), type);
     if (!picked) return;
     pendingFileSourcePath = picked.path;
@@ -1771,14 +1783,14 @@ contentForm.addEventListener('submit', async (e) => {
     };
   } else if (type === 'pdf' || type === 'launch'
              || type === 'local-video' || type === 'local-audio'
-             || type === 'download-vault') {
+             || type === 'download-vault' || type === 'archive-download') {
     if (pendingFileSourcePath) {
       data = { sourcePath: pendingFileSourcePath };
     } else {
       // Keep whatever was there (main.js falls back to previous file when no sourcePath)
       data = {};
     }
-    if (type === 'download-vault') data.buttonLabel = dyn['download-vault'].btn.value.trim();
+    if (type === 'download-vault' || type === 'archive-download') data.buttonLabel = dyn['download-vault'].btn.value.trim();
   }
 
   const generation = editorGeneration;

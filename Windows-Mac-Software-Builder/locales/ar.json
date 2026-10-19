@@ -147,7 +147,8 @@
       "embed": "نموذج أو اختبار",
       "iptv": "قنوات IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "برنامج محمول (Windows / Mac)"
+      "portable": "برنامج محمول (Windows / Mac)",
+      "archives": "أرشيفات ZIP / RAR"
     },
     "youtube_url_label": "رابط أو معرّف الفيديو",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... أو المعرّف فقط",
@@ -247,7 +248,8 @@
       "embed": "Google Forms وTypeform واختبارات…",
       "iptv": "قائمة قنوات تلفزيونية عبر الإنترنت.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "أضف مجلد البرنامج مع ملفاته واعتمادياته."
+      "portable": "أضف مجلد البرنامج مع ملفاته واعتمادياته.",
+      "archives": "شارك الأرشيفات، بما فيها الملفات المحمية بكلمة مرور."
     },
     "type_group": {
       "video": "فيديو",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "تُضمَّن أرشيفات ZIP وRAR و7z وTAR وغيرها دون تغيير، حتى لو كانت محمية بكلمة مرور. لا يفتحها التطبيق ولا يطلب كلمة المرور. يحفظ المستلم الأرشيف ويستخرجه بتطبيق متوافق وكلمة المرور الأصلية."
   },
   "export": {
     "icon_label": "أيقونة البرنامج",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "يُحفظ الأرشيف دون تغيير. إذا كان محمياً، تحتاج إلى كلمة المرور الأصلية وتطبيق متوافق لاستخراجه."
   },
   "corners": {
     "music_label": "موسيقاي",

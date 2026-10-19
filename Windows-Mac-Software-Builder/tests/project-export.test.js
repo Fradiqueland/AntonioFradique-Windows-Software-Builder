@@ -826,3 +826,29 @@ test('project names retain Unicode but cannot escape or create reserved Windows 
   assert.equal(safeProjectName('CON'), '_CON');
   assert.equal(safeProjectName('  '), 'My Software');
 });
+
+
+test('opaque archive downloads keep every byte in Windows and Mac exports without native runtimes', async t => {
+  const f = fixture(t);
+  // Opaque data may be encrypted or use an unsupported archive format. Export
+  // must never try to unpack, decode or recompress the inner file itself.
+  const originals = ['protected.zip', 'protected.rar', 'protected.7z'].map(fileName => ({
+    fileName, bytes: Buffer.concat([Buffer.from(fileName), crypto.randomBytes(2048)])
+  }));
+  f.config.content = originals.map((item, index) => {
+    fs.writeFileSync(path.join(f.assetsDir, item.fileName), item.bytes);
+    return {id:'archive-'+index,type:'archive-download',data:{file:'dist-assets/'+item.fileName,fileName:item.fileName}};
+  });
+  assert.deepEqual(projectRuntimeRequirements(f), {ffmpeg:false,php:false});
+  for (const target of ['windows','mac']) {
+    await writeTemplate(f.templatePath, [...(target === 'windows' ? WINDOWS : MAC), ...runtimeEntries(target)]);
+    await exportProject({...f,target});
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : 'Curso António.data';
+    const config = JSON.parse(entries.get(base+'/data/project-config.json').data);
+    assert.equal(config.content.length, originals.length);
+    assert.ok(config.content.every(mod=>mod.type==='archive-download'));
+    for (const item of originals) assert.deepEqual(entries.get(base+'/dist-assets/'+item.fileName).data, item.bytes);
+    assert.equal([...entries.keys()].some(name=>name.startsWith(base+'/ffmpeg/') || name.startsWith(base+'/php/')),false);
+  }
+});

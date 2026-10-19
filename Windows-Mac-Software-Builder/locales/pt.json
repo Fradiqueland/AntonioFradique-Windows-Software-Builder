@@ -147,7 +147,8 @@
       "embed": "Formulário ou quiz",
       "iptv": "Canais IPTV",
       "local_web": "Ficheiro HTML / PHP",
-      "portable": "Programa portátil (Windows / Mac)"
+      "portable": "Programa portátil (Windows / Mac)",
+      "archives": "Arquivos ZIP / RAR"
     },
     "youtube_url_label": "URL ou ID do vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou só o ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, quizzes…",
       "iptv": "Lista de canais de TV online.",
       "local_web": "Importe uma página ou site do seu computador.",
-      "portable": "Inclua uma pasta de programa com os ficheiros e dependências necessários."
+      "portable": "Inclua uma pasta de programa com os ficheiros e dependências necessários.",
+      "archives": "Disponibilize arquivos, incluindo os protegidos por palavra-passe."
     },
     "type_group": {
       "video": "Vídeo",
@@ -266,7 +268,8 @@
       "php_help": "PHP requer o runtime PHP incluído no produto. Os scripts PHP executam código com as permissões do utilizador: importe apenas código de confiança. HTML, CSS e JavaScript funcionam sem PHP.",
       "invalid_file": "Escolha um ficheiro .html, .htm ou .php.",
       "pick_first": "Escolha primeiro o ficheiro HTML ou PHP principal."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR e outros arquivos são incluídos sem alterações, mesmo quando protegidos por palavra-passe. A aplicação não os abre nem pede a palavra-passe. O destinatário guarda o arquivo e usa uma aplicação compatível e a palavra-passe original para o extrair."
   },
   "export": {
     "icon_label": "Ícone do Software",
@@ -375,7 +378,8 @@
     "local_web_error": "Não foi possível abrir este ficheiro.",
     "local_web_php_hint": "Este módulo requer o runtime PHP incluído no produto. Contacte o autor se estiver em falta.",
     "local_web_invalid": "O serviço local não está disponível.",
-    "local_web_load_failed": "Verifique se o ficheiro principal e os recursos foram incluídos."
+    "local_web_load_failed": "Verifique se o ficheiro principal e os recursos foram incluídos.",
+    "archive_help": "O arquivo é guardado sem alterações. Se estiver protegido, precisa da palavra-passe original e de uma aplicação compatível para o extrair."
   },
   "corners": {
     "music_label": "Minha música",

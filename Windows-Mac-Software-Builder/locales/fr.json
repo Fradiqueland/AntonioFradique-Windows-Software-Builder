@@ -147,7 +147,8 @@
       "embed": "Formulaire ou quiz",
       "iptv": "Chaînes IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "Programme portable (Windows / Mac)"
+      "portable": "Programme portable (Windows / Mac)",
+      "archives": "Archives ZIP / RAR"
     },
     "youtube_url_label": "URL ou ID de la vidéo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... ou seulement l'ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, quiz…",
       "iptv": "Liste de chaînes TV en ligne.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Incluez le dossier d’un programme avec ses fichiers et dépendances."
+      "portable": "Incluez le dossier d’un programme avec ses fichiers et dépendances.",
+      "archives": "Partagez des archives, y compris celles protégées par mot de passe."
     },
     "type_group": {
       "video": "Vidéo",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "Les archives ZIP, RAR, 7z, TAR et autres sont incluses sans modification, même avec un mot de passe. L’application ne les ouvre pas et ne demande pas de mot de passe. Le destinataire les enregistre puis les extrait avec une application compatible et le mot de passe d’origine."
   },
   "export": {
     "icon_label": "Icône du Logiciel",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "L’archive est enregistrée sans modification. Si elle est protégée, utilisez le mot de passe d’origine et une application compatible pour l’extraire."
   },
   "corners": {
     "music_label": "Ma musique",
