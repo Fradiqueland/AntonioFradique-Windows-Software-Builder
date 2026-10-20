@@ -261,6 +261,14 @@ function plistExecutable(buffer) {
   return executable;
 }
 
+// Windows has no POSIX execute bits. A validated Mach-O executable needs a
+// portable ZIP mode instead of the host's synthetic 0666 mode. Never infer
+// execution from a filename, apply it to ordinary resources, or alter files.
+function portableFileMode(filename, stat) {
+  if (process.platform === 'win32' && nativeHeader(filename, stat)?.platform === 'mac') return 0o755;
+  return stat.mode & 0o777;
+}
+
 function inspectFolder(sourcePath) {
   const tree = scanTree(sourcePath);
   const sourceName = path.basename(tree.rootPath);
@@ -286,13 +294,13 @@ function inspectFolder(sourcePath) {
     try { binary = tree.resolve(`${prefix}Contents/MacOS/${executable}`); } catch (_) { throw new Error(`Executável do bundle em falta: ${executable}`); }
     const native = binary.kind === 'file' ? nativeHeader(binary.absolute, binary.stat) : null;
     if (!native || native.platform !== 'mac') throw new Error(`O executável ${executable} não é um programa Mach-O válido.`);
-    candidates.push({ path: bundle.relative || '.', ...native, kind: 'app', label: path.posix.basename(bundle.relative || sourceName), executable: !!(binary.stat.mode & 0o111) });
+    candidates.push({ path: bundle.relative || '.', ...native, kind: 'app', label: path.posix.basename(bundle.relative || sourceName), executable: process.platform === 'win32' || !!(binary.stat.mode & 0o111) });
   }
   for (const node of tree.nodes.values()) {
     if (node.kind !== 'file' || outerBundles.some(bundle => !bundle.relative || node.relative.startsWith(`${bundle.relative}/`))) continue;
     const native = nativeHeader(node.absolute, node.stat);
     if (!native || (native.platform === 'windows' && !/\.exe$/i.test(node.relative))) continue;
-    candidates.push({ path: node.relative, ...native, label: path.posix.basename(node.relative), executable: !!(node.stat.mode & 0o111) });
+    candidates.push({ path: node.relative, ...native, label: path.posix.basename(node.relative), executable: (process.platform === 'win32' && native.platform === 'mac') || !!(node.stat.mode & 0o111) });
   }
   function rank(candidate) {
     return candidate.path.split('/').length * 10 + (/unins|uninstall|helper|crashpad|updater|crashreport/i.test(candidate.label) ? 100 : 0);
@@ -450,4 +458,4 @@ function assertPortableTarget({ data, assetsDir, target }) {
     warnings: requiresWine ? ['Esta aplicação requer Wine instalado no Mac. A compatibilidade não é garantida; não é convertida numa aplicação Mac nativa.'] : [] };
 }
 
-module.exports = { LIMITS, normalizePortableLink, copyPortableTree, scanPortableFolder, importPortableProject, validatePortableProject, updatePortableProject, removePortableProject, assertPortableTarget };
+module.exports = { LIMITS, normalizePortableLink, portableFileMode, copyPortableTree, scanPortableFolder, importPortableProject, validatePortableProject, updatePortableProject, removePortableProject, assertPortableTarget };

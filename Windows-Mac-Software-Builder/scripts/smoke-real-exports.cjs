@@ -13,6 +13,7 @@ const vm = require('node:vm');
 const { createRequire } = require('node:module');
 const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
+const { pipeline } = require('node:stream/promises');
 const yauzl = require('yauzl');
 const execFileP = promisify(execFile);
 const root = path.resolve(__dirname, '..');
@@ -286,6 +287,58 @@ async function verifyRealPortableLaunch(applicationRoot, assetsDir) {
   report.checks.push('portable import + real native process + physical ASAR + persistent working copy');
 }
 
+async function verifyCrossPlatformPortableExport({ applicationRoot, templates, engine }) {
+  const fromWindows = process.platform === 'win32';
+  const target = fromWindows ? 'mac' : 'windows';
+  const portable = createRequire(path.join(applicationRoot, 'package.json'))('./src/shared/portable-app');
+  const sourceName = fromWindows ? 'Imported Mac.app' : 'Imported Windows';
+  const source = path.join(temporary, sourceName);
+  const binaryRelative = fromWindows ? 'Contents/MacOS/Program' : 'Program.exe';
+  const resourceRelative = fromWindows ? 'Contents/Resources/settings.txt' : 'resources/settings.txt';
+  const executable = path.join(source, binaryRelative);
+  fs.mkdirSync(path.dirname(executable), {recursive:true});
+  fs.mkdirSync(path.dirname(path.join(source,resourceRelative)), {recursive:true});
+  fs.writeFileSync(path.join(source,resourceRelative),'Preserve original resources');
+  if (fromWindows) fs.writeFileSync(path.join(source,'Contents/Info.plist'),'<plist><dict><key>CFBundleExecutable</key><string>Program</string></dict></plist>');
+  // Read a real binary from the verified destination template. The creator
+  // never executes opposite-platform code or materialises the signed bundle.
+  const templatePath = path.join(templates,fromWindows?'mac-universal.zip':'windows-x64.zip');
+  const nativeEntry = fromWindows ? 'LaunchBox Viewer.app/Contents/MacOS/LaunchBox Viewer' : 'LaunchBox Viewer.exe';
+  const zip = await engine.archiveIO.openZip(templatePath);
+  try {
+    await new Promise((resolve,reject) => {
+      zip.once('error',reject);
+      zip.once('end',()=>reject(new Error('Native portable fixture missing from template')));
+      zip.on('entry',entry => {
+        if(entry.fileName!==nativeEntry)return zip.readEntry();
+        engine.archiveIO.entryStream(zip,entry).then(stream=>pipeline(stream,fs.createWriteStream(executable,{flags:'wx'}))).then(resolve,reject);
+      });zip.readEntry();
+    });
+  } finally {zip.close();}
+  const nativeHash=await fileHash(executable);
+  assert.equal(fs.statSync(executable).mode&0o111,0,'Fixture must lack Unix execute bits on the creator host');
+  const projectRoot=path.join(temporary,'cross-platform-regression'),assetsDir=path.join(projectRoot,'dist-assets');
+  fs.mkdirSync(assetsDir,{recursive:true});fs.mkdirSync(path.join(projectRoot,'data'));
+  const data=portable.importPortableProject({sourcePath:source,assetsDir,entries:fromWindows?{mac:'.'}:{windows:'Program.exe'}});
+  data.candidates.forEach(candidate=>{candidate.executable=false;}); // Saved metadata is advisory.
+  const config={brand:{title:'Cross-platform portable'},content:[{id:'native-portable',type:'portable',data}]};
+  assert.equal(portable.assertPortableTarget({data,assetsDir,target}).requiresWine,false);
+  const importedBinary=(fromWindows?sourceName+'/':'')+binaryRelative;
+  const imported=path.join(projectRoot,data.root,importedBinary),modeBefore=fs.statSync(imported).mode;
+  const outputPath=path.join(temporary,'cross-platform-portable.zip');
+  await engine.exportProject({target,templatePath,outputPath,projectName:'Portable Regression',config,assetsDir});
+  const base=(fromWindows?'Portable Regression.data/':'resources/')+data.root+'/';
+  const resource=(fromWindows?sourceName+'/':'')+resourceRelative;
+  const entries=await zipIndex(outputPath,[base+importedBinary,base+resource]);
+  assert.equal(entries.get(base+importedBinary).mode,0o100000|(fromWindows?0o755:modeBefore&0o777));
+  assert.equal(entries.get(base+importedBinary).sha256,nativeHash);
+  assert.equal(entries.get(base+resource).mode&0o111,0);
+  assert.equal(fs.statSync(imported).mode,modeBefore,'Export must not change the saved application on disk');
+  report.checks.push(fromWindows
+    ? 'Windows to Mac portable regression: real Mach-O, stale saved metadata, ZIP mode 0755, unchanged binary SHA-256/resources/project'
+    : 'Mac to Windows portable regression: real PE EXE without Unix execute permission, complete export, unchanged binary SHA-256/resources/project');
+}
+
 async function main() {
   assert.ok(process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE, 'This gate must run in the actual Electron main process');
   assert.ok(['win32', 'darwin'].includes(process.platform), 'Run this smoke on a native Windows or Mac runner');
@@ -402,6 +455,7 @@ async function main() {
     }
   }
   if (!mac) await verifyRealWindowsSfx({ applicationRoot, resources, engine, config, assetsDir, templates, expectedAsar: expectedWindowsAsar, sharedRuntimeSourcesDir });
+  await verifyCrossPlatformPortableExport({ applicationRoot, templates, engine });
   await verifyRealPortableLaunch(applicationRoot, assetsDir);
   await verifyAndroidInformation(applicationRoot);
   report.builderUI = await require('./verify-builder-ui.cjs').verifyBuilderUI({ BrowserWindow, applicationRoot });

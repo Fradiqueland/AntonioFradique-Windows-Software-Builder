@@ -531,7 +531,6 @@ test('Mac ZIP preserves all bundle bytes, executable modes and framework symlink
 });
 
 test('portable ZIP exports preserve safe app symlink bytes, executable modes and empty directories', async t => {
-  if (process.platform === 'win32') return t.skip('Windows cannot preserve Unix executable bits for native Mac asset exports.');
   const f = portableFixture(t, { symlinks: true });
   if (!f) return;
   const executable = path.join(f.portableRoot, f.bundle, 'Contents', 'MacOS', 'Portable Tool');
@@ -555,7 +554,7 @@ test('portable ZIP exports preserve safe app symlink bytes, executable modes and
     assert.equal(entries.get(framework + '/Demo').data.toString(), 'Versions/Current/Demo');
     assert.equal(entries.get(framework + '/Demo').mode & 0o170000, 0o120000);
     assert.deepEqual(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').data, executableHeader('mac'));
-    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').mode, 0o100000 | (fs.statSync(executable).mode & 0o777));
+    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').mode, 0o100000 | (process.platform === 'win32' ? 0o755 : fs.statSync(executable).mode & 0o777));
     assert.equal(entries.get(base + '/' + f.bundle + '/Contents/Resources/settings.json').mode, 0o100000 | (fs.statSync(settings).mode & 0o777));
     assert.equal(entries.get(base + '/' + f.bundle + '/Contents/Resources/empty-state/').mode, 0o040000 | (fs.statSync(empty).mode & 0o777));
     assert.equal(entries.get(base + '/').mode, 0o040000 | (fs.statSync(f.portableRoot).mode & 0o777));
@@ -563,12 +562,35 @@ test('portable ZIP exports preserve safe app symlink bytes, executable modes and
   }
 });
 
-test('Mac portable export rejects executable permissions lost on import or later edits', async t => {
+test('Mac portable export rejects lost Unix permissions and recovers Windows ZIP permissions', async t => {
   const f = portableFixture(t, { windows: false });
   fs.chmodSync(path.join(f.portableRoot, f.bundle, 'Contents', 'MacOS', 'Portable Tool'), 0o644);
   await writeTemplate(f.templatePath, MAC);
-  await assert.rejects(exportProject({ ...f, target: 'mac' }), /permiss|execut.*Mac|Mac.*execut/i);
-  assert.equal(fs.existsSync(f.outputPath), false);
+  if (process.platform === 'win32') {
+    await exportProject({ ...f, target: 'mac' });
+    const entries = await readZip(f.outputPath);
+    assert.equal(entries.get(f.projectName+'.data/'+f.data.root+'/'+f.bundle+'/Contents/MacOS/Portable Tool').mode,0o100755);
+  } else {
+    await assert.rejects(exportProject({ ...f, target: 'mac' }), /permiss|execut.*Mac|Mac.*execut/i);
+    assert.equal(fs.existsSync(f.outputPath), false);
+  }
+});
+
+test('Mac builder exports a Windows portable EXE without Unix execute permission', async t => {
+  const f = portableFixture(t, { mac: false });
+  const executable = path.join(f.portableRoot, 'tool.exe');
+  fs.chmodSync(executable, 0o644);
+  assert.equal(fs.statSync(executable).mode & 0o111, 0);
+  const selected = require('../src/shared/portable-app').assertPortableTarget({data:f.data,assetsDir:f.assetsDir,target:'windows'});
+  assert.equal(selected.requiresWine, false);
+  assert.equal(selected.launchKind, 'exe');
+  await writeTemplate(f.templatePath, WINDOWS);
+  await exportProject({ ...f, target: 'windows' });
+  const entries = await readZip(f.outputPath);
+  const binary = entries.get('resources/' + f.data.root + '/tool.exe');
+  assert.deepEqual(binary.data, executableHeader('windows'));
+  assert.equal(binary.mode & 0o111, 0, 'Windows execution must not require a POSIX execute flag');
+  assert.deepEqual(JSON.parse(entries.get('resources/data/project-config.json').data), f.config);
 });
 
 test('portable export rejects missing native targets and permits an explicit Mac Wine option', async t => {

@@ -13,7 +13,7 @@ const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
 const yazl = require('yazl');
 const { validateWebProject } = require('./local-web');
-const { assertPortableTarget, normalizePortableLink, validatePortableProject } = require('./portable-app');
+const { assertPortableTarget, normalizePortableLink, portableFileMode, validatePortableProject } = require('./portable-app');
 const { assertAPKExport } = require('./android-runtime');
 const { FFMPEG_SOURCE_LOCK } = require('./ffmpeg-source-lock');
 
@@ -250,9 +250,11 @@ async function inspectAssets(assetsDir, portableRoots = []) {
       registerPath(paths, relative, kind);
       if (paths.size > LIMITS.entries) throw new Error('Demasiados recursos.');
       const type = kind === 'directory' ? 0o040000 : kind === 'symlink' ? 0o120000 : 0o100000;
-      // Preserve imported executable/read permissions, never setuid/setgid or
-      // blanket executable bits. Ordinary content keeps the previous defaults.
-      const mode = type | (portable ? stat.mode & 0o777 : kind === 'directory' ? 0o755 : 0o644);
+      // Preserve Unix modes. On Windows only validated native Mac executables
+      // in managed portable modules receive 0755 in the ZIP, never on disk.
+      const permissions = portable ? (kind === 'file' ? portableFileMode(absolute, stat) : stat.mode & 0o777)
+        : kind === 'directory' ? 0o755 : 0o644;
+      const mode = type | permissions;
       const item = { absolute, relative, stat, kind, mode, portable };
       entries.push(item);
       if (kind === 'directory') await walk(absolute, relative, depth + 1);

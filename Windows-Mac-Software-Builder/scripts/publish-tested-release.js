@@ -74,6 +74,8 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
     '',
+    'Fix Windows-to-Mac exports containing native portable Mac applications: Windows does not preserve Unix execute bits, so validated Mach-O executables are written with mode 0755 inside the exported ZIP and editable project archives. Existing saved projects work without reimporting. Original files, binary bytes and the signed Viewer template remain unchanged. Ordinary resources are not made executable; native Unix permission checks and rejection of incompatible or invalid programs remain in place.',
+    '',
     '**APK execution is unavailable in this release.** The Android option is an information panel; there is no bundled tested Android engine. Existing modules remain usable without an Android emulator.',
     '',
     'Top and bottom image banners each have an optional end-user X button. Closing a permitted banner increases the viewing area without opening its destination link or losing the current content. Banners return when the application is reopened. Existing projects keep closing disabled by default.',
