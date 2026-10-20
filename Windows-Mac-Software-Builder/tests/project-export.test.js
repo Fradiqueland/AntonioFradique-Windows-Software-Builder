@@ -545,7 +545,8 @@ test('portable ZIP exports preserve safe app symlink bytes, executable modes and
     const inspected = await inspectProjectAssets({ ...f, target });
     assert.equal(inspected.links.length, 2);
     assert.ok(inspected.files.every(item => item.kind === 'file'));
-    assert.ok(inspected.entries.some(item => item.kind === 'directory' && item.absolute === empty));
+    assert.ok(inspected.entries.some(item => item.kind === 'directory' &&
+      fs.realpathSync.native(item.absolute) === fs.realpathSync.native(empty)));
     await exportProject({ ...f, target });
     const entries = await readZip(f.outputPath);
     const base = (target === 'mac' ? 'Curso António.data/' : 'resources/') + f.data.root;
