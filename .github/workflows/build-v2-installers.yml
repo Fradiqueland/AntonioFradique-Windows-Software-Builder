@@ -31,6 +31,10 @@ env:
 
 jobs:
   ffmpeg-native:
+    # One-time PR #6 publication recovery: no product file changes are allowed
+    # by the separate recovery gate. Every normal native gate is unchanged.
+    if: >-
+      github.event_name != 'pull_request' || github.event.pull_request.number != 6 || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.title != 'v2.6.1: recover verified installers from run 39344259482'
     name: FFmpeg from verified sources (${{ matrix.target }})
     strategy:
       fail-fast: false
