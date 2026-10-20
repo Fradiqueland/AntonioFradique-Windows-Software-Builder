@@ -143,6 +143,38 @@ test('older partial configurations still merge defaults and migrate the single b
   assert.equal(saved.marketing.banners.top.image, 'dist-assets/old-top.png');
   assert.equal(typeof saved.brand.colors.sidebar, 'string');
   assert.equal(saved.marketing.banner, undefined);
+  assert.equal(saved.marketing.banners.top.dismissible, false);
+});
+
+test('independent close permissions and animated GIF bytes survive save and project transfer', async t => {
+  const f = fixture(t);
+  const gif = path.join(__dirname, 'fixtures/banner-animated.gif');
+  const before = fs.readFileSync(gif);
+  const saved = f.run('marketing:saveBanners', {
+    top: { enabled: true, dismissible: true, imageSourcePath: gif, url: 'https://example.org' },
+    bottom: { enabled: true, dismissible: false, imageSourcePath: gif }
+  });
+  for (const slot of ['top', 'bottom']) {
+    const banner = saved.marketing.banners[slot];
+    assert.equal(banner.dismissible, slot === 'top');
+    assert.match(banner.image, /\.gif$/);
+    assert.deepEqual(fs.readFileSync(path.join(f.project, banner.image)), before);
+  }
+  // Older callers that omit the option must not reset a saved permission.
+  const retained = f.run('marketing:saveBanners', { top: { enabled: true }, bottom: { enabled: true } });
+  assert.equal(retained.marketing.banners.top.dismissible, true);
+  assert.equal(retained.marketing.banners.bottom.dismissible, false);
+  const archive = path.join(f.root, 'banners.wsmb'), destination = path.join(f.root, 'restored');
+  const archiveAPI = require('../src/shared/project-archive');
+  const readConfig = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+  await archiveAPI.exportArchive({ projectRoot: f.project, outputPath: archive, name: 'Banners', appVersion: '2.6.2', readConfig });
+  const restored = await archiveAPI.importArchive({ archivePath: archive, destination, readConfig });
+  assert.deepEqual(restored.config.marketing.banners, JSON.parse(JSON.stringify(retained.marketing.banners)));
+  for (const banner of Object.values(restored.config.marketing.banners)) {
+    assert.deepEqual(fs.readFileSync(path.join(destination, banner.image)), before);
+  }
+  const off = f.run('marketing:saveBanners', { top: { enabled: true, dismissible: false } });
+  assert.equal(off.marketing.banners.top.dismissible, false);
 });
 
 test('invalid project indexes block initialization and CRUD without replacing or hiding data', t => {

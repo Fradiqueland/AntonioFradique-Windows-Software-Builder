@@ -1958,6 +1958,8 @@ async function renderBanner(banners) {
   bannerBottomEl.classList.add('hidden');
   bannerTopEl.innerHTML = '';
   bannerBottomEl.innerHTML = '';
+  bannerTopEl.classList.remove('banner-dismissible');
+  bannerBottomEl.classList.remove('banner-dismissible');
   document.body.classList.remove('banner-top', 'banner-bottom');
 
   const b = banners || {};
@@ -1991,6 +1993,27 @@ async function renderBannerSlot(position, banner, host) {
   img.alt = 'Banner';
   link.appendChild(img);
   host.appendChild(link);
+  if (banner.dismissible === true) {
+    host.classList.add('banner-dismissible');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'banner-close';
+    close.textContent = '×';
+    const key = 'banner.close_' + position;
+    const label = tr(key, position === 'top' ? 'Fechar banner de topo' : 'Fechar banner de rodapé');
+    close.setAttribute('data-i18n-title', key);
+    close.setAttribute('aria-label', label);
+    close.title = label;
+    close.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      host.classList.add('hidden');
+      host.replaceChildren();
+      document.body.classList.remove('banner-' + position);
+      stageEl.focus({ preventScroll: true });
+    });
+    host.appendChild(close);
+  }
   host.classList.remove('hidden');
   document.body.classList.add(position === 'top' ? 'banner-top' : 'banner-bottom');
 }

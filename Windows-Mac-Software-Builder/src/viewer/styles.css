@@ -45,8 +45,25 @@ body {
  * ficam logo a seguir para não se sobreporem. */
 #banner-top { top: 30px; }
 #banner-bottom { bottom: 30px; }
-.banner-bar a { display: inline-block; line-height: 0; cursor: pointer; }
+.banner-bar a { display: inline-block; min-width: 0; max-width: 100%; line-height: 0; cursor: pointer; }
 .banner-bar img { max-height: 90px; max-width: 100%; display: block; }
+.banner-bar.banner-dismissible { padding-inline: 48px; min-height: 46px; }
+.banner-close {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: 1px solid #64748b;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #0f172a;
+  font: 24px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+.banner-close:hover { background: #e2e8f0; }
+.banner-close:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
 
 body.banner-top    .viewer-app { padding-top: 104px; }
 body.banner-bottom .viewer-app { padding-bottom: 104px; }

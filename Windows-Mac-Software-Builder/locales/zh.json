@@ -107,7 +107,7 @@
     "toggle_sub": "横幅将固定显示在查看器的所有页面上。",
     "image_label": "横幅图片",
     "image_empty": "未加载横幅",
-    "image_help": "推荐：横向图片（例如 728×90 或 970×90）。复制到 dist-assets/。",
+    "image_help": "推荐：728 × 90 像素。支持 PNG、JPG 和 GIF，包括动画。",
     "url_label": "目标链接",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "当最终客户点击横幅时，URL 将在外部浏览器中打开。",
@@ -115,11 +115,15 @@
     "position_top": "页面顶部",
     "position_bottom": "页面底部",
     "save_btn": "保存横幅设置",
-    "dims_hint": "支持格式：PNG、JPG 或动态 GIF。推荐尺寸：728×90px（横向格式）。",
+    "dims_hint": "顶部和底部：推荐尺寸 728 × 90 像素。支持 PNG、JPG 和动态 GIF。较大的图片会适应可用空间。",
     "top_legend": "顶部横幅",
     "bottom_legend": "底部横幅",
     "top_toggle_title": "启用顶部横幅",
-    "bottom_toggle_title": "启用底部横幅"
+    "bottom_toggle_title": "启用底部横幅",
+    "dismissible_title": "允许通过 X 关闭",
+    "dismissible_hint": "用户可以关闭此横幅以扩大显示区域。重新打开应用时，横幅会再次显示。",
+    "close_top": "关闭顶部横幅",
+    "close_bottom": "关闭底部横幅"
   },
   "content": {
     "list_title": "菜单模块",

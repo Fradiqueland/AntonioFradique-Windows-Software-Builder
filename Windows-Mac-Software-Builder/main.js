@@ -319,8 +319,8 @@ const DEFAULT_CONFIG = {
   marketing: {
     leads: { enabled: false, heading: 'Insira o seu email para aceder ao conteúdo', formHtml: '' },
     banners: {
-      top: { enabled: false, image: null, url: '' },
-      bottom: { enabled: false, image: null, url: '' }
+      top: { enabled: false, dismissible: false, image: null, url: '' },
+      bottom: { enabled: false, dismissible: false, image: null, url: '' }
     },
     social: {
       site: '', instagram: '', facebook: '', x: '', tiktok: '',
@@ -520,14 +520,15 @@ function migrateConfig(cfg) {
     const old = cfg.marketing.banner;
     if (!cfg.marketing.banners || typeof cfg.marketing.banners !== 'object') {
       cfg.marketing.banners = {
-        top: { enabled: false, image: null, url: '' },
-        bottom: { enabled: false, image: null, url: '' }
+        top: { enabled: false, dismissible: false, image: null, url: '' },
+        bottom: { enabled: false, dismissible: false, image: null, url: '' }
       };
     }
     if (old.image || old.enabled) {
       const slot = old.position === 'top' ? 'top' : 'bottom';
       cfg.marketing.banners[slot] = {
         enabled: !!old.enabled,
+        dismissible: false,
         image: old.image || null,
         url: typeof old.url === 'string' ? old.url : ''
       };
@@ -1386,6 +1387,7 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
     }
     return {
       enabled: !!p.enabled,
+      dismissible: typeof p.dismissible === 'boolean' ? p.dismissible : cur.dismissible === true,
       image,
       url: (typeof p.url === 'string') ? p.url.trim() : (cur.url || '')
     };

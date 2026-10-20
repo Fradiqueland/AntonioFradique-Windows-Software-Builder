@@ -527,7 +527,7 @@
             <button type="button" class="btn btn-ghost btn-sm section-toggle" data-i18n="section.show">Mostrar</button>
           </div>
           <form id="banner-form" class="form-card autosave" autocomplete="off">
-            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Dimensões recomendadas: 728×90px (ou formato horizontal equivalente).</p>
+            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Topo e rodapé: recomendado 728 × 90 px. PNG, JPG e GIF animado. Imagens maiores ajustam-se ao espaço disponível.</p>
 
             <!-- BANNER DE TOPO -->
             <fieldset class="banner-slot">
@@ -542,13 +542,24 @@
                 </label>
               </div>
               <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-top-dismissible" aria-describedby="banner-top-dismissible-hint" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.dismissible_title">Permitir fechar com X</span>
+                    <span class="toggle-sub" id="banner-top-dismissible-hint" data-i18n="banner.dismissible_hint">O utilizador pode fechar este banner para ganhar espaço. Volta a aparecer ao reabrir a aplicação.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
                 <label data-i18n="banner.image_label">Imagem do Banner</label>
                 <div class="file-row">
                   <label class="file-btn" for="banner-top-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                  <input type="file" id="banner-top-image" accept="image/*" class="file-input-hidden" />
+                  <input type="file" id="banner-top-image" accept="image/*,.gif" aria-describedby="banner-top-image-help" class="file-input-hidden" />
                   <span class="file-name" id="banner-top-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                   <button type="button" class="btn btn-ghost" id="banner-top-image-remove" data-i18n="common.remove">Remover</button>
                 </div>
+                <small id="banner-top-image-help" data-i18n="banner.image_help">Recomendado: 728 × 90 px. Aceita PNG, JPG e GIF, incluindo animações.</small>
                 <div class="logo-preview-wrap banner-preview-wrap">
                   <img id="banner-top-image-preview" alt="Pré-visualização do banner de topo" />
                   <span id="banner-top-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
@@ -575,13 +586,24 @@
                 </label>
               </div>
               <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-bottom-dismissible" aria-describedby="banner-bottom-dismissible-hint" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.dismissible_title">Permitir fechar com X</span>
+                    <span class="toggle-sub" id="banner-bottom-dismissible-hint" data-i18n="banner.dismissible_hint">O utilizador pode fechar este banner para ganhar espaço. Volta a aparecer ao reabrir a aplicação.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
                 <label data-i18n="banner.image_label">Imagem do Banner</label>
                 <div class="file-row">
                   <label class="file-btn" for="banner-bottom-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                  <input type="file" id="banner-bottom-image" accept="image/*" class="file-input-hidden" />
+                  <input type="file" id="banner-bottom-image" accept="image/*,.gif" aria-describedby="banner-bottom-image-help" class="file-input-hidden" />
                   <span class="file-name" id="banner-bottom-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                   <button type="button" class="btn btn-ghost" id="banner-bottom-image-remove" data-i18n="common.remove">Remover</button>
                 </div>
+                <small id="banner-bottom-image-help" data-i18n="banner.image_help">Recomendado: 728 × 90 px. Aceita PNG, JPG e GIF, incluindo animações.</small>
                 <div class="logo-preview-wrap banner-preview-wrap">
                   <img id="banner-bottom-image-preview" alt="Pré-visualização do banner de rodapé" />
                   <span id="banner-bottom-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>

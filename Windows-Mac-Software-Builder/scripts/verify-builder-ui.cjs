@@ -24,7 +24,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
       if (await evaluate(condition)) return;
       await new Promise(resolve => setTimeout(resolve, 20));
     }
-    console.error('Builder UI state:', await evaluate(`({scroll:document.scrollingElement.scrollTop,focus:document.activeElement?.id,point:qa.lastPoint,checked:document.getElementById('banner-top-enabled').checked,events:qa.mouseEvents,config:qa.config.marketing.banners})`));
+    console.error('Builder UI state:', await evaluate(`({viewport:[innerWidth,innerHeight],appRect:document.querySelector('.app').getBoundingClientRect().toJSON(),scroll:document.scrollingElement.scrollTop,focus:document.activeElement?.id,point:qa.lastPoint,checked:document.getElementById('banner-top-enabled').checked,events:qa.mouseEvents,config:qa.config.marketing.banners})`));
     throw new Error('Builder UI condition timed out: ' + condition);
   }
   try {
@@ -93,6 +93,25 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
         assert.ok(await evaluate("document.querySelector('.sidebar').getBoundingClientRect().right > 0"));
       }
     }
+    // New permissions share the real toggle layout and autosave form. Exercise
+    // pointer clicks (not scripted checkbox changes) and reload saved inputs.
+    for (const slot of ['top', 'bottom']) {
+      for (const allowed of [true, false, true]) {
+        const point = await evaluate(`(() => {
+          const label=document.getElementById('banner-${slot}-dismissible').closest('label');
+          label.scrollIntoView({block:'center'});
+          const r=label.querySelector('.toggle-track').getBoundingClientRect();
+          return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};
+        })()`);
+        await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))');
+        win.webContents.sendInputEvent({type:'mouseMove',...point});
+        win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...point});
+        win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,...point});
+        await until(`qa.config.marketing.banners.${slot}.dismissible === ${allowed} && settingsWrites.size === 0`);
+        assert.equal(await evaluate('document.scrollingElement.scrollTop'), 0);
+      }
+      assert.match(await evaluate(`document.getElementById('banner-${slot}-image-help').textContent`), /728.*90.*GIF/);
+    }
     await evaluate(`goToTab('content'); contentAddBtn.click();
       document.querySelector('.type-card[data-type="archive-download"]').click();
       moduleTitle.value='Protected archive';
@@ -115,6 +134,8 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     await until("qa.active === 'beta' && !projectTransition");
     assert.deepEqual(await evaluate('qa.calls'), ['banner-start', 'banner-done', 'open']);
     assert.equal(await evaluate('qa.config.marketing.banners.top.enabled'), true);
+    assert.equal(await evaluate("document.getElementById('banner-top-dismissible').checked"), true);
+    assert.equal(await evaluate("document.getElementById('banner-bottom-dismissible').checked"), true);
     // A failed save remains editable and prevents a switch; retry preserves it.
     await evaluate("qa.failBanner=true; qa.calls=[]; goToTab('aparencia'); document.getElementById('banner-bottom-enabled').click(); openProject('alpha'); void 0;");
     await until("settingsFailures.size === 1 && settingsWrites.size === 0");
@@ -150,7 +171,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     assert.deepEqual(crashes, []);
     assert.deepEqual(navigations, []);
     assert.ok(await evaluate("document.querySelector('.app').isConnected && document.body.innerText.length > 1000"));
-    return { bannerToggles: 8, navigationCount: navigations.length, saveFailureRecovery: true,
+    return { bannerToggles: 8, bannerCloseToggles: 6, bannerSizeAndGifHints: true, navigationCount: navigations.length, saveFailureRecovery: true,
       pendingSettingsPreserved: true, projectImportExport: true, archiveDownloads: true, renderer: 'full shipped code in Chromium' };
   } finally { if (!win.isDestroyed()) win.destroy(); }
 }

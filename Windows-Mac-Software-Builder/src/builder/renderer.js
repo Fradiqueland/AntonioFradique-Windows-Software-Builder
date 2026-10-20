@@ -551,6 +551,7 @@ const showBannerStatus = makeStatus(document.getElementById('banner-status'));
  * estado de imagem pendente (escolher / remover / manter). */
 function makeBannerSlot(slotName) {
   const enabled = document.getElementById('banner-' + slotName + '-enabled');
+  const dismissible = document.getElementById('banner-' + slotName + '-dismissible');
   const imageInput = document.getElementById('banner-' + slotName + '-image');
   const removeBtn = document.getElementById('banner-' + slotName + '-image-remove');
   const preview = document.getElementById('banner-' + slotName + '-image-preview');
@@ -585,6 +586,7 @@ function makeBannerSlot(slotName) {
     payload() {
       return {
         enabled: enabled.checked,
+        dismissible: dismissible.checked,
         url: urlInput.value,
         imageSourcePath: state.pendingImageSourcePath || undefined,
         removeImage: state.pendingRemoveImage || undefined
@@ -593,6 +595,7 @@ function makeBannerSlot(slotName) {
     async load(banner) {
       const b = banner || {};
       enabled.checked = !!b.enabled;
+      dismissible.checked = b.dismissible === true;
       urlInput.value = b.url || '';
       state.currentImageRelative = b.image || null;
       state.pendingImageSourcePath = null;

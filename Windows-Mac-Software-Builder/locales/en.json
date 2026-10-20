@@ -107,7 +107,7 @@
     "toggle_sub": "The banner will be fixed in the Viewer across all pages.",
     "image_label": "Banner Image",
     "image_empty": "No banner loaded",
-    "image_help": "Recommended: horizontal image (e.g. 728×90 or 970×90). Copied to dist-assets/.",
+    "image_help": "Recommended: 728 × 90 px. Supports PNG, JPG and GIF, including animations.",
     "url_label": "Destination Link",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "URL opened in the external browser when the end user clicks the banner.",
@@ -115,11 +115,15 @@
     "position_top": "Top of Page",
     "position_bottom": "Bottom of Page",
     "save_btn": "Save Banner Settings",
-    "dims_hint": "Accepted formats: PNG, JPG or animated GIF. Recommended size: 728×90px (horizontal format).",
+    "dims_hint": "Top and bottom: recommended 728 × 90 px. PNG, JPG and animated GIF. Larger images fit the available space.",
     "top_legend": "Top Banner",
     "bottom_legend": "Bottom Banner",
     "top_toggle_title": "Enable Top Banner",
-    "bottom_toggle_title": "Enable Bottom Banner"
+    "bottom_toggle_title": "Enable Bottom Banner",
+    "dismissible_title": "Allow closing with X",
+    "dismissible_hint": "Users can close this banner to gain space. It appears again when the application is reopened.",
+    "close_top": "Close top banner",
+    "close_bottom": "Close bottom banner"
   },
   "content": {
     "list_title": "Menu Modules",

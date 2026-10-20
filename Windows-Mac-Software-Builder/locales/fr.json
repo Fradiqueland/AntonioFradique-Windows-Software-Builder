@@ -107,7 +107,7 @@
     "toggle_sub": "La bannière restera fixe dans la Visionneuse, sur toutes les pages.",
     "image_label": "Image de la Bannière",
     "image_empty": "Aucune bannière chargée",
-    "image_help": "Recommandé : image horizontale (ex : 728×90 ou 970×90). Copiée dans dist-assets/.",
+    "image_help": "Recommandé : 728 × 90 px. PNG, JPG et GIF acceptés, y compris les animations.",
     "url_label": "Lien de Destination",
     "url_placeholder": "https://exemple.com/mon-lien-affilie",
     "url_help": "URL ouverte dans le navigateur externe quand le client final clique sur la bannière.",
@@ -115,11 +115,15 @@
     "position_top": "Haut de Page",
     "position_bottom": "Bas de Page",
     "save_btn": "Enregistrer les Paramètres de Bannière",
-    "dims_hint": "Formats acceptés : PNG, JPG ou GIF animé. Taille recommandée : 728×90px (format horizontal).",
+    "dims_hint": "En haut et en bas : 728 × 90 px recommandés. PNG, JPG et GIF animé. Les grandes images sont ajustées à l’espace disponible.",
     "top_legend": "Bannière du Haut",
     "bottom_legend": "Bannière du Bas",
     "top_toggle_title": "Activer la Bannière du Haut",
-    "bottom_toggle_title": "Activer la Bannière du Bas"
+    "bottom_toggle_title": "Activer la Bannière du Bas",
+    "dismissible_title": "Autoriser la fermeture avec X",
+    "dismissible_hint": "L’utilisateur peut fermer cette bannière pour gagner de la place. Elle réapparaît à la réouverture de l’application.",
+    "close_top": "Fermer la bannière supérieure",
+    "close_bottom": "Fermer la bannière inférieure"
   },
   "content": {
     "list_title": "Modules du Menu",

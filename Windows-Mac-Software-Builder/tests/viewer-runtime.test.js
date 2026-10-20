@@ -126,6 +126,46 @@ function deferred() { let resolve, reject; const promise = new Promise((yes, no)
 async function flush() { for (let i = 0; i < 8; i++) await Promise.resolve(); }
 const iptv = { channels: [{ name: 'One', url: 'https://stream.example/live.m3u8' }] };
 
+test('each permitted banner closes independently without opening its link or saving project state', async () => {
+  let writes = 0;
+  const h = harness({ saveState: async () => { writes++; } });
+  const banners = { top: { enabled: true, dismissible: true, image: 'top.gif', url: 'https://example.org' },
+    bottom: { enabled: true, dismissible: true, image: 'bottom.gif' } };
+  h.context.banners = banners;
+  await h.run('renderBanner(banners)');
+  const top = h.document.getElementById('banner-top'), bottom = h.document.getElementById('banner-bottom');
+  assert.match(top.querySelector('img').src, /top\.gif$/);
+  assert.equal(top.querySelector('.banner-close').getAttribute('aria-label'), 'Fechar banner de topo');
+  await top.querySelector('.banner-close').click();
+  assert.equal(top.classList.contains('hidden'), true);
+  assert.equal(h.document.body.classList.contains('banner-top'), false);
+  assert.equal(h.document.body.classList.contains('banner-bottom'), true);
+  assert.equal(bottom.classList.contains('hidden'), false);
+  assert.equal(h.document.activeElement, h.stage);
+  assert.equal(top.children.length, 0);
+  await bottom.querySelector('.banner-close').click();
+  assert.equal(h.document.body.classList.contains('banner-bottom'), false);
+  assert.deepEqual(h.opened, []);
+  assert.equal(writes, 0);
+  // A fresh Viewer render displays configured banners again.
+  await h.run('renderBanner(banners)');
+  assert.equal(top.classList.contains('hidden'), false);
+  assert.equal(bottom.classList.contains('hidden'), false);
+});
+
+test('legacy, disabled and non-dismissible banners do not gain a close button', async () => {
+  const h = harness();
+  h.context.banners = { top: { enabled: true, image: 'legacy.png', url: 'https://example.org' },
+    bottom: { enabled: false, dismissible: true, image: 'off.gif' } };
+  await h.run('renderBanner(banners)');
+  const top = h.document.getElementById('banner-top'), bottom = h.document.getElementById('banner-bottom');
+  assert.equal(top.querySelector('.banner-close'), null);
+  assert.equal(bottom.classList.contains('hidden'), true);
+  assert.equal(h.document.body.classList.contains('banner-bottom'), false);
+  await top.querySelector('a').click();
+  assert.deepEqual(h.opened, ['https://example.org']);
+});
+
 test('leaving IPTV before host registration finishes cannot create a hidden player', async () => {
   const hosts = deferred(); const h = harness({ iptvHosts: () => hosts.promise });
   h.context.iptv = iptv; await h.run("renderIptv(iptv, 'tv')");

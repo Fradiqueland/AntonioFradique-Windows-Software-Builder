@@ -207,6 +207,21 @@ test('Windows ZIP keeps the Viewer, configuration and nested Unicode assets', as
   assert.equal(progress.at(-1).completed, progress.at(-1).total);
 });
 
+test('Windows and Mac exports preserve animated banner bytes and independent close permissions', async t => {
+  const f = fixture(t), gif = fs.readFileSync(path.join(__dirname, 'fixtures/banner-animated.gif'));
+  fs.writeFileSync(path.join(f.assetsDir, 'banner.gif'), gif);
+  f.config.marketing = { banners: { top: { enabled: true, dismissible: true, image: 'dist-assets/banner.gif', url: '' },
+    bottom: { enabled: true, dismissible: false, image: 'dist-assets/banner.gif', url: '' } } };
+  for (const target of ['windows', 'mac']) {
+    await writeTemplate(f.templatePath, target === 'windows' ? WINDOWS : MAC);
+    await exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : f.projectName + '.data';
+    assert.deepEqual(entries.get(base + '/dist-assets/banner.gif').data, gif);
+    assert.deepEqual(JSON.parse(entries.get(base + '/data/project-config.json').data).marketing.banners, f.config.marketing.banners);
+  }
+});
+
 test('ordinary exports omit optional native runtimes without changing local media or signed Mac bundle bytes', async t => {
   const f = fixture(t);
   const media = Buffer.from('ORIGINAL LOSSLESS MEDIA');

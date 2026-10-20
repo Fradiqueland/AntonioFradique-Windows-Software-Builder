@@ -317,6 +317,12 @@ async function main() {
   const archiveBytes = Buffer.from('UEsDBAoACQAAACwSVF3znKRmJAAAABgAAAAKABwAcmVhZG1lLnR4dFVUCQADA6XWagOl1mp1eAsAAQQAAAAABAAAAACWurCOwKQ3tkzfU8cAxHGblFHehLud84pZwrl86SehC6TwuPlQSwcI85ykZiQAAAAYAAAAUEsBAh4DCgAJAAAALBJUXfOcpGYkAAAAGAAAAAoAGAAAAAAAAQAAAKSBAAAAAHJlYWRtZS50eHRVVAUAAwOl1mp1eAsAAQQAAAAABAAAAABQSwUGAAAAAAEAAQBQAAAAeAAAAAAA', 'base64');
   fs.writeFileSync(path.join(assetsDir, 'protected.zip'), archiveBytes);
   config.content.push({id:'archive-smoke',type:'archive-download',title:'Protected archive',data:{file:'dist-assets/protected.zip',fileName:'protected.zip'}});
+  const gifBytes = fs.readFileSync(path.join(root, 'tests/fixtures/banner-animated.gif'));
+  fs.writeFileSync(path.join(assetsDir, 'banner.gif'), gifBytes);
+  config.marketing = { banners: {
+    top: { enabled:true, dismissible:true, image:'dist-assets/banner.gif', url:'' },
+    bottom: { enabled:true, dismissible:false, image:'dist-assets/banner.gif', url:'' }
+  } };
   report.exports = [];
   let expectedWindowsAsar;
   for (const target of ['windows', 'mac']) {
@@ -337,7 +343,7 @@ async function main() {
     assert.equal(result.target, target);
     const outputAsar = target === 'windows' ? asarEntry : projectName + '.app/Contents/Resources/app.asar';
     const base = target === 'windows' ? 'resources' : projectName + '.data';
-    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip']);
+    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif']);
     for (const [name, metadata] of baseline) {
       if (templateRuntime(name, target)) continue;
       const destination = exportEntry(name, target, projectName);
@@ -350,6 +356,8 @@ async function main() {
     assert.equal(exported.get(base + '/data/project-config.json').sha256, crypto.createHash('sha256').update(JSON.stringify(config, null, 2)).digest('hex'));
     assert.equal(exported.get(base + '/dist-assets/' + webFolder + '/index.html').sha256, await fileHash(path.join(assetsDir, webFolder, 'index.html')));
     assert.equal(exported.get(base + '/dist-assets/protected.zip').sha256, crypto.createHash('sha256').update(archiveBytes).digest('hex'));
+    assert.equal(exported.get(base + '/dist-assets/banner.gif').sha256, crypto.createHash('sha256').update(gifBytes).digest('hex'));
+    report.checks.push(target + ' animated banner: unchanged GIF SHA-256 and close permissions in exported config');
     report.checks.push(target + ' protected archive: unchanged SHA-256');
     report.checks.push(target + ' HTML ZIP: real template, unchanged ASAR, project HTML, no unused FFmpeg/PHP');
     const iptvConfig = { ...config, content: [...config.content, { id: 'iptv-smoke', type: 'iptv', title: 'IPTV offline smoke', data: {} }] };
@@ -398,6 +406,8 @@ async function main() {
   await verifyAndroidInformation(applicationRoot);
   report.builderUI = await require('./verify-builder-ui.cjs').verifyBuilderUI({ BrowserWindow, applicationRoot });
   report.checks.push('full shipped Builder UI in Chromium: banner toggles, failed saves, pending settings, editable import/export, no navigation');
+  report.viewerBanners = await require('./verify-viewer-banners.cjs').verifyViewerBanners({ BrowserWindow, applicationRoot });
+  report.checks.push('full shipped Viewer: animated GIF frames, independent X buttons, pointer/keyboard, reclaimed content space');
   if (!packaged) {
     report.links = await require('../tests/electron-links.cjs').runElectronLinkTests({ app, BrowserWindow });
     report.checks.push('real Electron webview link navigation');

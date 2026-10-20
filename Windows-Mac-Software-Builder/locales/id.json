@@ -107,7 +107,7 @@
     "toggle_sub": "Spanduk akan tetap di Penampil di semua halaman.",
     "image_label": "Gambar Spanduk",
     "image_empty": "Tidak ada spanduk dimuat",
-    "image_help": "Disarankan: gambar horizontal (mis: 728×90 atau 970×90). Disalin ke dist-assets/.",
+    "image_help": "Disarankan: 728 × 90 px. Mendukung PNG, JPG dan GIF, termasuk animasi.",
     "url_label": "Tautan Tujuan",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "URL dibuka di browser eksternal saat pelanggan akhir mengklik spanduk.",
@@ -115,11 +115,15 @@
     "position_top": "Atas Halaman",
     "position_bottom": "Bawah Halaman",
     "save_btn": "Simpan Pengaturan Spanduk",
-    "dims_hint": "Format yang diterima: PNG, JPG, atau GIF animasi. Ukuran yang disarankan: 728×90px (format horizontal).",
+    "dims_hint": "Atas dan bawah: disarankan 728 × 90 px. PNG, JPG dan GIF animasi. Gambar besar menyesuaikan ruang yang tersedia.",
     "top_legend": "Spanduk Atas",
     "bottom_legend": "Spanduk Bawah",
     "top_toggle_title": "Aktifkan Spanduk Atas",
-    "bottom_toggle_title": "Aktifkan Spanduk Bawah"
+    "bottom_toggle_title": "Aktifkan Spanduk Bawah",
+    "dismissible_title": "Izinkan menutup dengan X",
+    "dismissible_hint": "Pengguna dapat menutup banner ini untuk memperluas tampilan. Banner muncul kembali saat aplikasi dibuka lagi.",
+    "close_top": "Tutup banner atas",
+    "close_bottom": "Tutup banner bawah"
   },
   "content": {
     "list_title": "Modul Menu",

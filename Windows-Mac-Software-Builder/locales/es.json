@@ -107,7 +107,7 @@
     "toggle_sub": "El banner quedará fijo en el Visualizador, en todas las páginas.",
     "image_label": "Imagen del Banner",
     "image_empty": "Sin banner cargado",
-    "image_help": "Recomendado: imagen horizontal (ej: 728×90 o 970×90). Copiada a dist-assets/.",
+    "image_help": "Recomendado: 728 × 90 px. Admite PNG, JPG y GIF, incluidas animaciones.",
     "url_label": "Enlace de Destino",
     "url_placeholder": "https://ejemplo.com/mi-enlace-afiliado",
     "url_help": "URL abierta en el navegador externo cuando el cliente final haga clic en el banner.",
@@ -115,11 +115,15 @@
     "position_top": "Arriba de la Página",
     "position_bottom": "Abajo de la Página",
     "save_btn": "Guardar Configuración del Banner",
-    "dims_hint": "Formatos aceptados: PNG, JPG o GIF animado. Tamaño recomendado: 728×90px (formato horizontal).",
+    "dims_hint": "Arriba y abajo: recomendado 728 × 90 px. PNG, JPG y GIF animado. Las imágenes mayores se ajustan al espacio disponible.",
     "top_legend": "Banner Superior",
     "bottom_legend": "Banner Inferior",
     "top_toggle_title": "Activar Banner Superior",
-    "bottom_toggle_title": "Activar Banner Inferior"
+    "bottom_toggle_title": "Activar Banner Inferior",
+    "dismissible_title": "Permitir cerrar con X",
+    "dismissible_hint": "El usuario puede cerrar este banner para ganar espacio. Vuelve a aparecer al abrir de nuevo la aplicación.",
+    "close_top": "Cerrar banner superior",
+    "close_bottom": "Cerrar banner inferior"
   },
   "content": {
     "list_title": "Módulos del Menú",
