@@ -53,7 +53,7 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
     const point = await run("(()=>{const r=document.querySelector('#banner-top img').getBoundingClientRect();return {x:Math.floor(r.x+r.width/2),y:Math.floor(r.y+r.height/2),width:1,height:1};})()");
     const colors=new Set();
     for(let i=0;i<16&&colors.size<2;i++) {
-      const pixel=(await win.webContents.capturePage(point)).toBitmap();
+      const pixel=(await win.webContents.capturePage(point)).resize({width:1,height:1}).toBitmap();
       assert.equal(pixel.length,4);
       if(pixel[2]>200&&pixel[0]<30)colors.add('red');
       if(pixel[0]>200&&pixel[2]<30)colors.add('blue');
