@@ -147,7 +147,8 @@
       "embed": "ফর্ম বা কুইজ",
       "iptv": "IPTV চ্যানেল",
       "local_web": "HTML / PHP file",
-      "portable": "পোর্টেবল প্রোগ্রাম (Windows / Mac)"
+      "portable": "পোর্টেবল প্রোগ্রাম (Windows / Mac)",
+      "archives": "ZIP / RAR আর্কাইভ"
     },
     "youtube_url_label": "ভিডিওর URL বা ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... বা শুধু ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, কুইজ…",
       "iptv": "অনলাইন টিভি চ্যানেলের তালিকা।",
       "local_web": "Import a page or website from your PC.",
-      "portable": "প্রোগ্রামের ফোল্ডারটি তার ফাইল ও নির্ভরতাসহ যুক্ত করুন।"
+      "portable": "প্রোগ্রামের ফোল্ডারটি তার ফাইল ও নির্ভরতাসহ যুক্ত করুন।",
+      "archives": "পাসওয়ার্ড দিয়ে সুরক্ষিত ফাইলসহ আর্কাইভ শেয়ার করুন।"
     },
     "type_group": {
       "video": "ভিডিও",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR ও অন্যান্য আর্কাইভ অপরিবর্তিতভাবে অন্তর্ভুক্ত হয়, পাসওয়ার্ড দিয়ে সুরক্ষিত হলেও। অ্যাপ এগুলো খোলে না বা পাসওয়ার্ড চায় না। প্রাপক ফাইল সেভ করে সামঞ্জস্যপূর্ণ অ্যাপ ও মূল পাসওয়ার্ড দিয়ে বের করেন।"
   },
   "export": {
     "icon_label": "সফটওয়্যার আইকন",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "আর্কাইভ অপরিবর্তিতভাবে সেভ হয়। সুরক্ষিত হলে বের করতে মূল পাসওয়ার্ড ও সামঞ্জস্যপূর্ণ অ্যাপ প্রয়োজন।"
   },
   "corners": {
     "music_label": "আমার সঙ্গীত",

@@ -360,3 +360,44 @@ test('missing gallery sources and duplicate module IDs reject the whole save', t
   assert.throws(() => f.run('content:save', { modules:[{id:'same',type:'html'},{id:'same',type:'html'}] }), /repetido/);
   assert.deepEqual(snapshot(f.project), original);
 });
+
+
+test('protected archive module survives save, editable transfer, download and failed replacement byte-for-byte', async t => {
+  const f = fixture(t);
+  // A real ZipCrypto-encrypted ZIP, generated with a test-only password.
+  // Production only copies the bytes; it never requests or uses that password.
+  const original = Buffer.from('UEsDBAoACQAAACwSVF3znKRmJAAAABgAAAAKABwAcmVhZG1lLnR4dFVUCQADA6XWagOl1mp1eAsAAQQAAAAABAAAAACWurCOwKQ3tkzfU8cAxHGblFHehLud84pZwrl86SehC6TwuPlQSwcI85ykZiQAAAAYAAAAUEsBAh4DCgAJAAAALBJUXfOcpGYkAAAAGAAAAAoAGAAAAAAAAQAAAKSBAAAAAHJlYWRtZS50eHRVVAUAAwOl1mp1eAsAAQQAAAAABAAAAABQSwUGAAAAAAEAAQBQAAAAeAAAAAAA', 'base64');
+  assert.equal(original.readUInt16LE(6) & 1, 1, 'Fixture must be encrypted');
+  const sourcePath = path.join(f.root, 'protegido.zip');
+  fs.writeFileSync(sourcePath, original);
+  let updated = await f.run('content:save', { modules: [{id:'protected',type:'archive-download',title:'Arquivo',data:{sourcePath,buttonLabel:'Obter arquivo'}}] });
+  const mod = updated.content[0];
+  assert.equal(mod.type, 'archive-download');
+  assert.equal(mod.data.fileName, 'protegido.zip');
+  assert.equal(mod.data.buttonLabel, 'Obter arquivo');
+  assert.deepEqual(fs.readFileSync(path.join(f.project, mod.data.file)), original);
+  updated = await f.run('content:save', {modules:updated.content});
+  assert.deepEqual(updated.content[0].data, mod.data, 'Reordering/re-saving must preserve the source');
+  const archivePath = path.join(f.root, 'editable.wsmb');
+  const readConfig = filename => JSON.parse(fs.readFileSync(filename, 'utf8'));
+  const engine = require('../src/shared/project-archive');
+  await engine.exportArchive({projectRoot:f.project,outputPath:archivePath,name:'Archive test',appVersion:'2.6.1',readConfig});
+  const destination = path.join(f.root, 'restored');
+  const restored = await engine.importArchive({archivePath,destination,readConfig});
+  assert.equal(restored.config.content[0].type, 'archive-download');
+  assert.deepEqual(fs.readFileSync(path.join(destination, restored.config.content[0].data.file)), original);
+  const downloaded = await f.run('dialog:saveFileAs', mod.data);
+  assert.equal(downloaded.ok, true);
+  assert.deepEqual(fs.readFileSync(downloaded.path), original);
+  const before = snapshot(f.project);
+  f.failure.configWrite = true;
+  fs.writeFileSync(sourcePath, 'replacement bytes');
+  assert.throws(() => f.run('content:save', {modules:[{...mod,data:{sourcePath}}]}), /Injected disk full/);
+  assert.deepEqual(snapshot(f.project), before, 'A failed replacement must preserve the original encrypted file');
+});
+
+test('an archive download cannot be saved without choosing its file', t => {
+  const f = fixture(t), before = snapshot(f.project);
+  assert.throws(() => f.run('content:save', {modules:[{id:'empty',type:'archive-download',data:{}}]}), /Selecione um arquivo/);
+  assert.deepEqual(snapshot(f.project), before);
+});

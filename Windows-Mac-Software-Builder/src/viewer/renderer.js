@@ -536,7 +536,7 @@ function renderArticle(data) {
   stageEl.appendChild(host);
 }
 
-function renderDownloadVault(data) {
+function renderDownloadVault(data, archive = false) {
   clearStage();
   const host = document.createElement('div');
   host.className = 'viewer-empty';
@@ -567,7 +567,14 @@ function renderDownloadVault(data) {
       }
     });
   }
-  card.append(icon, name, btn);
+  card.append(icon, name);
+  if (archive) {
+    const notice = document.createElement('p');
+    notice.className = 'dl-name';
+    notice.textContent = tr('viewer.archive_help', 'O arquivo é guardado sem alterações. Se estiver protegido, precisa da palavra-passe original e de uma aplicação compatível para o extrair.');
+    card.appendChild(notice);
+  }
+  card.appendChild(btn);
   host.appendChild(card);
   stageEl.appendChild(host);
 }
@@ -753,7 +760,7 @@ function miniMarkdown(src) {
 
 const MODULE_ICON = {
   youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
-  'download-vault': '⬇️', launch: '🚀', portable: '🧳', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'download-vault': '⬇️', 'archive-download': '📦', launch: '🚀', portable: '🧳', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
 
@@ -1853,6 +1860,7 @@ async function dispatchModule(mod, btn) {
     case 'local-audio':    setActiveMenuBtn(btn); await renderLocalAudio(mod.data); break;
     case 'image-gallery':  setActiveMenuBtn(btn); await renderGallery(mod.data); break;
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
+    case 'archive-download': setActiveMenuBtn(btn); renderDownloadVault(mod.data, true); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
     case 'portable': setActiveMenuBtn(btn); renderPortable(mod); break;
     case 'apk':

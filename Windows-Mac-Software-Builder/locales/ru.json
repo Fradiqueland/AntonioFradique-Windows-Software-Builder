@@ -147,7 +147,8 @@
       "embed": "Форма или тест",
       "iptv": "Каналы IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "Портативная программа (Windows / Mac)"
+      "portable": "Портативная программа (Windows / Mac)",
+      "archives": "Архивы ZIP / RAR"
     },
     "youtube_url_label": "URL или ID видео",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... или только ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, тесты…",
       "iptv": "Список онлайн-телеканалов.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Добавьте папку программы с её файлами и зависимостями."
+      "portable": "Добавьте папку программы с её файлами и зависимостями.",
+      "archives": "Делитесь архивами, в том числе защищёнными паролем."
     },
     "type_group": {
       "video": "Видео",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "Архивы ZIP, RAR, 7z, TAR и другие включаются без изменений, даже если защищены паролем. Приложение не открывает их и не запрашивает пароль. Получатель сохраняет архив и распаковывает его совместимой программой с исходным паролем."
   },
   "export": {
     "icon_label": "Значок программы",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "Архив сохраняется без изменений. Для защищённого архива нужны исходный пароль и совместимая программа распаковки."
   },
   "corners": {
     "music_label": "Моя музыка",

@@ -314,6 +314,9 @@ async function main() {
   fs.writeFileSync(path.join(assetsDir, webFolder, 'styles/app.css'), 'h1 { color: #126; }');
   const projectName = 'Smoke António';
   const config = { language: 'pt', brand: { title: projectName }, content: [{ id: 'web-smoke', type: 'local-web', title: 'HTML local', data: { root: 'dist-assets/' + webFolder, entry: 'index.html' } }], export: { iconPath: null } };
+  const archiveBytes = Buffer.from('UEsDBAoACQAAACwSVF3znKRmJAAAABgAAAAKABwAcmVhZG1lLnR4dFVUCQADA6XWagOl1mp1eAsAAQQAAAAABAAAAACWurCOwKQ3tkzfU8cAxHGblFHehLud84pZwrl86SehC6TwuPlQSwcI85ykZiQAAAAYAAAAUEsBAh4DCgAJAAAALBJUXfOcpGYkAAAAGAAAAAoAGAAAAAAAAQAAAKSBAAAAAHJlYWRtZS50eHRVVAUAAwOl1mp1eAsAAQQAAAAABAAAAABQSwUGAAAAAAEAAQBQAAAAeAAAAAAA', 'base64');
+  fs.writeFileSync(path.join(assetsDir, 'protected.zip'), archiveBytes);
+  config.content.push({id:'archive-smoke',type:'archive-download',title:'Protected archive',data:{file:'dist-assets/protected.zip',fileName:'protected.zip'}});
   report.exports = [];
   let expectedWindowsAsar;
   for (const target of ['windows', 'mac']) {
@@ -334,7 +337,7 @@ async function main() {
     assert.equal(result.target, target);
     const outputAsar = target === 'windows' ? asarEntry : projectName + '.app/Contents/Resources/app.asar';
     const base = target === 'windows' ? 'resources' : projectName + '.data';
-    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html']);
+    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip']);
     for (const [name, metadata] of baseline) {
       if (templateRuntime(name, target)) continue;
       const destination = exportEntry(name, target, projectName);
@@ -346,6 +349,8 @@ async function main() {
     assert.equal(result.omittedRuntimeBytes, omitted);
     assert.equal(exported.get(base + '/data/project-config.json').sha256, crypto.createHash('sha256').update(JSON.stringify(config, null, 2)).digest('hex'));
     assert.equal(exported.get(base + '/dist-assets/' + webFolder + '/index.html').sha256, await fileHash(path.join(assetsDir, webFolder, 'index.html')));
+    assert.equal(exported.get(base + '/dist-assets/protected.zip').sha256, crypto.createHash('sha256').update(archiveBytes).digest('hex'));
+    report.checks.push(target + ' protected archive: unchanged SHA-256');
     report.checks.push(target + ' HTML ZIP: real template, unchanged ASAR, project HTML, no unused FFmpeg/PHP');
     const iptvConfig = { ...config, content: [...config.content, { id: 'iptv-smoke', type: 'iptv', title: 'IPTV offline smoke', data: {} }] };
     const iptvPath = path.join(temporary, target + '-iptv.zip');

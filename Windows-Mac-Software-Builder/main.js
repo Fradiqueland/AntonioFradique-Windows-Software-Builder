@@ -262,11 +262,11 @@ handleTrustedIpc('android:status', (_event, payload) => androidRuntime.getAndroi
 }));
 
 
-const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault']);
+const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault', 'archive-download']);
 const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
-  'local-video', 'local-audio', 'download-vault', 'image-gallery',
+  'local-video', 'local-audio', 'download-vault', 'archive-download', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv', 'local-web', 'portable'
 ]);
 
@@ -1504,7 +1504,7 @@ handleTrustedIpc('content:save', (_event, payload) => {
         const prefix = mod.type === 'pdf' ? 'pdf'
           : mod.type === 'local-video' ? 'video'
           : mod.type === 'local-audio' ? 'audio'
-          : mod.type === 'download-vault' ? 'download' : 'file';
+          : (mod.type === 'download-vault' || mod.type === 'archive-download') ? 'download' : 'file';
         file = copyAssetToProject(sourcePath, prefix);
         importedFiles.push(relToAbs(file));
         fileName = path.basename(sourcePath);
@@ -1512,8 +1512,9 @@ handleTrustedIpc('content:save', (_event, payload) => {
         file = (prev && prev.data && prev.data.file) || null;
         fileName = (prev && prev.data && prev.data.fileName) || null;
       }
+      if (mod.type === 'archive-download' && !file) throw new Error('Selecione um arquivo para descarregar.');
       const out = { file, fileName };
-      if (mod.type === 'download-vault') {
+      if (mod.type === 'download-vault' || mod.type === 'archive-download') {
         out.buttonLabel = typeof d.buttonLabel === 'string' ? d.buttonLabel.trim() : '';
       }
       mod.data = out;
@@ -1780,6 +1781,7 @@ const PICK_FILTERS = {
   video: [{ name: 'Vídeo', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
   audio: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] }],
   playlist: [{ name: 'Listas IPTV', extensions: ['m3u', 'm3u8'] }],
+  archives: [{ name: 'ZIP / RAR / 7z / TAR (incluindo arquivos protegidos)', extensions: ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'zst', '001'] }],
   download: [{
     name: 'Ficheiros',
     extensions: ['zip', 'rar', '7z', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',

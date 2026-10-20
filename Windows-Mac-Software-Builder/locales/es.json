@@ -147,7 +147,8 @@
       "embed": "Formulario o quiz",
       "iptv": "Canales IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "Programa portátil (Windows / Mac)"
+      "portable": "Programa portátil (Windows / Mac)",
+      "archives": "Archivos ZIP / RAR"
     },
     "youtube_url_label": "URL o ID del vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... o solo el ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, quizzes…",
       "iptv": "Lista de canales de TV online.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Incluya una carpeta de programa con sus archivos y dependencias."
+      "portable": "Incluya una carpeta de programa con sus archivos y dependencias.",
+      "archives": "Comparte archivos, incluidos los protegidos con contraseña."
     },
     "type_group": {
       "video": "Vídeo",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR y otros archivos se incluyen sin cambios, aunque tengan contraseña. La aplicación no los abre ni pide la contraseña. El destinatario guarda el archivo y lo extrae con una aplicación compatible y la contraseña original."
   },
   "export": {
     "icon_label": "Icono del Software",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "El archivo se guarda sin cambios. Si está protegido, necesitas la contraseña original y una aplicación compatible para extraerlo."
   },
   "corners": {
     "music_label": "Mi música",

@@ -147,7 +147,8 @@
       "embed": "फ़ॉर्म या क्विज़",
       "iptv": "IPTV चैनल",
       "local_web": "HTML / PHP file",
-      "portable": "पोर्टेबल प्रोग्राम (Windows / Mac)"
+      "portable": "पोर्टेबल प्रोग्राम (Windows / Mac)",
+      "archives": "ZIP / RAR आर्काइव"
     },
     "youtube_url_label": "वीडियो का URL या ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... या केवल ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, क्विज़…",
       "iptv": "ऑनलाइन टीवी चैनलों की सूची।",
       "local_web": "Import a page or website from your PC.",
-      "portable": "प्रोग्राम का फ़ोल्डर उसकी फ़ाइलों और निर्भरताओं सहित जोड़ें।"
+      "portable": "प्रोग्राम का फ़ोल्डर उसकी फ़ाइलों और निर्भरताओं सहित जोड़ें।",
+      "archives": "पासवर्ड से सुरक्षित फ़ाइलों सहित आर्काइव साझा करें।"
     },
     "type_group": {
       "video": "वीडियो",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR और अन्य आर्काइव बिना बदलाव शामिल किए जाते हैं, भले ही वे पासवर्ड से सुरक्षित हों। ऐप उन्हें खोलता नहीं है और पासवर्ड नहीं माँगता। प्राप्तकर्ता फ़ाइल सहेजकर किसी संगत ऐप और मूल पासवर्ड से उसे निकालता है।"
   },
   "export": {
     "icon_label": "सॉफ़्टवेयर आइकन",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "आर्काइव बिना बदलाव सहेजा जाता है। सुरक्षित होने पर उसे निकालने के लिए मूल पासवर्ड और संगत ऐप चाहिए।"
   },
   "corners": {
     "music_label": "मेरा संगीत",

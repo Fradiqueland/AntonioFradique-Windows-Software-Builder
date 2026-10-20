@@ -238,3 +238,26 @@ test('malformed saved favourite entries cannot crash the IPTV channel list', asy
   await h.stage.querySelectorAll('.iptv-tab')[1].click();
   assert.match(h.stage.textContent, /Good/);
 });
+
+
+test('archive downloads explain password handling and save only after a click, including retry and cancellation', async () => {
+  const calls = []; let fail = true;
+  const h = harness({saveFileAs: async payload => {
+    calls.push({...payload}); if (fail) throw new Error('disk full'); return {cancelled:true};
+  }});
+  h.run("renderDownloadVault({file:'dist-assets/protected.zip',fileName:'protected.zip',buttonLabel:'Obter arquivo'}, true)");
+  assert.match(h.stage.textContent, /palavra-passe original/);
+  assert.equal(calls.length, 0);
+  const button = h.stage.querySelector('.dl-btn');
+  assert.equal(button.textContent, 'Obter arquivo');
+  await button.click();
+  assert.equal(button.disabled, false);
+  fail = false;
+  await button.click();
+  assert.equal(button.disabled, false);
+  assert.deepEqual(calls, [
+    {file:'dist-assets/protected.zip',fileName:'protected.zip'},
+    {file:'dist-assets/protected.zip',fileName:'protected.zip'}
+  ]);
+  assert.deepEqual(h.opened, [], 'Downloading must never launch or extract the archive');
+});

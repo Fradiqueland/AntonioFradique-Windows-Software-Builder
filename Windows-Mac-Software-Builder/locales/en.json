@@ -147,7 +147,8 @@
       "embed": "Form or quiz",
       "iptv": "IPTV channels",
       "local_web": "HTML / PHP file",
-      "portable": "Portable program (Windows / Mac)"
+      "portable": "Portable program (Windows / Mac)",
+      "archives": "ZIP / RAR archives"
     },
     "youtube_url_label": "Video URL or ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... or just the ID",
@@ -247,7 +248,8 @@
       "embed": "Google Forms, Typeform, quizzes…",
       "iptv": "List of online TV channels.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Include a program folder with its files and dependencies."
+      "portable": "Include a program folder with its files and dependencies.",
+      "archives": "Share archives, including password-protected files."
     },
     "type_group": {
       "video": "Video",
@@ -266,7 +268,8 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR and other archives are included unchanged, including password-protected files. The app does not open them or ask for a password. Recipients save the archive and extract it with a compatible app and the original password."
   },
   "export": {
     "icon_label": "Software Icon",
@@ -375,7 +378,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "The archive is saved unchanged. If protected, you need the original password and a compatible app to extract it."
   },
   "corners": {
     "music_label": "My music",

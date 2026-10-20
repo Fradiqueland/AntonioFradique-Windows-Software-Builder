@@ -7,14 +7,15 @@ const assert = require('node:assert/strict');
 async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
   const renderer = fs.readFileSync(path.join(applicationRoot, 'src/builder/renderer.js'), 'utf8');
   const html = fs.readFileSync(path.join(applicationRoot, 'src/builder/index.html'), 'utf8')
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace('<link rel="stylesheet" href="styles.css" />', () => '<style>' + fs.readFileSync(path.join(applicationRoot, 'src/builder/styles.css'), 'utf8') + '</style>');
   const main = fs.readFileSync(path.join(applicationRoot, 'main.js'), 'utf8');
   const defaults = main.match(/const DEFAULT_CONFIG = ([\s\S]*?);\r?\n/);
   assert.ok(defaults, 'The shipped main process must define DEFAULT_CONFIG (LF or CRLF).');
   const config = vm.runInNewContext('(' + defaults[1] + ')');
   config.content = [{ id: 'first', type: 'html', title: 'Test', data: { html: '<h1>Test</h1>' } }];
   const dict = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'locales/pt.json'), 'utf8'));
-  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true,
+  const win = new BrowserWindow({ width:1280, height:820, show: false, webPreferences: { sandbox: true, contextIsolation: true,
     nodeIntegration: false, offscreen: true, backgroundThrottling: false } });
   const navigations = [], crashes = [];
   const evaluate = script => win.webContents.executeJavaScript(script);
@@ -23,10 +24,14 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
       if (await evaluate(condition)) return;
       await new Promise(resolve => setTimeout(resolve, 20));
     }
+    console.error('Builder UI state:', await evaluate(`({scroll:document.scrollingElement.scrollTop,focus:document.activeElement?.id,point:qa.lastPoint,checked:document.getElementById('banner-top-enabled').checked,events:qa.mouseEvents,config:qa.config.marketing.banners})`));
     throw new Error('Builder UI condition timed out: ' + condition);
   }
   try {
     await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+    win.show?.();
+    win.focus?.();
+    win.webContents.focus?.();
     win.webContents.on('did-start-navigation', (_event, url, _inPlace, isMainFrame) => { if (isMainFrame) navigations.push(url); });
     win.webContents.on('render-process-gone', (_event, detail) => crashes.push(detail.reason));
     // Only IPC transport/dialogs are mocked. Execute the entire shipped renderer,
@@ -54,21 +59,57 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
         projectsImportArchive: async () => { qa.calls.push('archive-import'); await pause(); if(qa.cancelImport)return {cancelled:true}; qa.config.brand.title='Imported'; return {state:projectState(),config:copy(qa.config)}; },
         exportProject: async () => { qa.calls.push('build'); qa.built=copy(qa.config); await pause(); return {cancelled:true}; },
         openViewer: async () => { qa.calls.push('preview'); },
-        pickFile: async () => ({path:'chosen.png',name:'chosen.png'}),
+        pickFile: async category => { qa.lastCategory=category; return category==='archives'
+          ? {path:'protected.zip',name:'protected.zip'} : {path:'chosen.png',name:'chosen.png'}; },
+        saveContent: async payload => {
+          qa.config.content=payload.modules.map(mod => mod.data.sourcePath
+            ? {...mod,data:{file:'dist-assets/'+mod.data.sourcePath,fileName:mod.data.sourcePath,buttonLabel:mod.data.buttonLabel}} : mod);
+          return copy(qa.config);
+        },
         saveIcon: async () => { qa.calls.push('icon-start'); await pause(); if(qa.failIcon)throw new Error('Injected icon failure'); qa.config.export.iconPath='data/icon-source.png'; qa.calls.push('icon-done'); return copy(qa.config); }
       }; void 0;
     `);
+    await evaluate(`qa.mouseEvents=[];document.addEventListener('click',event=>qa.mouseEvents.push({id:event.target.id,cls:event.target.className,x:event.clientX,y:event.clientY}));`);
     await evaluate(renderer);
     await evaluate("document.dispatchEvent(new Event('DOMContentLoaded')); void 0;");
     await until("document.querySelectorAll('.project-item').length === 2 && !projectTransition");
     await evaluate("goToTab('aparencia'); setSectionCollapsed('banners',false); void 0;");
     for (const slot of ['top', 'bottom']) {
       for (const enabled of [true, false, true, false]) {
-        await evaluate(`document.getElementById('banner-${slot}-enabled').click(); void 0;`);
+        const point = await evaluate(`(() => {
+          const label = document.getElementById('banner-${slot}-enabled').closest('label');
+          label.scrollIntoView({block:'center'});
+          const r = label.querySelector('.toggle-track').getBoundingClientRect();
+          return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};
+        })()`);
+        await evaluate(`qa.lastPoint={...${JSON.stringify(point)},target:document.elementFromPoint(${point.x},${point.y})?.outerHTML};void 0;`);
+        await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))');
+        win.webContents.sendInputEvent({type:'mouseMove',...point});
+        win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...point});
+        win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,...point});
         await until(`qa.config.marketing.banners.${slot}.enabled === ${enabled} && settingsWrites.size === 0`);
-        assert.equal(await evaluate("document.getElementById('banner-status').textContent"), dict.common.saved);
+        assert.equal(await evaluate('settingsFailures.size'), 0, 'A completed save must not leave a failure; transient toast text may already have expired');
+        assert.equal(await evaluate("document.scrollingElement.scrollTop"), 0, 'Toggling a banner must not scroll the whole application out of view');
+        assert.ok(await evaluate("document.querySelector('.sidebar').getBoundingClientRect().right > 0"));
       }
     }
+    await evaluate(`goToTab('content'); contentAddBtn.click();
+      document.querySelector('.type-card[data-type="archive-download"]').click();
+      moduleTitle.value='Protected archive';
+      document.querySelector('label[for="dyn-download-vault-file"]').click(); void 0;`);
+    await until("pendingFileName === 'protected.zip'");
+    assert.equal(await evaluate('qa.lastCategory'), 'archives');
+    assert.ok(await evaluate("!document.getElementById('dyn-download-vault').classList.contains('hidden')"));
+    await evaluate("moduleType.value='download-vault';showDynamicGroup('download-vault');void 0;");
+    assert.equal(await evaluate('pendingFileSourcePath'), null);
+    assert.equal(await evaluate("document.getElementById('dyn-download-vault-file-name').classList.contains('has-file')"), false);
+    await evaluate("moduleType.value='archive-download';showDynamicGroup('archive-download');dyn['download-vault'].btn.value='Get archive';contentEditorSave.click();void 0;");
+    await until("contentModules.some(mod=>mod.type==='archive-download') && !contentMutation");
+    assert.equal(await evaluate("contentModules.find(mod=>mod.type==='archive-download').data.fileName"), 'protected.zip');
+    await evaluate("openEditorForEdit(contentModules.find(mod=>mod.type==='archive-download').id);void 0;");
+    assert.equal(await evaluate("dyn['archive-download'].btn.value"), 'Get archive');
+    assert.match(await evaluate("dyn['archive-download'].current.textContent"), /protected.zip/);
+    await evaluate("hideEditor();void 0;");
     // An edit followed immediately by a project switch must commit before open.
     await evaluate("qa.calls=[]; document.getElementById('banner-top-enabled').click(); openProject('beta'); void 0;");
     await until("qa.active === 'beta' && !projectTransition");
@@ -110,7 +151,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     assert.deepEqual(navigations, []);
     assert.ok(await evaluate("document.querySelector('.app').isConnected && document.body.innerText.length > 1000"));
     return { bannerToggles: 8, navigationCount: navigations.length, saveFailureRecovery: true,
-      pendingSettingsPreserved: true, projectImportExport: true, renderer: 'full shipped code in Chromium' };
+      pendingSettingsPreserved: true, projectImportExport: true, archiveDownloads: true, renderer: 'full shipped code in Chromium' };
   } finally { if (!win.isDestroyed()) win.destroy(); }
 }
 module.exports = { verifyBuilderUI };
