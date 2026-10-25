@@ -216,7 +216,10 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   // Run the actual produced SFX, not just 7za x (which has different long-path
   // support). No product test hook: the normal Viewer must restore and open.
   const temp = path.join(temporary,'native-sfx-temp');fs.mkdirSync(temp);
-  const child = spawn(outputPath,[],{env:{...process.env,TEMP:temp,TMP:temp},stdio:'ignore'});
+  const logFile=path.join(temporary,'native-sfx-electron.log');
+  const child = spawn(outputPath,[],{env:{...process.env,TEMP:temp,TMP:temp,ELECTRON_ENABLE_LOGGING:'1',ELECTRON_LOG_FILE:logFile},stdio:['ignore','pipe','pipe']});
+  let childLog='';
+  for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{childLog=(childLog+chunk.toString()).slice(-24000);});
   let exit;const exited=new Promise(resolve=>child.once('exit',(code,signal)=>{exit={code,signal};resolve();}));
   let spawnError;child.once('error',error=>{spawnError=error;});
   const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -235,18 +238,21 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     assert.ok(longFile.length>260);
     assert.equal(fs.readFileSync(longFile,'utf8'),'LONG PATH PRESERVED');
     let opened=false;
-    const env={...process.env,WSMB_QA_TITLE:config.brand.title};
+    const env={...process.env,WSMB_QA_TITLE:config.brand.title,WSMB_QA_SFX_PID:String(child.pid)};
+    const windowCheck=path.join(root,'scripts/check-sfx-window.ps1');
+    let snapshot='';
     for(let i=0;i<30&&!opened;i++) {
-      const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-Command',
-        "Get-Process -Name 'LaunchBox Viewer' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq $env:WSMB_QA_TITLE } | ForEach-Object { 'READY' }; exit 0"],{env,windowsHide:true});
-      opened=check.stdout.includes('READY');if(!opened)await wait(200);
+      const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env,windowsHide:true,timeout:15000});
+      snapshot=check.stdout;opened=snapshot.includes('READY');if(!opened)await wait(200);
     }
-    assert.ok(opened,'The normal shipped Viewer must open with the exported project title');
-    await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-Command',
-      "Get-Process -Name 'LaunchBox Viewer' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq $env:WSMB_QA_TITLE } | ForEach-Object { [void]$_.CloseMainWindow() }"],{env,windowsHide:true});
+    assert.ok(opened,'The normal shipped Viewer must open with the exported project title. Owned windows: '+snapshot);
+    await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env:{...env,WSMB_QA_CLOSE:'1'},windowsHide:true,timeout:15000});
     await Promise.race([exited,wait(10000)]);
     assert.equal(fs.existsSync(restored),false,'Closing the actual SFX must clean its long temporary resources');
     report.checks.push('actual generated SFX opens the normal shipped Viewer, restores >260-character paths and a 72-level resource tree, and cleans temporary resources on close');
+  } catch(error) {
+    if(fs.existsSync(logFile))console.error(fs.readFileSync(logFile,'utf8').slice(-24000));
+    if(childLog)console.error(childLog);throw error;
   } finally {
     if(!exit&&child.pid)await execFileP('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true}).catch(()=>{});
   }
