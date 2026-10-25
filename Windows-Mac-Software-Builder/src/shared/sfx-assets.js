@@ -14,6 +14,9 @@ const RECEIPT_FILE = '.wsmb-assets-ready.json';
 const FORMAT = 'wsmb-sfx-assets';
 const disk = filename => path.toNamespacedPath(filename);
 const exists = filename => fs.existsSync(disk(filename));
+// Node's JavaScript realpath walker mishandles namespaced Windows drive roots.
+// The native implementation accepts the same extended paths as the I/O calls.
+const realpath = filename => fs.realpathSync.native(disk(filename));
 
 async function hashFile(filename) {
   const digest = crypto.createHash('sha256');
@@ -44,8 +47,8 @@ function ready(root, d) {
 async function packAssets({ assetsDir, resourcesDir, config }) {
   const yazl = require('yazl');
   fs.mkdirSync(disk(resourcesDir), {recursive:true});
-  const realAssets = fs.realpathSync(disk(assetsDir));
-  const realResources = fs.realpathSync(disk(resourcesDir));
+  const realAssets = realpath(assetsDir);
+  const realResources = realpath(resourcesDir);
   const rel = path.relative(realAssets,realResources);
   if (!rel || (rel !== '..' && !rel.startsWith('..'+path.sep) && !path.isAbsolute(rel))) throw new Error('A preparação da exportação deve ficar fora dos recursos originais.');
   const assets = await engine.inspectProjectAssets({ config, assetsDir, target:'windows' });
@@ -150,8 +153,8 @@ async function restoreAssets(resourcesDir) {
 function cleanupTemporaryAssets(resourcesDir,temporaryRoot) {
   // Only the SFX launch flag calls this, and only inside its temporary root.
   // Plain ZIP exports and manually expanded Viewers keep their resources.
-  const root=fs.realpathSync(disk(temporaryRoot));
-  const resources=fs.realpathSync(disk(resourcesDir));
+  const root=realpath(temporaryRoot);
+  const resources=realpath(resourcesDir);
   const relative=path.relative(root,resources);
   if(!relative || relative==='..' || relative.startsWith('..'+path.sep) || path.isAbsolute(relative) || path.basename(resources)!=='resources') throw new Error('Pasta temporária SFX inválida.');
   const d=validateDescriptor(metadata(path.join(resources,DESCRIPTOR_FILE)));
