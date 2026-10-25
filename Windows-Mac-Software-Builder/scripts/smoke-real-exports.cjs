@@ -178,6 +178,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   const context = vm.createContext({
     fs: electronFs, path, os, crypto, process, console, Buffer, Date,
     projectExport: engine,
+    sfxAssets: appRequire('./src/shared/sfx-assets'),
     iptvCipher: appRequire('./src/shared/iptv-cipher'),
     androidRuntime: appRequire('./src/shared/android-runtime'),
     localWeb: appRequire('./src/shared/local-web'),
@@ -202,6 +203,9 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   await execFileP(sevenZip, ['t', outputPath, '-bsp0', '-bso0'], { windowsHide: true });
   const expanded = path.join(temporary, 'sfx-expanded');
   await execFileP(sevenZip, ['x', outputPath, '-o' + expanded, '-y', '-bsp0', '-bso0'], { windowsHide: true });
+  const transport = appRequire('./src/shared/sfx-assets');
+  assert.ok(fs.existsSync(path.join(expanded,'resources',transport.PACKAGE_FILE)));
+  await transport.restoreAssets(path.join(expanded,'resources'));
   const asarFile = path.join(expanded, 'resources/app.asar');
   verifyAsar(asarFile);
   assert.equal(await fileHash(asarFile), expectedAsar);
@@ -209,6 +213,42 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   for (const runtime of ['ffmpeg', 'php']) assert.equal(fs.existsSync(path.join(expanded, 'resources', runtime)), false,
     'HTML-only SFX must omit ' + runtime);
   report.checks.push('production buildWindowsExe + real 7-Zip SFX extraction + valid ASAR + no unused runtimes');
+  // Run the actual produced SFX, not just 7za x (which has different long-path
+  // support). No product test hook: the normal Viewer must restore and open.
+  const temp = path.join(temporary,'native-sfx-temp');fs.mkdirSync(temp);
+  const child = spawn(outputPath,[],{env:{...process.env,TEMP:temp,TMP:temp},stdio:'ignore'});
+  let exit;const exited=new Promise(resolve=>child.once('exit',(code,signal)=>{exit={code,signal};resolve();}));
+  let spawnError;child.once('error',error=>{spawnError=error;});
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  let restored;
+  try {
+    for(let i=0;i<300&&!restored;i++) {
+      if(spawnError)throw spawnError;if(exit)throw new Error('SFX exited before opening the Viewer: '+JSON.stringify(exit));
+      for(const name of fs.readdirSync(temp)) {
+        const candidate=path.join(temp,name,'resources','dist-assets');
+        if(fs.existsSync(path.join(candidate,transport.RECEIPT_FILE)))restored=candidate;
+      }
+      if(!restored)await wait(200);
+    }
+    assert.ok(restored,'Real SFX must restore its assets without a path error dialog');
+    const longFile=path.join(restored,...report.longAsset.split('/'));
+    assert.ok(longFile.length>260);
+    assert.equal(fs.readFileSync(longFile,'utf8'),'LONG PATH PRESERVED');
+    let opened=false;
+    const env={...process.env,WSMB_QA_TITLE:config.brand.title};
+    for(let i=0;i<30&&!opened;i++) {
+      const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-Command',
+        "Get-Process -Name 'LaunchBox Viewer' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq $env:WSMB_QA_TITLE } | ForEach-Object { 'READY' }; exit 0"],{env,windowsHide:true});
+      opened=check.stdout.includes('READY');if(!opened)await wait(200);
+    }
+    assert.ok(opened,'The normal shipped Viewer must open with the exported project title');
+    await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-Command',
+      "Get-Process -Name 'LaunchBox Viewer' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq $env:WSMB_QA_TITLE } | ForEach-Object { [void]$_.CloseMainWindow() }"],{env,windowsHide:true});
+    await Promise.race([exited,wait(10000)]);
+    report.checks.push('actual generated SFX opens the normal shipped Viewer and restores >260-character paths and a 72-level resource tree');
+  } finally {
+    if(!exit&&child.pid)await execFileP('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true}).catch(()=>{});
+  }
 }
 
 async function verifyRealPortableLaunch(applicationRoot, assetsDir) {
@@ -369,6 +409,9 @@ async function main() {
   const config = { language: 'pt', brand: { title: projectName }, content: [{ id: 'web-smoke', type: 'local-web', title: 'HTML local', data: { root: 'dist-assets/' + webFolder, entry: 'index.html' } }], export: { iconPath: null } };
   const archiveBytes = Buffer.from('UEsDBAoACQAAACwSVF3znKRmJAAAABgAAAAKABwAcmVhZG1lLnR4dFVUCQADA6XWagOl1mp1eAsAAQQAAAAABAAAAACWurCOwKQ3tkzfU8cAxHGblFHehLud84pZwrl86SehC6TwuPlQSwcI85ykZiQAAAAYAAAAUEsBAh4DCgAJAAAALBJUXfOcpGYkAAAAGAAAAAoAGAAAAAAAAQAAAKSBAAAAAHJlYWRtZS50eHRVVAUAAwOl1mp1eAsAAQQAAAAABAAAAABQSwUGAAAAAAEAAQBQAAAAeAAAAAAA', 'base64');
   fs.writeFileSync(path.join(assetsDir, 'protected.zip'), archiveBytes);
+  const longAsset='long-paths/'+Array(72).fill('d').join('/')+'/'+ 'a'.repeat(64)+'-'+'b'.repeat(64)+'.cache';
+  fs.mkdirSync(path.dirname(path.join(assetsDir,longAsset)),{recursive:true});
+  fs.writeFileSync(path.join(assetsDir,longAsset),'LONG PATH PRESERVED');report.longAsset=longAsset;
   config.content.push({id:'archive-smoke',type:'archive-download',title:'Protected archive',data:{file:'dist-assets/protected.zip',fileName:'protected.zip'}});
   const gifBytes = fs.readFileSync(path.join(root, 'tests/fixtures/banner-animated.gif'));
   fs.writeFileSync(path.join(assetsDir, 'banner.gif'), gifBytes);
@@ -396,7 +439,7 @@ async function main() {
     assert.equal(result.target, target);
     const outputAsar = target === 'windows' ? asarEntry : projectName + '.app/Contents/Resources/app.asar';
     const base = target === 'windows' ? 'resources' : projectName + '.data';
-    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif']);
+    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif',base+'/dist-assets/'+longAsset]);
     for (const [name, metadata] of baseline) {
       if (templateRuntime(name, target)) continue;
       const destination = exportEntry(name, target, projectName);
@@ -409,6 +452,7 @@ async function main() {
     assert.equal(exported.get(base + '/data/project-config.json').sha256, crypto.createHash('sha256').update(JSON.stringify(config, null, 2)).digest('hex'));
     assert.equal(exported.get(base + '/dist-assets/' + webFolder + '/index.html').sha256, await fileHash(path.join(assetsDir, webFolder, 'index.html')));
     assert.equal(exported.get(base + '/dist-assets/protected.zip').sha256, crypto.createHash('sha256').update(archiveBytes).digest('hex'));
+    assert.equal(exported.get(base+'/dist-assets/'+longAsset).sha256,crypto.createHash('sha256').update('LONG PATH PRESERVED').digest('hex'));
     assert.equal(exported.get(base + '/dist-assets/banner.gif').sha256, crypto.createHash('sha256').update(gifBytes).digest('hex'));
     report.checks.push(target + ' animated banner: unchanged GIF SHA-256 and close permissions in exported config');
     report.checks.push(target + ' protected archive: unchanged SHA-256');
@@ -451,6 +495,7 @@ async function main() {
       await execFileP('/usr/bin/lipo', [path.join(bundle, 'Contents/MacOS/LaunchBox Viewer'), '-verify_arch', 'x86_64', 'arm64']);
       verifyAsar(path.join(bundle, 'Contents/Resources/app.asar'));
       assert.deepEqual(JSON.parse(fs.readFileSync(path.join(expanded, projectName + '.data/data/project-config.json'), 'utf8')), config);
+      assert.equal(fs.readFileSync(path.join(expanded,projectName+'.data/dist-assets',longAsset),'utf8'),'LONG PATH PRESERVED');
       report.checks.push('Mac exported ZIP expanded by ditto + intact signature + universal executable');
     }
   }

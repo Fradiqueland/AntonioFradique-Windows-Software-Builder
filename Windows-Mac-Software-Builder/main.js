@@ -11,6 +11,7 @@ const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
 const projectArchive = require('./src/shared/project-archive');
+const sfxAssets = require('./src/shared/sfx-assets');
 const portableApps = require('./src/shared/portable-app');
 const portableRuntime = require('./src/shared/portable-runtime');
 const androidRuntime = require('./src/shared/android-runtime');
@@ -686,13 +687,16 @@ function resolveProjectFile(relativePath) {
 }
 
 function copyDirRecursive(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name);
-    const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyDirRecursive(s, d);
-    else if (entry.isFile()) fs.copyFileSync(s, d);
-    else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): ' + s);
+  const pending=[{src,dest}];
+  while(pending.length) {
+    const {src,dest}=pending.pop();
+    fs.mkdirSync(dest,{recursive:true});
+    for(const entry of fs.readdirSync(src,{withFileTypes:true})) {
+      const from=path.join(src,entry.name),to=path.join(dest,entry.name);
+      if(entry.isDirectory())pending.push({src:from,dest:to});
+      else if(entry.isFile())fs.copyFileSync(from,to);
+      else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): '+from);
+    }
   }
 }
 
@@ -2085,7 +2089,8 @@ async function buildWindowsExe(event, payload) {
         throw new Error('O curso contém PHP, mas o template não inclui php.exe. Prepare vendor/php e reconstrua o Viewer e o Construtor.');
       }
     }
-    if (fs.existsSync(ASSETS_DIR)) copyProjectAssets(ASSETS_DIR, stageAssets, courseConfig);
+    send('A preparar os recursos para abertura automática…');
+    await sfxAssets.packAssets({assetsDir:ASSETS_DIR,resourcesDir:stageResources,config:courseConfig});
 
     /* 3. Compress the staging tree into a .7z payload. Compressão ultra
      *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
@@ -2265,6 +2270,7 @@ async function locateMacProject() {
 app.whenReady().then(async () => {
   if (isViewer) {
     if (!await locateMacProject()) { app.quit(); return; }
+    if (app.isPackaged && process.platform === 'win32') await sfxAssets.restoreAssets(WRITE_BASE);
     createViewerWindow({ standalone: true });
   } else {
     initProjects();

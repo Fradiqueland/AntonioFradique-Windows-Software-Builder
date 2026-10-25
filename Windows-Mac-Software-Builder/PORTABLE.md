@@ -42,7 +42,7 @@ O programa é executado a partir de uma cópia de trabalho persistente em `Launc
 
 Os programas importados são código nativo, executado com os privilégios do utilizador. O isolamento das páginas HTML do Builder não constitui uma sandbox para esses programas. A mensagem **Processo iniciado** confirma o arranque, não o funcionamento completo nem a compatibilidade Wine. A aplicação portable pode continuar aberta depois de fechar o Viewer.
 
-Limites por importação: 30000 ficheiros/pastas, 64 níveis, 2 GB por ficheiro e 8 GB no total. A exportação aplica os seus limites ao conjunto de todos os recursos do projeto.
+Limites por importação: 30000 ficheiros/pastas, 2 GB por ficheiro e 8 GB no total. Não existe um limite adicional de níveis de pastas no construtor; aplicam-se os limites físicos do sistema de ficheiros. A exportação aplica os seus limites ao conjunto de todos os recursos do projeto.
 
 ## Compilar v2.1
 

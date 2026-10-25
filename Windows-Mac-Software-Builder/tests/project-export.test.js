@@ -13,10 +13,28 @@ const { Transform } = require('node:stream');
 const yazl = require('yazl');
 const yauzl = require('yauzl');
 const { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName } = require('../src/shared/project-export');
-const { importPortableProject } = require('../src/shared/portable-app');
+const { importPortableProject, copyPortableTree } = require('../src/shared/portable-app');
 const { FFMPEG_SOURCE_LOCK } = require('../src/shared/ffmpeg-source-lock');
 
 const APP = 'LaunchBox Viewer.app';
+
+test('deep portable trees copy and export with identical bytes for both targets',async t=>{
+  const f=portableFixture(t);
+  const relative=Array(72).fill('d').join('/')+'/profile.cache';
+  const original=path.join(f.portableRoot,...relative.split('/'));
+  fs.mkdirSync(path.toNamespacedPath(path.dirname(original)),{recursive:true});
+  fs.writeFileSync(path.toNamespacedPath(original),'DEEP PORTABLE PROFILE');
+  const copied=path.join(f.root,'deep-copy');copyPortableTree(f.portableRoot,copied);
+  assert.equal(fs.readFileSync(path.toNamespacedPath(path.join(copied,...relative.split('/'))),'utf8'),'DEEP PORTABLE PROFILE');
+  for(const target of ['windows','mac']) {
+    await writeTemplate(f.templatePath,target==='windows'?WINDOWS:MAC);
+    await exportProject({...f,target});
+    const entries=await readZip(f.outputPath);
+    const base=target==='windows'?'resources':f.projectName+'.data';
+    const resource=f.data.root.slice('dist-assets/'.length)+'/'+relative;
+    assert.equal(entries.get(base+'/dist-assets/'+resource).data.toString(),'DEEP PORTABLE PROFILE');
+  }
+});
 const WINDOWS = [
   { name: 'LaunchBox Viewer.exe', data: 'WINDOWS EXE', mode: 0o100755 },
   { name: 'resources/app.asar', data: 'VIEWER SOURCE' },

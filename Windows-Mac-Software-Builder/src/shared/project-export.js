@@ -20,7 +20,7 @@ const { FFMPEG_SOURCE_LOCK } = require('./ffmpeg-source-lock');
 const MAC_BUNDLE = 'LaunchBox Viewer.app';
 const MAC_RUNTIME_DATA = 'LaunchBox Viewer.data';
 const OPTIONAL_RUNTIMES = Object.freeze(['ffmpeg', 'php']);
-const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, depth: 64 });
+const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3 });
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   for (let i = 0; i < 8; i++) n = (n & 1) ? (0xedb88320 ^ (n >>> 1)) : (n >>> 1);
   return n >>> 0;
@@ -40,11 +40,11 @@ function safeProjectName(value) {
 }
 
 function validPath(name) {
-  if (typeof name !== 'string' || !name || name.length > 2048 || /[\\:<>"|?*\x00-\x1f\x7f]/.test(name) || name.startsWith('/')) {
+  if (typeof name !== 'string' || !name || /[\\:<>"|?*\x00-\x1f\x7f]/.test(name) || name.startsWith('/')) {
     throw new Error(`Caminho ZIP inválido: ${name}`);
   }
   const parts = name.replace(/\/$/, '').split('/');
-  if (parts.length > LIMITS.depth || parts.some(p => !p || p === '.' || p === '..' || /[. ]$/.test(p) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))) {
+  if (parts.some(p => !p || p === '.' || p === '..' || /[. ]$/.test(p) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))) {
     throw new Error(`Caminho ZIP inválido: ${name}`);
   }
   return parts;
@@ -140,7 +140,7 @@ async function inspectTemplate(templatePath, target) {
             if (!bundle && !companionRoot && !companionRuntime) throw new Error('O template Mac contém um ficheiro fora da aplicação ou dos runtimes permitidos.');
           } else {
             if (kind === 'symlink') throw new Error('O template Windows não pode conter ligações simbólicas.');
-            if (/^resources\/(?:data|dist-assets)(?:\/|$)/i.test(name)) throw new Error('O template Windows contém dados de um projeto.');
+            if (/^resources\/(?:(?:data|dist-assets)(?:\/|$)|project-assets\.(?:zip|json)$)/i.test(name)) throw new Error('O template Windows contém dados de um projeto.');
           }
           entries.push({ entry, name, kind, mode: storedMode || (kind === 'directory' ? 0o040755 : 0o100644) });
           zip.readEntry();
@@ -238,8 +238,10 @@ async function inspectAssets(assetsDir, portableRoots = []) {
   const entries = [];
   const paths = new Map();
   let bytes = 0;
-  async function walk(directory, prefix = '', depth = 0) {
-    if (depth > LIMITS.depth) throw new Error('Demasiados níveis de recursos.');
+  async function walk(directory, prefix = '') {
+    const pending=[{directory,prefix}];
+    while(pending.length) {
+      const {directory,prefix}=pending.pop();
     for (const name of (await fs.promises.readdir(directory)).sort()) {
       const relative = prefix ? `${prefix}/${name}` : name;
       const absolute = path.join(directory, name);
@@ -257,7 +259,7 @@ async function inspectAssets(assetsDir, portableRoots = []) {
       const mode = type | permissions;
       const item = { absolute, relative, stat, kind, mode, portable };
       entries.push(item);
-      if (kind === 'directory') await walk(absolute, relative, depth + 1);
+      if (kind === 'directory') pending.push({directory:absolute,prefix:relative});
       else if (kind === 'symlink') {
         item.rawLink = await fs.promises.readlink(absolute, { encoding: 'buffer' });
         const rawTarget = item.rawLink.toString('utf8');
@@ -268,6 +270,7 @@ async function inspectAssets(assetsDir, portableRoots = []) {
       } else {
         if (stat.size > LIMITS.fileBytes || (bytes += stat.size) > LIMITS.totalBytes) throw new Error('Os recursos excedem os limites de tamanho.');
       }
+    }
     }
   }
   await walk(root);
@@ -315,12 +318,15 @@ async function inspectAssets(assetsDir, portableRoots = []) {
   const visiting = new Set();
   const visited = new Set();
   function checkDirectory(name) {
-    if (visiting.has(name)) throw new Error('Ciclo de diretórios e ligações no programa portátil.');
-    if (visited.has(name)) return;
-    visiting.add(name);
-    for (const child of directoryEdges.get(name) || []) checkDirectory(child);
-    visiting.delete(name);
-    visited.add(name);
+    const pending=[{name,exit:false}];
+    while(pending.length) {
+      const item=pending.pop();
+      if(item.exit){visiting.delete(item.name);visited.add(item.name);continue;}
+      if(visiting.has(item.name))throw new Error('Ciclo de diretórios e ligações no programa portátil.');
+      if(visited.has(item.name))continue;
+      visiting.add(item.name);pending.push({name:item.name,exit:true});
+      for(const child of directoryEdges.get(item.name)||[])pending.push({name:child,exit:false});
+    }
   }
   for (const name of directoryEdges.keys()) checkDirectory(name);
   return { root, entries, files: entries.filter(item => item.kind === 'file'), links, paths, portableRoots };

@@ -16,7 +16,8 @@ A seleção de uma pasta pode incluir informação privada em ficheiros PHP/JSON
 Reveja essa pasta antes de importar. Exclusões automáticas de ficheiros ocultos
 e pastas de desenvolvimento não substituem essa revisão. Ligações simbólicas e
 ficheiros especiais são rejeitados. Limites: 2000 ficheiros, 32 MB por ficheiro,
-256 MB no total e 32 níveis de subpastas.
+256 MB no total. A profundidade das subpastas depende do sistema de ficheiros,
+sem um limite adicional de níveis no construtor.
 
 Guardar novamente, editar o título ou reordenar o módulo preserva a cópia atual.
 Para atualizar o conteúdo, volte a selecionar o ficheiro. Substituir/apagar o
