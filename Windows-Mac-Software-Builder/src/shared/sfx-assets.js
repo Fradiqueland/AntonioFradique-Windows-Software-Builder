@@ -147,4 +147,18 @@ async function restoreAssets(resourcesDir) {
     return {restored:true,files:entries.filter(e=>e.kind==='file').length,bytes};
   } finally {archive.close();fs.rmSync(disk(staging),{recursive:true,force:true});}
 }
-module.exports={PACKAGE_FILE,DESCRIPTOR_FILE,RECEIPT_FILE,packAssets,restoreAssets};
+function cleanupTemporaryAssets(resourcesDir,temporaryRoot) {
+  // Only the SFX launch flag calls this, and only inside its temporary root.
+  // Plain ZIP exports and manually expanded Viewers keep their resources.
+  const root=fs.realpathSync(disk(temporaryRoot));
+  const resources=fs.realpathSync(disk(resourcesDir));
+  const relative=path.relative(root,resources);
+  if(!relative || relative==='..' || relative.startsWith('..'+path.sep) || path.isAbsolute(relative) || path.basename(resources)!=='resources') throw new Error('Pasta temporária SFX inválida.');
+  const d=validateDescriptor(metadata(path.join(resources,DESCRIPTOR_FILE)));
+  const destination=path.join(resources,'dist-assets');
+  if(!ready(destination,d))return false;
+  // The old SFX cannot reliably remove these same long paths at shutdown.
+  fs.rmSync(disk(destination),{recursive:true,force:true,maxRetries:3,retryDelay:100});
+  return true;
+}
+module.exports={PACKAGE_FILE,DESCRIPTOR_FILE,RECEIPT_FILE,packAssets,restoreAssets,cleanupTemporaryAssets};

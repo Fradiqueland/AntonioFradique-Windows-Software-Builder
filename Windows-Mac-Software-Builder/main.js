@@ -2114,7 +2114,7 @@ async function buildWindowsExe(event, payload) {
       ';!@Install@!UTF-8!\r\n' +
       'GUIMode="2"\r\n' +
       'OverwriteMode="2"\r\n' +
-      'RunProgram="\\"%%T\\\\LaunchBox Viewer.exe\\""\r\n' +
+      'RunProgram="\\"%%T\\\\LaunchBox Viewer.exe\\" --wsmb-sfx"\r\n' +
       ';!@InstallEnd@!\r\n';
     fs.writeFileSync(sfxCfgPath, sfxConfig, { encoding: 'utf-8' });
 
@@ -2270,7 +2270,13 @@ async function locateMacProject() {
 app.whenReady().then(async () => {
   if (isViewer) {
     if (!await locateMacProject()) { app.quit(); return; }
-    if (app.isPackaged && process.platform === 'win32') await sfxAssets.restoreAssets(WRITE_BASE);
+    if (app.isPackaged && process.platform === 'win32') {
+      await sfxAssets.restoreAssets(WRITE_BASE);
+      if(process.argv.includes('--wsmb-sfx'))app.on('will-quit',()=>{
+        try{sfxAssets.cleanupTemporaryAssets(WRITE_BASE,os.tmpdir());}
+        catch(error){console.warn('Não foi possível limpar os recursos temporários:',error.message);}
+      });
+    }
     createViewerWindow({ standalone: true });
   } else {
     initProjects();

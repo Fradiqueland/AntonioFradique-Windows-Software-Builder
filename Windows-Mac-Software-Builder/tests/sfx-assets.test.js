@@ -55,6 +55,11 @@ test('SFX opaque transport restores long cache paths and 72 directory levels wit
   assert.ok(fs.statSync(path.join(f.resourcesDir,'dist-assets','empty')).isDirectory());
   assert.equal(fs.existsSync(path.join(f.resourcesDir,sfx.PACKAGE_FILE)),false);
   assert.deepEqual(await sfx.restoreAssets(f.resourcesDir),{restored:false,reused:true});
+  assert.throws(()=>sfx.cleanupTemporaryAssets(f.resourcesDir,path.join(f.root,'source')),/temporária/);
+  assert.ok(fs.existsSync(path.toNamespacedPath(restored)));
+  assert.equal(sfx.cleanupTemporaryAssets(f.resourcesDir,f.root),true);
+  assert.equal(fs.existsSync(path.join(f.resourcesDir,'dist-assets')),false);
+  assert.deepEqual(fs.readFileSync(path.toNamespacedPath(original)),bytes);
 });
 
 test('archive paths have no artificial 2048 character or 64 level cap while traversal remains invalid',()=>{

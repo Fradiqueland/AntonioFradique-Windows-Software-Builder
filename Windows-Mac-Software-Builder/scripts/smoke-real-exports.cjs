@@ -245,7 +245,8 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-Command',
       "Get-Process -Name 'LaunchBox Viewer' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq $env:WSMB_QA_TITLE } | ForEach-Object { [void]$_.CloseMainWindow() }"],{env,windowsHide:true});
     await Promise.race([exited,wait(10000)]);
-    report.checks.push('actual generated SFX opens the normal shipped Viewer and restores >260-character paths and a 72-level resource tree');
+    assert.equal(fs.existsSync(restored),false,'Closing the actual SFX must clean its long temporary resources');
+    report.checks.push('actual generated SFX opens the normal shipped Viewer, restores >260-character paths and a 72-level resource tree, and cleans temporary resources on close');
   } finally {
     if(!exit&&child.pid)await execFileP('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true}).catch(()=>{});
   }
