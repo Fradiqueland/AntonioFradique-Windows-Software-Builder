@@ -178,6 +178,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   const context = vm.createContext({
     fs: electronFs, path, os, crypto, process, console, Buffer, Date,
     projectExport: engine,
+    ...appRequire('./src/shared/export-progress'),
     sfxAssets: appRequire('./src/shared/sfx-assets'),
     iptvCipher: appRequire('./src/shared/iptv-cipher'),
     androidRuntime: appRequire('./src/shared/android-runtime'),
@@ -196,9 +197,17 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   const helpers = functionBlock(source, 'function copyDirRecursive(', '/* -------- Windows -------- */');
   const build = functionBlock(source, 'async function buildWindowsExe(', "handleTrustedIpc('export:targets'");
   vm.runInContext(helpers + '\n' + build + '\nthis.realBuildWindowsExe = buildWindowsExe;', context, { filename: 'production-main-export-smoke.js' });
-  const result = await context.realBuildWindowsExe({ sender: { send(_channel, item) { console.log('[SFX] ' + item.msg); } } }, { defaultName: 'Smoke Export' });
+  const progressEvents=[];
+  const result = await context.realBuildWindowsExe({ sender: { send(channel, item) {
+    if(channel==='export:progress')progressEvents.push(item);else console.log('[SFX] ' + item.msg);
+  } } }, { defaultName: 'Smoke Export' });
   assert.equal(result.ok, true);
   assert.equal(result.path, outputPath);
+  assert.ok(progressEvents.some(item=>item.stage==='compressing'&&item.percent>40&&item.percent<=90),'Real 7-Zip must provide compression progress');
+  assert.equal(progressEvents.at(-1).percent,100);
+  assert.equal(progressEvents.at(-1).status,'success');
+  assert.ok(progressEvents.slice(0,-1).every(item=>item.percent<100));
+  report.checks.push('real SFX compression reports stage percentages and reaches 100 only after the final EXE is saved');
   const sevenZip = path.join(sfxDir, '7za.exe');
   await execFileP(sevenZip, ['t', outputPath, '-bsp0', '-bso0'], { windowsHide: true });
   const expanded = path.join(temporary, 'sfx-expanded');

@@ -325,7 +325,20 @@
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "Kemajuan mengikuti tahap pembuatan. 100% berarti berkas telah disimpan.",
+    "progress": {
+      "preparing": "Mempersiapkan…",
+      "template": "Mempersiapkan aplikasi…",
+      "resources": "Mempersiapkan sumber daya…",
+      "compressing": "Mengompresi…",
+      "packing": "Mengemas aplikasi…",
+      "finalizing": "Menyelesaikan…",
+      "saving": "Menyimpan berkas…",
+      "complete": "Selesai",
+      "cancelled": "Operasi dibatalkan",
+      "failed": "Pembuatan gagal"
+    }
   },
   "viewer": {
     "menu_empty": "Tidak ada modul dikonfigurasi.",
@@ -494,5 +507,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "Dibuat oleh:",
+    "more_products": "Produk lainnya di:"
   }
 }

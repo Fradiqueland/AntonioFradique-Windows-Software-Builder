@@ -12,6 +12,7 @@ const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
 const projectArchive = require('./src/shared/project-archive');
 const sfxAssets = require('./src/shared/sfx-assets');
+const { createExportProgress, sevenZipProgress } = require('./src/shared/export-progress');
 const portableApps = require('./src/shared/portable-app');
 const portableRuntime = require('./src/shared/portable-runtime');
 const androidRuntime = require('./src/shared/android-runtime');
@@ -1993,6 +1994,8 @@ async function buildWindowsExe(event, payload) {
   // open concurrent dialogs / interleaved exports.
   if (exportBusy) throw new Error('Já existe uma exportação em curso.');
   exportBusy = true;
+  const progress = createExportProgress(event.sender);
+  progress.update(0, 'preparing');
 
   const send = (msg, kind = 'info') => {
     try { event.sender.send('export:log', { msg, kind }); } catch (_) { /* window closed */ }
@@ -2045,6 +2048,7 @@ async function buildWindowsExe(event, payload) {
       filters: [{ name: 'Curso (.exe)', extensions: ['exe'] }]
     });
     if (result.canceled || !result.filePath) {
+      progress.cancel();
       send('Operação cancelada.', 'info');
       return { ok: false, cancelled: true };
     }
@@ -2053,6 +2057,7 @@ async function buildWindowsExe(event, payload) {
 
     /* 1. Stage = copy Viewer template (LaunchBox Viewer.exe + DLLs + asar). */
     send('A copiar template do Viewer…');
+    progress.update(5, 'template');
     if (fs.existsSync(templateZip)) {
       await projectExport.extractWindowsTemplate(templateZip, stagingRoot, { config: courseConfig, assetsDir: ASSETS_DIR,
         sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources') });
@@ -2087,6 +2092,7 @@ async function buildWindowsExe(event, payload) {
     /* 2. Inject the current project under <stage>/resources/ so the Viewer
      *    finds it at process.resourcesPath/data/* exactly like in dev. */
     send('A injectar configuração do curso…');
+    progress.update(25, 'resources');
     const stageResources = path.join(stagingRoot, 'resources');
     if (!fs.existsSync(stageResources)) fs.mkdirSync(stageResources, { recursive: true });
     const stageData = path.join(stageResources, 'data');
@@ -2113,12 +2119,15 @@ async function buildWindowsExe(event, payload) {
      *    final do curso (~60-70 MB típico) e reduzir o tempo de extracção
      *    em %TEMP% no PC do aluno. -mmt=on usa múltiplos núcleos. */
     send('A comprimir conteúdos com compressão máxima (pode demorar)…');
-    await execFileP(sevenZipExe, [
+    progress.update(40, 'compressing');
+    const compression = execFileP(sevenZipExe, [
       'a', '-t7z',
       '-m0=lzma2', '-mx=9', '-md=64m', '-mfb=64',
-      '-mmt=on', '-bsp0', '-bso0',
+      '-mmt=on', '-bsp1', '-bso0',
       archivePath, stagingRoot + path.sep + '*'
     ], { maxBuffer: 1024 * 1024 * 64, windowsHide: true });
+    compression.child.stdout.on('data', sevenZipProgress(value => progress.range(40, 90, value, 100, 'compressing')));
+    await compression;
 
     /* 4. Build the SFX config. These directives target the chrislake/
      *    7zsfxmm fork (7zsd_All_x64.sfx). %%T = the per-run temp folder
@@ -2126,6 +2135,7 @@ async function buildWindowsExe(event, payload) {
      *    suppresses the extraction UI. The quoted RunProgram path lets
      *    the Viewer exe name contain a space ("LaunchBox Viewer.exe"). */
     send('A construir o executável SFX…');
+    progress.update(90, 'finalizing');
     const sfxConfig =
       ';!@Install@!UTF-8!\r\n' +
       'GUIMode="2"\r\n' +
@@ -2154,14 +2164,17 @@ async function buildWindowsExe(event, payload) {
     /* 6. The single-file magic: SFX stub + config + 7z payload, concatenated
      *    in that order, IS a valid Windows .exe that auto-extracts + runs. */
     const pendingTarget = target + '.' + stamp + '.tmp';
+    progress.update(95, 'saving');
     try {
       await concatFilesToTarget([stubToUse, sfxCfgPath, archivePath], pendingTarget);
       fs.renameSync(pendingTarget, target);
     } finally { try { fs.unlinkSync(pendingTarget); } catch (_) {} }
 
     send('Curso guardado: ' + target, 'success');
+    progress.complete();
     return { ok: true, path: target };
   } catch (err) {
+    progress.fail();
     send('Erro: ' + (err && err.message ? err.message : err), 'error');
     throw err;
   } finally {
@@ -2185,6 +2198,8 @@ async function exportProject(event, payload = {}) {
   if (!selected.available) throw new Error(selected.reason);
   if (target === 'windows' && selected.format === 'exe') return buildWindowsExe(event, payload);
   exportBusy = true;
+  const progress = createExportProgress(event.sender);
+  progress.update(0, 'preparing');
   const send = (msg, kind = 'info') => {
     try { event.sender.send('export:log', { msg, kind }); } catch (_) {}
   };
@@ -2203,18 +2218,20 @@ async function exportProject(event, payload = {}) {
       title: target === 'mac' ? 'Guardar aplicação Mac (.zip)' : 'Guardar aplicação Windows portátil (.zip)',
       defaultPath: name + '-' + target + '.zip', filters: [{ name: 'Aplicação portátil ZIP', extensions: ['zip'] }]
     });
-    if (choice.canceled || !choice.filePath) return { ok: false, cancelled: true };
+    if (choice.canceled || !choice.filePath) { progress.cancel(); return { ok: false, cancelled: true }; }
     const outputPath = /\.zip$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.zip';
-    let lastProgress = -1;
+    send('A empacotar a aplicação…');
+    progress.update(5, 'packing');
     const result = await projectExport.exportProject({ target, templatePath: getExportTemplatePath(target),
       outputPath, projectName: name, config, assetsDir: ASSETS_DIR,
       sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources'), onProgress: ({ completed, total }) => {
-        const progress = Math.floor(10 * completed / Math.max(total, 1));
-        if (progress !== lastProgress) { lastProgress = progress; send('A empacotar a aplicação: ' + progress * 10 + '%'); }
+        progress.range(5, 95, completed, total, 'packing');
       } });
     send('Aplicação exportada: ' + result.path, 'success');
+    progress.complete();
     return { ...result, ok: true };
   } catch (err) {
+    progress.fail();
     send('Erro: ' + err.message, 'error');
     throw err;
   } finally { exportBusy = false; }

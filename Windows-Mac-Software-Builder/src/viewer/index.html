@@ -6,6 +6,7 @@
       content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https: http: data: blob:; media-src 'self' blob: data: file: https: http:; img-src 'self' data: blob: file: https: http:; font-src 'self'; frame-src https: file: http://127.0.0.1:*; child-src https: file: blob: http://127.0.0.1:*;" />
     <title>Pré-visualização</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="../shared/author.css" />
   </head>
   <body>
     <!-- Opt-in gate overlay -->
@@ -53,6 +54,13 @@
         </div>
         <nav class="viewer-menu" id="viewer-menu"></nav>
         <div class="viewer-sidebar-footer">
+          <section class="author-card" aria-label="Antonio Fradique">
+            <span data-i18n="author.created_by">Criado por:</span>
+            <strong>Antonio Fradique</strong>
+            <img class="author-photo" src="../shared/antonio-fradique.webp" alt="Antonio Fradique" />
+            <span data-i18n="author.more_products">Mais Produtos em:</span>
+            <a href="https://AntonioFradique.net" class="corner-link" data-ext="https://AntonioFradique.net">https://AntonioFradique.net</a>
+          </section>
           <div class="viewer-social hidden" id="viewer-social"></div>
           <div class="viewer-lang-row">
             <label for="viewer-lang" title="Idioma" data-i18n-title="lang.label">🌐</label>

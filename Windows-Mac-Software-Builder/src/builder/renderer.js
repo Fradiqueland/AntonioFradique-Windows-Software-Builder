@@ -57,6 +57,7 @@ async function setLanguage(lang, { persist = true } = {}) {
     I18N.ready = true;
     applyI18n();
     renderExportTarget();
+    if (exportProgressState) renderExportProgress();
     renderProjectsList();
     renderPortableEditor();
     if (lastExportConfig) updateExportSummary(lastExportConfig);
@@ -2219,6 +2220,30 @@ let exportTargets = [];
 let exportTargetsError = '';
 let exportInProgress = false;
 let lastExportConfig = null;
+let exportProgressState = null;
+
+function renderExportProgress() {
+  if (!exportProgressState) return;
+  const { percent, stage, status } = exportProgressState;
+  const panel = document.getElementById('export-progress');
+  panel.classList.remove('hidden');
+  panel.dataset.status = status;
+  panel.setAttribute('aria-busy', status === 'building' ? 'true' : 'false');
+  document.getElementById('export-progress-bar').value = percent;
+  document.getElementById('export-progress-percent').textContent = percent + '%';
+  document.getElementById('export-progress-stage').textContent = t('export.progress.' + stage);
+}
+
+function setExportProgress(value) {
+  if (!exportInProgress || !value || !Number.isFinite(value.percent)) return;
+  const stages = ['preparing', 'template', 'resources', 'compressing', 'packing', 'finalizing', 'saving', 'complete', 'cancelled', 'failed'];
+  if (!stages.includes(value.stage) || !['building', 'success', 'cancelled', 'error'].includes(value.status)) return;
+  if (exportProgressState && exportProgressState.status !== 'building') return;
+  const limit = value.status === 'success' ? 100 : 99;
+  const percent = Math.max(exportProgressState?.percent || 0, Math.min(limit, Math.max(0, Math.floor(value.percent))));
+  exportProgressState = { percent, stage: value.stage, status: value.status };
+  renderExportProgress();
+}
 
 function selectedExportTarget() {
   return exportTargets.find((target) => target.id === exportTargetSelect.value);
@@ -2423,6 +2448,9 @@ function appendExportLog(msg, kind) {
 if (window.icurator && window.icurator.onExportLog) {
   window.icurator.onExportLog(({ msg, kind }) => appendExportLog(msg, kind));
 }
+if (window.icurator && window.icurator.onExportProgress) {
+  window.icurator.onExportProgress(setExportProgress);
+}
 
 // Tracks the last successfully written product path so the "reveal in folder"
 // button knows what to show. Reset to null after each new export attempt.
@@ -2433,6 +2461,8 @@ exportBuildBtn.addEventListener('click', async () => {
   const target = selectedExportTarget();
   if (exportInProgress || contentMutation || projectTransition || settingsWrites.size > 0 || !target || !target.available) return;
   exportInProgress = true;
+  exportProgressState = null;
+  setExportProgress({ percent: 0, stage: 'preparing', status: 'building' });
   updateBuilderBusyUI();
   exportLogEl.innerHTML = '';
   appendExportLog(t('export.log.starting'));
@@ -2444,8 +2474,10 @@ exportBuildBtn.addEventListener('click', async () => {
     const suggested = (cfg && cfg.brand && cfg.brand.title) || 'meu-curso';
     const result = await window.icurator.exportProject({ target: target.id, defaultName: suggested });
     if (result && result.cancelled) {
+      setExportProgress({ percent: exportProgressState.percent, stage: 'cancelled', status: 'cancelled' });
       appendExportLog(t('export.log.cancelled'));
     } else if (result && result.ok && result.path) {
+      setExportProgress({ percent: 100, stage: 'complete', status: 'success' });
       lastExportedPath = result.path;
       exportOpenReleaseBtn.disabled = false;
       appendExportLog(t('export.log.saved_prefix') + result.path, 'success');
@@ -2456,6 +2488,7 @@ exportBuildBtn.addEventListener('click', async () => {
       throw new Error((result && (result.error || result.message)) || t('export.log.no_result'));
     }
   } catch (err) {
+    setExportProgress({ percent: exportProgressState.percent, stage: 'failed', status: 'error' });
     appendExportLog(t('export.log.failed_prefix') + (err && err.message ? err.message : err), 'error');
   } finally {
     exportInProgress = false;

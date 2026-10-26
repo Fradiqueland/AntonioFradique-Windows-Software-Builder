@@ -6,6 +6,7 @@
       content="default-src 'self'; form-action 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: file:; font-src 'self' https://cdn.jsdelivr.net;" />
     <title>Windows &amp; Mac Software Builder</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="../shared/author.css" />
   </head>
   <body>
     <!-- ===== Faixas de texto rolante (marquee) de branding / promoção ===== -->
@@ -76,10 +77,17 @@
         </nav>
 
         <div class="sidebar-footer">
+          <section class="author-card" aria-label="Antonio Fradique">
+            <span data-i18n="author.created_by">Criado por:</span>
+            <strong>Antonio Fradique</strong>
+            <img class="author-photo" src="../shared/antonio-fradique.webp" alt="Antonio Fradique" />
+            <span data-i18n="author.more_products">Mais Produtos em:</span>
+            <a href="https://AntonioFradique.net" class="corner-link" data-ext="https://AntonioFradique.net">https://AntonioFradique.net</a>
+          </section>
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v2.6.1</div>
+          <div class="version"></div>
         </div>
       </aside>
 
@@ -765,6 +773,14 @@
 
             <div class="form-group">
               <label data-i18n="export.status_label">Status</label>
+              <div class="export-progress hidden" id="export-progress" aria-busy="false">
+                <div class="export-progress-heading">
+                  <span id="export-progress-stage" role="status" aria-live="polite"></span>
+                  <strong id="export-progress-percent">0%</strong>
+                </div>
+                <progress id="export-progress-bar" max="100" value="0" aria-labelledby="export-progress-stage"></progress>
+                <small data-i18n="export.progress_help">O progresso acompanha as etapas de construção. Os 100% confirmam que o ficheiro foi guardado.</small>
+              </div>
               <div class="export-log" id="export-log">
                 <div class="export-log-empty" data-i18n="export.log_empty">Sem atividade. Clique em "Exportar" para começar.</div>
               </div>

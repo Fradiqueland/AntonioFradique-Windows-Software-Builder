@@ -9,7 +9,9 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
   const renderer = fs.readFileSync(path.join(applicationRoot, 'src/viewer/renderer.js'), 'utf8').replace(/\r?\nboot\(\);\s*$/, '\n');
   const html = fs.readFileSync(path.join(applicationRoot, 'src/viewer/index.html'), 'utf8')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace('<link rel="stylesheet" href="styles.css" />', () => '<style>' + fs.readFileSync(path.join(applicationRoot, 'src/viewer/styles.css'), 'utf8') + '</style>');
+    .replace('<link rel="stylesheet" href="styles.css" />', () => '<style>' + fs.readFileSync(path.join(applicationRoot, 'src/viewer/styles.css'), 'utf8') + '</style>')
+    .replace('<link rel="stylesheet" href="../shared/author.css" />', () => '<style>' + fs.readFileSync(path.join(applicationRoot, 'src/shared/author.css'), 'utf8') + '</style>')
+    .replace('../shared/antonio-fradique.webp', () => 'data:image/webp;base64,' + fs.readFileSync(path.join(applicationRoot, 'src/shared/antonio-fradique.webp')).toString('base64'));
   const file = path.join(temporary, 'viewer.html');
   fs.writeFileSync(file, html);
   const gifPath = path.resolve(__dirname, '../tests/fixtures/banner-animated.gif');
@@ -39,6 +41,10 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
       window.viewer={resolveAssetPath:async()=>${JSON.stringify(gifPath)},openExternal:async url=>qa.opened.push(url),
         saveState:async()=>qa.writes++,loadLocale:async()=>({dict:${JSON.stringify(dict)}})};void 0;`);
     await run(renderer);
+    await until("document.querySelector('.author-photo').complete && document.querySelector('.author-photo').naturalWidth>0");
+    await run("wireCornerLinks();document.querySelector('.author-card a').click();void 0;");
+    assert.deepEqual(await run('qa.opened'),['https://AntonioFradique.net']);
+    await run('qa.opened=[];void 0;');
     await run(`i18nDict=${JSON.stringify(dict)};config={brand:{},content:[]};
       qa.banners={top:{enabled:true,dismissible:true,image:'top.gif',url:'https://example.org'},
         bottom:{enabled:true,dismissible:true,image:'bottom.gif'}};
@@ -95,7 +101,7 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
     assert.equal(await run("document.body.classList.contains('banner-top')||document.body.classList.contains('banner-bottom')"),false);
     assert.deepEqual(await run('qa.errors'),[]);assert.deepEqual(navigations,[]);assert.deepEqual(crashes,[]);
     return {animatedGif:true,independentClose:true,pointerAndKeyboard:true,reclaimedPixels:bothClosedHeight-initialHeight,
-      unchangedOpenContent:true,noLinkOnClose:true,legacyBannersFixed:true,narrowWindow:true};
+      unchangedOpenContent:true,noLinkOnClose:true,legacyBannersFixed:true,narrowWindow:true,authorPhotoAndLink:true};
   } finally {if(!win.isDestroyed())win.destroy();fs.rmSync(temporary,{recursive:true,force:true});}
 }
 module.exports={verifyViewerBanners};

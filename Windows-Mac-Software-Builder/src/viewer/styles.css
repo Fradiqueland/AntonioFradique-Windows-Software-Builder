@@ -834,6 +834,7 @@ body.banner-bottom .viewer-app { padding-bottom: 104px; }
 }
 
 .viewer-sidebar-footer { border-top: 1px solid rgba(255,255,255,.08); }
+.viewer-sidebar-footer { flex-shrink: 0; max-height: 50%; overflow-y: auto; }
 .viewer-sidebar-footer .viewer-social { border-top: none; padding: 10px 14px 6px; }
 .viewer-sidebar-footer .viewer-lang-row { border-bottom: none; padding: 8px 14px 12px; }
 .viewer-sidebar-footer .viewer-lang-row label { font-size: 15px; cursor: default; }

@@ -153,9 +153,12 @@ async function main() {
       const targets=await window.icurator.getExportTargets();
       const active=document.getElementById('active-project-name').textContent;
       const rendered=document.querySelectorAll('#projects-list .project-item').length;
-      return {ready:rendered>0&&active!=='—'&&!document.getElementById('project-new-btn').disabled,
+      const photoLoaded=!!document.querySelector('.author-photo')?.naturalWidth;
+      return {ready:rendered>0&&active!=='—'&&!document.getElementById('project-new-btn').disabled&&photoLoaded,
         url:location.href,version:window.icurator.version,active,projectCount:state.projects.length,rendered,
         sidebarWidth:document.querySelector('.sidebar').getBoundingClientRect().width,
+        authorPhotoLoaded:photoLoaded,
+        authorLink:document.querySelector('.author-card a')?.getAttribute('data-ext'),
         configTitle:config.brand.title,targets};
     })()`;
     let state,lastError;const editorDeadline=Date.now()+60000;
@@ -168,9 +171,12 @@ async function main() {
     assert.ok(state?.ready,'Installed Builder must render the editor and project list: '+JSON.stringify({state,lastError}));
     assert.match(state.url,/\/src\/builder\/index\.html$/);
     assert.equal(state.version,pkg.version);assert.ok(state.sidebarWidth>100);
+    assert.equal(state.authorPhotoLoaded,true,'Installed Builder must include and display the author photograph');
+    assert.equal(state.authorLink,'https://AntonioFradique.net');
     assert.equal(state.projectCount,state.rendered);assert.ok(state.configTitle);
     report.editor=state;
     report.checks.push('installed Builder renders its real editor, preload and strict privileged IPC load the current version and projects');
+    report.checks.push('installed Builder displays the bundled author photograph and products link');
     progress('verify installed editor navigation');
     for(const [tab,panel] of [['projetos','projetos'],['aparencia','brand'],['publicar','export'],['content','content']]) {
       await client.evaluate(`document.querySelector('.tab[data-tab="${tab}"]').click()`);

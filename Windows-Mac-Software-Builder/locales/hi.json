@@ -325,7 +325,20 @@
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "प्रगति निर्माण के चरणों पर आधारित है। 100% का अर्थ है कि फ़ाइल सहेज दी गई है।",
+    "progress": {
+      "preparing": "तैयारी जारी…",
+      "template": "ऐप तैयार किया जा रहा है…",
+      "resources": "संसाधन तैयार किए जा रहे हैं…",
+      "compressing": "संपीड़न जारी…",
+      "packing": "ऐप का पैकेज बनाया जा रहा है…",
+      "finalizing": "अंतिम प्रक्रिया जारी…",
+      "saving": "फ़ाइल सहेजी जा रही है…",
+      "complete": "पूर्ण",
+      "cancelled": "प्रक्रिया रद्द की गई",
+      "failed": "निर्माण विफल"
+    }
   },
   "viewer": {
     "menu_empty": "कोई मॉड्यूल कॉन्फ़िगर नहीं किया गया।",
@@ -494,5 +507,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "निर्माता:",
+    "more_products": "अन्य उत्पाद:"
   }
 }

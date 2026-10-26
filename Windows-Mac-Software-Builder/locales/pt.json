@@ -325,7 +325,20 @@
       "mac_zip": "Mac — ZIP com aplicação .app e pasta de dados"
     },
     "mac_delivery_help": "No Mac, extraia o ZIP completo e mantenha a aplicação .app e a sua pasta de dados juntas. Abra a .app para executar o produto.",
-    "windows_zip_delivery_help": "No Windows, extraia o ZIP completo e mantenha todos os ficheiros juntos. Abra o .exe incluído para executar o produto."
+    "windows_zip_delivery_help": "No Windows, extraia o ZIP completo e mantenha todos os ficheiros juntos. Abra o .exe incluído para executar o produto.",
+    "progress_help": "O progresso acompanha as etapas de construção. Os 100% confirmam que o ficheiro foi guardado.",
+    "progress": {
+      "preparing": "A preparar…",
+      "template": "A preparar a aplicação…",
+      "resources": "A preparar os recursos…",
+      "compressing": "A comprimir…",
+      "packing": "A empacotar a aplicação…",
+      "finalizing": "A finalizar…",
+      "saving": "A guardar o ficheiro…",
+      "complete": "Concluído",
+      "cancelled": "Operação cancelada",
+      "failed": "A construção falhou"
+    }
   },
   "viewer": {
     "menu_empty": "Nenhum módulo configurado.",
@@ -494,5 +507,9 @@
     "close_information": "Fechar informação",
     "viewer_title": "Aplicação Android indisponível",
     "viewer_unavailable": "Este produto não inclui um motor Android validado. Não é possível executar o APK nesta versão. Contacte quem criou o software para obter uma versão compatível."
+  },
+  "author": {
+    "created_by": "Criado por:",
+    "more_products": "Mais Produtos em:"
   }
 }

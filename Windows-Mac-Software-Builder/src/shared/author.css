@@ -1,0 +1,29 @@
+.author-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #e5e7eb;
+}
+.author-card strong { color: #fff; font-size: 14px; }
+.author-photo {
+  display: block;
+  width: 160px;
+  height: auto;
+  max-width: 100%;
+  max-height: 104px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 3px 0;
+}
+.author-card a { color: #93c5fd; overflow-wrap: anywhere; }
+.author-card a:hover { color: #fff; }
+.author-card a:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }
+@media (max-height: 650px) {
+  .author-photo { width: 112px; max-height: 64px; }
+  .author-card { padding: 8px; gap: 3px; }
+}

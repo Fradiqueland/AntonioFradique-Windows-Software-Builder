@@ -74,6 +74,10 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
     '',
+    'The Builder and exported Windows/Mac applications include an author card in the sidebar: Created by Antonio Fradique, the bundled photograph and More Products at https://AntonioFradique.net. The link opens in the system browser; the photograph is available offline.',
+    '',
+    'Project builds now display a progress bar and percentage for Windows EXE and Windows/Mac ZIP exports. The percentage follows build stages and actual compressor or archive progress; 100% is reserved for the successfully saved final file. Failed or cancelled builds retain their status and can be retried.',
+    '',
     'Fix the blank Windows Builder window introduced in v2.6.4: the installed Windows Builder uses resources/app, while the Viewer uses resources/app.asar. UI loading now retains the actual path reported by Electron, with canonical Windows aliases and exact IPC validation. Mac startup uses its existing path. A failed page load displays a clear error instead of leaving an empty window.',
     '',
     'New mandatory installer startup gate: silently install the actual Windows NSIS setup, or mount the actual Mac DMG and copy/verify its application, then launch the real Builder. The gate checks the visible editor, current version, working privileged IPC, projects and navigation through Projects, Appearance, Publish and Content. Its report is tied to the SHA-256 of the exact published installer.',

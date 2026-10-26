@@ -4,9 +4,9 @@ Crie aplicações de conteúdos para **Windows e Mac**: cursos, bibliotecas, apr
 
 O **Builder** é o programa de edição instalado no seu computador. As **aplicações exportadas** são os produtos que cria e distribui; os destinatários não precisam de instalar o Builder.
 
-## Novidades da v2.6.5
+## Novidades da v2.6.6
 
-Corrige a janela vazia do construtor Windows e acrescenta testes de instalação e abertura nos dois sistemas. Mantém a correção dos caminhos longos da v2.6.4. Consulte [as alterações da v2.6.5](Windows-Mac-Software-Builder/V2.6.5.md).
+Acrescenta os créditos com fotografia e link no menu do construtor e das aplicações exportadas, e uma barra com percentagem durante a construção dos projetos. Mantém a correção da janela vazia do Windows e os testes de instalação e abertura nos dois sistemas. Consulte [as alterações da v2.6.6](Windows-Mac-Software-Builder/V2.6.6.md).
 
 ## Projetos editáveis
 
@@ -20,12 +20,12 @@ Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md
 
 ## Descarregar e instalar o Builder
 
-Na [Release v2.6.5](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.5), descarregue o instalador correspondente ao seu computador em **Assets**:
+Na [Release v2.6.6](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.6), descarregue o instalador correspondente ao seu computador em **Assets**:
 
-| Computador | Instalador v2.6.5 |
+| Computador | Instalador v2.6.6 |
 | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.6.5-windows-x64-setup.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.5-mac-universal.dmg` |
+| Windows x64 | `Windows-Mac-Software-Builder-2.6.6-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.6-mac-universal.dmg` |
 
 A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
 
