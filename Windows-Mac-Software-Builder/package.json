@@ -24,7 +24,8 @@
     "test:electron": "electron scripts/smoke-real-exports.cjs",
     "test:electron:packaged": "electron scripts/smoke-real-exports.cjs --packaged",
     "test:electron:iptv": "electron scripts/smoke-iptv.cjs",
-    "test:electron:iptv:packaged": "electron scripts/smoke-iptv.cjs --packaged"
+    "test:electron:iptv:packaged": "electron scripts/smoke-iptv.cjs --packaged",
+    "test:builder:installed": "node scripts/smoke-builder-startup.cjs"
   },
   "build": {
     "appId": "com.launchbox.builder",

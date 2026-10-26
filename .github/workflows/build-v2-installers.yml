@@ -289,7 +289,7 @@ jobs:
       - name: Verify packaged app and both embedded templates
         run: npm run verify:package 2>&1 | tee build-verification.log
       - name: Install and open the actual Builder interface
-        run: node scripts/smoke-builder-startup.cjs 2>&1 | tee build-builder-startup.log
+        run: npm run test:builder:installed 2>&1 | tee build-builder-startup.log
       - name: Exercise packaged export code and dependencies in real Electron
         run: npm run test:electron:packaged 2>&1 | tee build-electron-smoke-packaged.log
       - name: Play transcoded IPTV using packaged code and FFmpeg
