@@ -2092,6 +2092,7 @@ async function boot() {
   try {
     config = await window.viewer.loadConfig();
   } catch (err) {
+    console.error('Erro ao carregar configuração:', err);
     showToast('Erro ao carregar configuração: ' + (err && err.message ? err.message : err));
     return;
   }

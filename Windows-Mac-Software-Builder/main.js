@@ -28,9 +28,9 @@ const VIEWER_CHANNELS = new Set([
 ]);
 function handleTrustedIpc(channel, handler) {
   ipcMain.handle(channel, (event, ...args) => {
-    const fromBuilder = isTrustedFrame(event, builderWindow, path.join(__dirname, 'src/builder/index.html'));
+    const fromBuilder = isTrustedFrame(event, builderWindow, path.join(PROJECT_ROOT, 'src/builder/index.html'));
     const fromViewer = VIEWER_CHANNELS.has(channel)
-      && isTrustedFrame(event, viewerWindow, path.join(__dirname, 'src/viewer/index.html'));
+      && isTrustedFrame(event, viewerWindow, path.join(PROJECT_ROOT, 'src/viewer/index.html'));
     if (!fromBuilder && !fromViewer) throw new Error('Origem IPC não autorizada.');
     return handler(event, ...args);
   });
@@ -121,7 +121,13 @@ app.userAgentFallback = 'Mozilla/5.0 (' + (process.platform === 'darwin' ? 'Maci
  *                    folder, sibling of app.asar — read & write OK because
  *                    it's a fresh %TEMP% extraction every launch)
  * ========================================================= */
-const PROJECT_ROOT = __dirname;
+// Canonicalise the physical resources directory before adding the virtual ASAR
+// path. Windows SFX temp paths may contain 8.3 aliases; Chromium resolves those
+// when loading file URLs, so both UI loading and the strict IPC gate must use
+// the same canonical spelling. The allowed window/frame/URL checks stay exact.
+const PROJECT_ROOT = app.isPackaged && process.platform === 'win32'
+  ? path.join(fs.realpathSync.native(process.resourcesPath), 'app.asar')
+  : __dirname;
 function macProjectDirectory(resourcesPath) {
   const bundle = path.resolve(resourcesPath, '..', '..');
   const name = path.basename(bundle).replace(/\.app$/i, '');
@@ -271,7 +277,7 @@ const ALL_TYPES = new Set([
   'article-reader', 'smart-embed', 'iptv', 'local-web', 'portable'
 ]);
 
-const LOCALES_DIR = path.join(__dirname, 'locales');
+const LOCALES_DIR = path.join(PROJECT_ROOT, 'locales');
 const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr', 'hi', 'ar', 'zh', 'bn', 'ru', 'id']);
 
 /* SFX export resources (Builder packaged only).
@@ -774,10 +780,10 @@ function createBuilderWindow() {
   builderWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 1024, minHeight: 680,
     title: 'Windows & Mac Software Builder',
-    icon: path.join(__dirname, 'src', 'builder', 'app-icon.png'),
+    icon: path.join(PROJECT_ROOT, 'src', 'builder', 'app-icon.png'),
     backgroundColor: '#0f172a',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(PROJECT_ROOT, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
@@ -801,13 +807,13 @@ function createBuilderWindow() {
       buttons: ['Reabrir editor', 'Fechar'], defaultId: 0, cancelId: 1
     });
     if (window.isDestroyed()) return;
-    if (result.response === 0) await window.loadFile(path.join(__dirname, 'src/builder/index.html'));
+    if (result.response === 0) await window.loadFile(path.join(PROJECT_ROOT, 'src/builder/index.html'));
     else window.close();
     } catch (error) { console.error('[builder] recovery failed:', error.message); }
   });
   builderWindow.setMenuBarVisibility(false);
   attachContextMenu(builderWindow.webContents);
-  builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
+  builderWindow.loadFile(path.join(PROJECT_ROOT, 'src', 'builder', 'index.html'));
   builderWindow.on('closed', () => { builderWindow = null; });
 }
 
@@ -896,7 +902,7 @@ function createViewerWindow({ standalone = false } = {}) {
     backgroundColor: bgColor,
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload-viewer.js'),
+      preload: path.join(PROJECT_ROOT, 'preload-viewer.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
@@ -1001,7 +1007,7 @@ function createViewerWindow({ standalone = false } = {}) {
   viewerWindow.webContents.on('render-process-gone', stopWebModules);
 
   viewerWindow.setMenuBarVisibility(false);
-  viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
+  viewerWindow.loadFile(path.join(PROJECT_ROOT, 'src', 'viewer', 'index.html'));
   viewerWindow.once('ready-to-show', () => {
     if (standalone) viewerWindow.maximize();
     viewerWindow.show();
