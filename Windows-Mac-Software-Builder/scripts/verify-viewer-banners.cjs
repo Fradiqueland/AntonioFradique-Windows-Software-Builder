@@ -42,7 +42,8 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
         saveState:async()=>qa.writes++,loadLocale:async()=>({dict:${JSON.stringify(dict)}})};void 0;`);
     await run(renderer);
     await until("document.querySelector('.author-photo').complete && document.querySelector('.author-photo').naturalWidth>0");
-    await run("wireCornerLinks();document.querySelector('.author-card a').click();void 0;");
+    // The full shipped renderer already wires its links at top level.
+    await run("document.querySelector('.author-card a').click();void 0;");
     assert.deepEqual(await run('qa.opened'),['https://AntonioFradique.net']);
     await run('qa.opened=[];void 0;');
     await run(`i18nDict=${JSON.stringify(dict)};config={brand:{},content:[]};
