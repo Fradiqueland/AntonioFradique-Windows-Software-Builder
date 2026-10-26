@@ -38,7 +38,7 @@ test('packaged Windows Viewer retains its real resources/app.asar archive',async
   await asar.createPackage(source,appPath);
   const root=productionRoot(f.resources,appPath);
   assert.equal(root,appPath);
-  assert.equal(asar.extractFile(root,'src/viewer/index.html').toString(),'<h1>Viewer interface</h1>');
+  assert.equal(asar.extractFile(root,path.join('src','viewer','index.html')).toString(),'<h1>Viewer interface</h1>');
 });
 
 test('Windows directory aliases canonicalise without changing app versus app.asar',t=>{
