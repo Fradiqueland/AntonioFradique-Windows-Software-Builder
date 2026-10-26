@@ -74,6 +74,10 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
     '',
+    'Fix the blank Windows Builder window introduced in v2.6.4: the installed Windows Builder uses resources/app, while the Viewer uses resources/app.asar. UI loading now retains the actual path reported by Electron, with canonical Windows aliases and exact IPC validation. Mac startup uses its existing path. A failed page load displays a clear error instead of leaving an empty window.',
+    '',
+    'New mandatory installer startup gate: silently install the actual Windows NSIS setup, or mount the actual Mac DMG and copy/verify its application, then launch the real Builder. The gate checks the visible editor, current version, working privileged IPC, projects and navigation through Projects, Appearance, Publish and Content. Its report is tied to the SHA-256 of the exact published installer.',
+    '',
     'Fix long resource paths when opening the Windows self-extracting EXE: the legacy SFX transports assets in a short-named opaque ZIP, then the normal Viewer validates and atomically restores every original byte using extended Windows paths before opening. No profile or cache is deleted. Native tests execute the actual generated SFX and verify the normal Viewer window and resources longer than 260 characters.',
     '',
     'Remove artificial 32/64-directory depth caps from web/portable imports and Windows/Mac exports, and the internal 2048-character ZIP path cap. Both native export gates preserve and extract 72-level trees. Filesystem limits and existing file count/size quotas still apply. See V2.6.4.md.',

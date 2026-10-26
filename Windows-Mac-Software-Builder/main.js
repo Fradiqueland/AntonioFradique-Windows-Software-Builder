@@ -121,12 +121,11 @@ app.userAgentFallback = 'Mozilla/5.0 (' + (process.platform === 'darwin' ? 'Maci
  *                    folder, sibling of app.asar — read & write OK because
  *                    it's a fresh %TEMP% extraction every launch)
  * ========================================================= */
-// Canonicalise the physical resources directory before adding the virtual ASAR
-// path. Windows SFX temp paths may contain 8.3 aliases; Chromium resolves those
-// when loading file URLs, so both UI loading and the strict IPC gate must use
-// the same canonical spelling. The allowed window/frame/URL checks stay exact.
+// Canonicalise the physical parent but retain Electron's actual app basename:
+// the Windows Builder uses resources/app; the Viewer uses resources/app.asar.
+// Resolve 8.3 aliases consistently for UI loading and the exact IPC URL gate.
 const PROJECT_ROOT = app.isPackaged && process.platform === 'win32'
-  ? path.join(fs.realpathSync.native(process.resourcesPath), 'app.asar')
+  ? path.join(fs.realpathSync.native(path.dirname(app.getAppPath())), path.basename(app.getAppPath()))
   : __dirname;
 function macProjectDirectory(resourcesPath) {
   const bundle = path.resolve(resourcesPath, '..', '..');
@@ -776,6 +775,17 @@ function secureEmbeddedContent(win) {
   });
 }
 
+async function loadBuilderPage(window) {
+  try { await window.loadFile(path.join(PROJECT_ROOT, 'src', 'builder', 'index.html')); }
+  catch (error) {
+    console.error('[builder] interface load failed:', error.message);
+    if (window.isDestroyed()) return;
+    dialog.showErrorBox('Não foi possível abrir o editor',
+      'A interface do construtor não pôde ser carregada. Reinstale a versão mais recente. Os projetos guardados não foram alterados.\n\n' + error.message);
+    app.quit();
+  }
+}
+
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 1024, minHeight: 680,
@@ -807,13 +817,13 @@ function createBuilderWindow() {
       buttons: ['Reabrir editor', 'Fechar'], defaultId: 0, cancelId: 1
     });
     if (window.isDestroyed()) return;
-    if (result.response === 0) await window.loadFile(path.join(PROJECT_ROOT, 'src/builder/index.html'));
+    if (result.response === 0) await loadBuilderPage(window);
     else window.close();
     } catch (error) { console.error('[builder] recovery failed:', error.message); }
   });
   builderWindow.setMenuBarVisibility(false);
   attachContextMenu(builderWindow.webContents);
-  builderWindow.loadFile(path.join(PROJECT_ROOT, 'src', 'builder', 'index.html'));
+  loadBuilderPage(builderWindow);
   builderWindow.on('closed', () => { builderWindow = null; });
 }
 

@@ -1,8 +1,8 @@
-# Windows & Mac Software Builder — v2.6.4
+# Windows & Mac Software Builder — v2.6.5
 
 Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Builder permite gerir projetos, personalizar a apresentação e exportar produtos independentes para os dois sistemas.
 
-Consulte [as alterações da v2.6.4](V2.6.4.md) e [da v2.6](V2.6.md). **A importação e execução APK ainda não estão disponíveis**; o cartão experimental apresenta o estado e os requisitos.
+Consulte [as alterações da v2.6.5](V2.6.5.md) e [da v2.6](V2.6.md). **A importação e execução APK ainda não estão disponíveis**; o cartão experimental apresenta o estado e os requisitos.
 
 ## Builder e produtos exportados
 
@@ -16,7 +16,7 @@ Os dois instaladores incluem os dois modelos de exportação. O destinatário de
 
 O ícone personalizado aplica-se ao EXE auto-extraível gerado no Windows. Os ZIPs mantêm o ícone do modelo. O novo módulo **Software portable** permite incluir a pasta completa e selecionar entradas Windows e Mac. Pode autorizar Wine externo para tentar programas Windows no Mac. A exportação Mac rejeita programas Windows do módulo antigo **Lançar ficheiro**; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
 
-Os [instaladores v2.6.4](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.4) são publicados em **Releases → Assets**, acompanhados por `SHA256SUMS.txt` e relatórios dos tamanhos medidos. A publicação exige sucesso das [compilações e verificações nativas](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) dos dois instaladores. O repositório privado exige acesso autorizado para descarregar.
+Os [instaladores v2.6.5](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.5) são publicados em **Releases → Assets**, acompanhados por `SHA256SUMS.txt` e relatórios dos tamanhos medidos. A publicação exige sucesso das [compilações e verificações nativas](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) dos dois instaladores. O repositório privado exige acesso autorizado para descarregar.
 
 ## Transferir projetos editáveis
 
