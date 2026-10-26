@@ -8,7 +8,7 @@ const vm=require('node:vm');
 const asar=require('@electron/asar');
 
 function fixture(t) {
-  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'builder-ui-root-')));
+  const root=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'builder-ui-root-')));
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const resources=path.join(root,'resources');fs.mkdirSync(resources);
   return {root,resources};
