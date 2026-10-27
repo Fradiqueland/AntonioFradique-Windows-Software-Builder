@@ -38,8 +38,10 @@ static BOOL normal_directory(const wchar_t *p) {
   return a!=INVALID_FILE_ATTRIBUTES&&(a&FILE_ATTRIBUTE_DIRECTORY)&&!(a&FILE_ATTRIBUTE_REPARSE_POINT);
 }
 static BOOL normal_file(const wchar_t *p) {
-  DWORD a=GetFileAttributesW(p);
-  return a!=INVALID_FILE_ATTRIBUTES&&!(a&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT));
+  WIN32_FILE_ATTRIBUTE_DATA data;
+  return GetFileAttributesExW(p,GetFileExInfoStandard,&data)&&
+    !(data.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))&&
+    (data.nFileSizeHigh||data.nFileSizeLow);
 }
 static BOOL make_directory(const wchar_t *p) {
   return CreateDirectoryW(p,NULL)?TRUE:normal_directory(p);
@@ -104,7 +106,11 @@ static BOOL read_footer(Bundle *b) {
 }
 static BOOL ready(Bundle *b) {
   wchar_t *p;HANDLE file;char receipt[64],expected[65];DWORD count;size_t i;BOOL ok=FALSE;
-  const wchar_t *required[]={L"LaunchBox Viewer.exe",L"resources\\app.asar",L"resources\\data\\project-config.json",L"resources\\project-assets.json"};
+  // These small metadata checks also catch an interrupted/quarantined engine.
+  // Never hash the engine or scan the appended payload on a warm launch.
+  const wchar_t *required[]={L"LaunchBox Viewer.exe",L"icudtl.dat",L"resources.pak",L"v8_context_snapshot.bin",
+    L"ffmpeg.dll",L"libEGL.dll",L"libGLESv2.dll",L"locales\\en-US.pak",
+    L"resources\\app.asar",L"resources\\app-mode.json",L"resources\\data\\project-config.json",L"resources\\project-assets.json"};
   if(!normal_directory(b->root))return FALSE;
   p=joined(b->root,L".wsmb-runtime-ready");if(!p)return FALSE;
   file=CreateFileW(p,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,NULL);free(p);

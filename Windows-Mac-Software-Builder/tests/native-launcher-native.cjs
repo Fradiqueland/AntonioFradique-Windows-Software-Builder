@@ -7,6 +7,9 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
  const root=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'wsmb-native-check-')));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
  const stage=path.join(root,'stage'),resources=path.join(stage,'resources');fs.mkdirSync(path.join(resources,'data'),{recursive:true});
  fs.copyFileSync(process.execPath,path.join(stage,'LaunchBox Viewer.exe'));
+ for(const name of ['icudtl.dat','resources.pak','v8_context_snapshot.bin','ffmpeg.dll','libEGL.dll','libGLESv2.dll','locales/en-US.pak','resources/app-mode.json']){
+  const file=path.join(stage,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,'native engine fixture');
+ }
  fs.writeFileSync(path.join(resources,'app.asar'),'native fixture');fs.writeFileSync(path.join(resources,'data/project-config.json'),'{}');fs.writeFileSync(path.join(resources,'project-assets.json'),'{}');fs.writeFileSync(path.join(resources,'project-assets.zip'),'fixture');
  const sevenZip=path.resolve(__dirname,'../src/builder/bin/7za.exe'),archive=path.join(root,'payload.7z'),output=path.join(root,'Prepared app.exe');
  execFileSync(sevenZip,['a','-t7z','-mx=1',archive,stage+path.sep+'*'],{stdio:'ignore',windowsHide:true});
@@ -18,5 +21,10 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
  const warm=await run('warm');assert.equal(warm.cacheHit,true);assert.equal(warm.payloadBytesRead,0);assert.equal(warm.archiveExtractions,0);assert.equal(fs.statSync(marker).mtimeMs,before);
  const deep=path.join(cache,'deep',...Array(72).fill('d'),'profile.cache');fs.mkdirSync(path.toNamespacedPath(path.dirname(deep)),{recursive:true});fs.writeFileSync(path.toNamespacedPath(deep),'LONG CACHED DATA');
  fs.unlinkSync(path.join(cache,'LaunchBox Viewer.exe'));const repaired=await run('repair');assert.equal(repaired.cacheHit,false);assert.equal(repaired.archiveExtractions,1);assert.equal(fs.existsSync(path.toNamespacedPath(deep)),false);
- console.log('NATIVE_BOOTSTRAP_PASS',JSON.stringify({first,warm,repaired}));
+ for(const name of ['icudtl.dat','ffmpeg.dll','resources/app-mode.json']) {
+  fs.unlinkSync(path.join(cache,name));const fixed=await run('missing-'+path.basename(name));assert.equal(fixed.cacheHit,false);assert.equal(fixed.archiveExtractions,1);assert.ok(fs.statSync(path.join(cache,name)).size>0);
+ }
+ fs.truncateSync(path.join(cache,'resources.pak'),0);const truncated=await run('truncated');assert.equal(truncated.cacheHit,false);assert.equal(truncated.archiveExtractions,1);assert.ok(fs.statSync(path.join(cache,'resources.pak')).size>0);
+ const finalWarm=await run('final-warm');assert.equal(finalWarm.cacheHit,true);assert.equal(finalWarm.payloadBytesRead,0);assert.equal(finalWarm.archiveExtractions,0);
+ console.log('NATIVE_BOOTSTRAP_PASS',JSON.stringify({first,warm,repaired,truncated,finalWarm}));
 });

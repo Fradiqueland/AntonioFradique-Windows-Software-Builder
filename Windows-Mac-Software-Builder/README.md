@@ -1,24 +1,24 @@
-# Windows & Mac Software Builder — v2.6.6
+# Windows & Mac Software Builder — v2.6.9
 
 Editor Electron para criar aplicações de conteúdos em Windows e macOS. O Builder permite gerir projetos, personalizar a apresentação e exportar produtos independentes para os dois sistemas.
 
-A v2.6.6 inclui créditos com fotografia e link no menu e uma barra de progresso com percentagem nas exportações Windows e Mac.
+A v2.6.9 corrige a recuperação de aplicações com componentes do motor em falta ou vazios, atualiza o ícone ao reabrir a pré-visualização e valida os ícones antes de os guardar. Inclui leitura de ícones ICO no Mac, mantendo os arranques diretos do EXE único e o nome e ícone personalizados no ZIP Windows.
 
-Consulte [as alterações da v2.6.6](V2.6.6.md) e [da v2.6](V2.6.md). **A importação e execução APK ainda não estão disponíveis**; o cartão experimental apresenta o estado e os requisitos.
+Consulte [as correções da v2.6.9](V2.6.9.md), [o arranque rápido da v2.6.8](V2.6.8.md) e [o formato de projetos da v2.6](V2.6.md). **A importação e execução APK ainda não estão disponíveis**; o cartão experimental apresenta o estado e os requisitos.
 
 ## Builder e produtos exportados
 
 | Elemento | Windows | Mac |
 | --- | --- | --- |
 | Instalação do Builder | Setup `.exe` para Windows x64 | `.dmg` universal para Intel e Apple Silicon (macOS 13+) |
-| Produto exportado no Builder Windows | EXE único auto-extraível | ZIP com `.app` universal e pasta `.data` |
+| Produto exportado no Builder Windows | EXE único com preparação inicial ou ZIP portátil | ZIP com `.app` universal e pasta `.data` |
 | Produto exportado no Builder Mac | ZIP portátil com EXE e dependências | ZIP com `.app` universal e pasta `.data` |
 
 Os dois instaladores incluem os dois modelos de exportação. O destinatário de um produto não precisa de instalar o Builder. Num ZIP Windows, deve extrair e manter todos os ficheiros; num ZIP Mac, deve manter a aplicação e a pasta `.data` juntas.
 
-O ícone personalizado aplica-se ao EXE auto-extraível gerado no Windows. Os ZIPs mantêm o ícone do modelo. O novo módulo **Software portable** permite incluir a pasta completa e selecionar entradas Windows e Mac. Pode autorizar Wine externo para tentar programas Windows no Mac. A exportação Mac rejeita programas Windows do módulo antigo **Lançar ficheiro**; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
+O ícone escolhido em Aparência aplica-se ao EXE único, ao executável com o nome do software dentro do ZIP Windows e à janela e barra de tarefas da aplicação. No Mac, aplica-se ao Dock durante a execução; o ícone Finder da aplicação assinada mantém-se. O novo módulo **Software portable** permite incluir a pasta completa e selecionar entradas Windows e Mac. Pode autorizar Wine externo para tentar programas Windows no Mac. A exportação Mac rejeita programas Windows do módulo antigo **Lançar ficheiro**; esses ficheiros podem continuar a ser disponibilizados em módulos de Downloads.
 
-Os [instaladores v2.6.6](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.6) são publicados em **Releases → Assets**, acompanhados por `SHA256SUMS.txt` e relatórios dos tamanhos medidos. A publicação exige sucesso das [compilações e verificações nativas](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) dos dois instaladores. O repositório privado exige acesso autorizado para descarregar.
+Os [instaladores v2.6.9](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.9) são publicados em **Releases → Assets**, acompanhados por `SHA256SUMS.txt` e relatórios dos tamanhos medidos. A publicação exige sucesso das [compilações e verificações nativas](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/actions/workflows/build-v2-installers.yml) dos dois instaladores. O repositório privado exige acesso autorizado para descarregar.
 
 ## Transferir projetos editáveis
 

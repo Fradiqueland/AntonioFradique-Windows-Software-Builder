@@ -893,11 +893,23 @@ async function stampSfxIcon(stubPath, iconSourceAbs, tmpDir, send) {
   }
 }
 
+function applyViewerAppearance(standalone, config) {
+  const title = config.brand?.title || 'LaunchBox Viewer';
+  viewerWindow.setTitle(standalone ? title : title + ' — Pré-visualização');
+  viewerWindow.setBackgroundColor(config.brand?.colors?.background || '#f8fafc');
+  try {
+    projectIcons.applyWindowIcon({ window: viewerWindow, app, nativeImage, config,
+      assetsDir: path.join(WRITE_BASE, 'dist-assets'), platform: process.platform, standalone,
+      defaultIconPath: standalone ? undefined : path.join(PROJECT_ROOT, 'src/builder/app-icon.png') });
+  } catch (error) { console.warn('Ícone da aplicação:', error.message); }
+}
+
 function createViewerWindow({ standalone = false } = {}) {
   if (viewerWindow && !viewerWindow.isDestroyed()) {
     // Recarrega para reler o project-config.json atualizado (módulos novos,
     // logo, banner). Sem isto, reabrir a pré-visualização mostrava o estado
     // antigo (ecrã "Bem-vindo" vazio) em vez do conteúdo já gravado.
+    applyViewerAppearance(standalone, readConfig());
     stopWebModules();
     viewerWindow.webContents.reload();
     viewerWindow.focus();
@@ -922,11 +934,7 @@ function createViewerWindow({ standalone = false } = {}) {
     }
   });
 
-  try {
-    // Icon data stays outside the signed Mac bundle and is shipped in both ZIP routes.
-    projectIcons.applyWindowIcon({ window: viewerWindow, app, nativeImage, config,
-      assetsDir: path.join(WRITE_BASE, 'dist-assets'), platform: process.platform, standalone });
-  } catch (error) { console.warn('Ícone da aplicação:', error.message); }
+  applyViewerAppearance(standalone, config);
 
   /* YouTube: ver ensureYoutubeHost() — o leitor é embutido a partir de uma
    * página servida em http://127.0.0.1, uma origem web real que o YouTube
@@ -1983,9 +1991,14 @@ handleTrustedIpc('export:saveIcon', (_event, payload) => {
   }
   const destName = 'icon-source-' + crypto.randomUUID() + ext;
   const destination = path.join(DATA_DIR, destName);
-  try { fs.copyFileSync(payload.sourcePath, destination, fs.constants.COPYFILE_EXCL); }
-  catch (error) { cleanupFiles([destination]); throw error; }
   const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/' + destName } };
+  try {
+    fs.copyFileSync(payload.sourcePath, destination, fs.constants.COPYFILE_EXCL);
+    // Validate the private copy before retiring the previously selected icon.
+    // A bad image must not leave the project unable to export.
+    const icon = projectIcons.projectIcon(updated, ASSETS_DIR);
+    if (projectIcons.readIconImage(icon.absolute, nativeImage).isEmpty()) throw new Error('Imagem de ícone inválida. Use PNG, JPG ou ICO.');
+  } catch (error) { cleanupFiles([destination]); throw error; }
   commitConfigFiles(updated, [destination], retired);
   return updated;
 });

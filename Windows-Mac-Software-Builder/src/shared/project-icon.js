@@ -11,7 +11,7 @@ function projectIcon(config, assetsDir) {
   const root = fs.realpathSync.native(path.join(assetsDir, '..', 'data'));
   const absolute = path.join(root, path.posix.basename(relative));
   const stat = fs.lstatSync(absolute);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 ** 2) throw new Error('Ficheiro de ícone inválido.');
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0 || stat.size > 16 * 1024 ** 2) throw new Error('Ficheiro de ícone inválido.');
   return { relative, absolute, root, stat };
 }
 function imageToIco(image) {
@@ -29,16 +29,36 @@ function imageToIco(image) {
   });
   return Buffer.concat([header, ...frames]);
 }
-function applyWindowIcon({ window, app, nativeImage, config, assetsDir, platform, standalone }) {
+function readIconImage(absolute, nativeImage) {
+  const image = nativeImage.createFromPath(absolute);
+  if (!image.isEmpty() || path.extname(absolute).toLowerCase() !== '.ico') return image;
+  const ico = require('./ico-image');
+  for (const frame of ico.frames(fs.readFileSync(absolute))) {
+    try {
+      const png = frame.bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      const decoded = png ? nativeImage.createFromBuffer(frame.bytes) : (() => {
+        const bitmap = ico.bitmap(frame);
+        return nativeImage.createFromBitmap(bitmap.data, { width: bitmap.width, height: bitmap.height });
+      })();
+      if (!decoded.isEmpty()) return decoded;
+    } catch (_) { /* Another frame may use a supported image format. */ }
+  }
+  return image;
+}
+function applyWindowIcon({ window, app, nativeImage, config, assetsDir, platform, standalone, defaultIconPath }) {
   const icon = projectIcon(config, assetsDir);
-  if (!icon) return false;
-  const image = nativeImage.createFromPath(icon.absolute);
+  if (!icon && !defaultIconPath) return false;
+  const image = readIconImage(icon ? icon.absolute : defaultIconPath, nativeImage);
   if (image.isEmpty()) throw new Error('Não foi possível ler o ícone escolhido. Use PNG, JPG ou ICO.');
   if (platform === 'darwin') {
     if (standalone && app.dock) app.dock.setIcon(image);
   } else {
     window.setIcon(image);
     if (platform === 'win32') {
+      if (!icon) {
+        window.setAppDetails({ appId: 'com.launchbox.builder', appIconPath: defaultIconPath });
+        return true;
+      }
       // Separate projects must not be grouped under the generic Electron icon.
       const identity = crypto.createHash('sha256').update(JSON.stringify([config.brand?.title || '', fs.readFileSync(icon.absolute).toString('base64')])).digest('hex').slice(0, 32);
       const directory = path.join(app.getPath('appData'), 'LaunchBox Viewer', 'window-icons');
@@ -56,4 +76,4 @@ function applyWindowIcon({ window, app, nativeImage, config, assetsDir, platform
   }
   return true;
 }
-module.exports = { projectIcon, applyWindowIcon, imageToIco };
+module.exports = { projectIcon, applyWindowIcon, imageToIco, readIconImage };

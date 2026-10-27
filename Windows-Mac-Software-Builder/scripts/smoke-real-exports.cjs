@@ -271,7 +271,8 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     await context.concatFilesToTarget([path.join(sfxDir,'7zsd_All_x64.sfx'),configPath,archivePath],baselinePath);
     await openAndClose(baselinePath,'baseline-first');
     const baseline=await openAndClose(baselinePath,'baseline-repeat');
-    const cacheRepair=path.join(cacheRoot,'LaunchBox Viewer.exe');fs.unlinkSync(cacheRepair);
+    // The executable still exists: a missing engine data file must also repair.
+    const cacheRepair=path.join(cacheRoot,'icudtl.dat');fs.unlinkSync(cacheRepair);
     const repaired=await openAndClose(outputPath,'native-repair',{bootReport:path.join(temporary,'native-repair.json'),expectCache:false});
     report.windowsStartup={first,repeated,baseline,repaired,savedRepeatMs:baseline.visibleMs-repeated.visibleMs};
     console.log('WINDOWS_STARTUP_COMPARISON '+JSON.stringify(report.windowsStartup));
@@ -590,6 +591,12 @@ async function main() {
   try {
     const icons=createRequire(path.join(applicationRoot,'package.json'))('./src/shared/project-icon');
     assert.equal(icons.applyWindowIcon({window:iconWindow,app,nativeImage,config,assetsDir,platform:process.platform,standalone:true}),true);
+    // Exercise the real cross-platform decoder, bypassing Windows' native ICO
+    // path support so the Mac fallback is checked on both native hosts.
+    const icoFile=path.join(temporary,'cross-platform-icon.ico');
+    fs.writeFileSync(icoFile,await appRequire('png-to-ico')(iconBytes));
+    const decoded=icons.readIconImage(icoFile,{createFromPath:()=>nativeImage.createEmpty(),createFromBitmap:(bytes,size)=>nativeImage.createFromBitmap(bytes,size),createFromBuffer:bytes=>nativeImage.createFromBuffer(bytes)});
+    assert.equal(decoded.isEmpty(),false);assert.deepEqual([...decoded.toBitmap().subarray(0,4)],[0x4a,0x2b,0xe0,0xff]);
     report.checks.push('shipped project icon helper applies the exported image through native Electron on this host');
   } finally {iconWindow.destroy();}
   await verifyCrossPlatformPortableExport({ applicationRoot, templates, engine });

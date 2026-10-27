@@ -82,6 +82,8 @@ function fixture(t) {
     fs: observedFs, path, crypto, structuredClone,
     projectArchive: require('../src/shared/project-archive'),
     projectExport: require('../src/shared/project-export'), app: { getVersion: () => '2.6.0' },
+    projectIcons: require('../src/shared/project-icon'),
+    nativeImage: { createFromPath: filename => ({ isEmpty: () => fs.readFileSync(filename, 'utf8') === 'INVALID IMAGE' }) },
     console: { warn() {}, error() {} }, isViewer: false, exportBusy: false,
     WRITE_BASE: root, PROJECTS_ROOT: projects, PROJECTS_INDEX: index,
     DATA_DIR: data, ASSETS_DIR: assets, CONFIG_PATH: config, ICON_DEST_PATH: path.join(data, 'icon.ico'),
@@ -263,6 +265,17 @@ test('successful resource saves retire old files only after commit and allow sel
   const icon = f.run('export:saveIcon', { sourcePath: oldIcon });
   assert.equal(fs.existsSync(oldIcon), false);
   assert.equal(fs.readFileSync(f.ctx.relToAbs(icon.export.iconPath), 'utf8'), 'ORIGINAL ICON');
+});
+
+test('invalid and oversized icons preserve the selected icon, configuration and project index', t => {
+  const f = fixture(t), before = snapshot(f.project), index = fs.readFileSync(f.index);
+  fs.writeFileSync(f.image, 'INVALID IMAGE');
+  assert.throws(() => f.run('export:saveIcon', { sourcePath: f.image }), /ícone inválid/i);
+  assert.deepEqual(snapshot(f.project), before);
+  fs.writeFileSync(f.image, Buffer.alloc(16 * 1024 ** 2 + 1));
+  assert.throws(() => f.run('export:saveIcon', { sourcePath: f.image }), /ícone inválid/i);
+  assert.deepEqual(snapshot(f.project), before);
+  assert.deepEqual(fs.readFileSync(f.index), index);
 });
 
 test('index write failures leave create, duplicate, rename and delete atomic with no active-project switch', t => {
