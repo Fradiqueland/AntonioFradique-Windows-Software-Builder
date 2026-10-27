@@ -186,7 +186,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     androidRuntime: appRequire('./src/shared/android-runtime'),
     localWeb: appRequire('./src/shared/local-web'),
     portableApps: appRequire('./src/shared/portable-app'),
-    ASSETS_DIR: assetsDir, builderWindow: window, exportBusy: false,
+    ASSETS_DIR: assetsDir, DATA_DIR: path.join(assetsDir,'..','data'), WRITE_BASE: path.dirname(assetsDir), builderWindow: window, exportBusy: false,
     assertBuilder() {}, hasProject: () => true, readConfig: () => config,
     getSfxBinDir: () => sfxDir,
     getExportTemplatePath: () => path.join(templates, 'windows-x64.zip'),
@@ -198,8 +198,9 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   });
   const helpers = functionBlock(source, 'function copyDirRecursive(', '/* -------- Windows -------- */');
   const build = functionBlock(source, 'async function buildWindowsExe(', "handleTrustedIpc('export:targets'");
+  const resolvePaths = functionBlock(source, 'function relToAbs(', 'function deleteAssetIfInside(');
   const iconHelpers = functionBlock(source, 'async function buildIcoFromSource(', 'function createViewerWindow(');
-  vm.runInContext(helpers + '\n' + iconHelpers + '\n' + build + '\nthis.realBuildWindowsExe = buildWindowsExe;', context, { filename: 'production-main-export-smoke.js' });
+  vm.runInContext(resolvePaths + '\n' + helpers + '\n' + iconHelpers + '\n' + build + '\nthis.realBuildWindowsExe = buildWindowsExe;', context, { filename: 'production-main-export-smoke.js' });
   const progressEvents=[];
   const result = await context.realBuildWindowsExe({ sender: { send(channel, item) {
     if(channel==='export:progress')progressEvents.push(item);else console.log('[SFX] ' + item.msg);
