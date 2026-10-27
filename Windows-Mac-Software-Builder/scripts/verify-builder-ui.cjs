@@ -48,7 +48,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
       window.icurator = {
         version: 'test', loadConfig: async () => copy(qa.config), projectsList: async () => projectState(),
         loadLocale: async () => ({lang:'pt', dict:${JSON.stringify(dict)}}), saveLanguage: async () => {},
-        getExportTargets: async () => ({hostPlatform:'win32',targets:[{id:'windows',available:true,format:'exe'},{id:'mac',available:true,format:'zip'}]}),
+        getExportTargets: async () => ({hostPlatform:'win32',targets:[{id:'windows',available:true,format:'exe',formats:['zip','exe']},{id:'mac',available:true,format:'zip'}]}),
         resolveAssetPath: async () => null, onExportLog: () => {},
         onExportProgress: callback => { qa.progress=callback; },
         openExternal: async url => { (qa.opened ||= []).push(url); },
@@ -61,7 +61,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
         projectsOpen: async id => { qa.calls.push('open'); qa.active=id; return {state:projectState(),config:copy(qa.config)}; },
         projectsExportArchive: async id => { qa.calls.push('archive-export'); qa.exported=copy(qa.config); await pause(); return {ok:true,path:'Project.wsmb'}; },
         projectsImportArchive: async () => { qa.calls.push('archive-import'); await pause(); if(qa.cancelImport)return {cancelled:true}; qa.config.brand.title='Imported'; return {state:projectState(),config:copy(qa.config)}; },
-        exportProject: async () => {
+        exportProject: async payload => { qa.exportPayload=payload;
           qa.calls.push('build'); qa.built=copy(qa.config); await pause();
           qa.progress({percent:60,stage:'compressing',status:'building'});
           if(qa.holdBuild)await new Promise(resolve=>qa.finishBuild=resolve);
@@ -86,6 +86,13 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     await until("document.querySelector('.author-photo').complete && document.querySelector('.author-photo').naturalWidth>0");
     await evaluate("document.querySelector('.author-card a').click(); void 0;");
     assert.deepEqual(await evaluate('qa.opened'),['https://AntonioFradique.net']);
+    assert.equal(await evaluate("document.getElementById('export-format').value"),'zip');
+    await evaluate("goToTab('publicar');exportFormatSelect.value='exe';exportFormatSelect.dispatchEvent(new Event('change'));void 0;");
+    assert.match(await evaluate("document.getElementById('export-target-description').textContent"),/EXE/);
+    await evaluate("exportTargetSelect.value='mac';exportTargetSelect.dispatchEvent(new Event('change'));void 0;");
+    assert.equal(await evaluate("exportFormatSelect.value"),'zip');
+    assert.equal(await evaluate("exportFormatSelect.querySelector('[value=exe]').hidden"),true);
+    await evaluate("exportTargetSelect.value='windows';exportTargetSelect.dispatchEvent(new Event('change'));void 0;");
     await evaluate("goToTab('aparencia'); setSectionCollapsed('banners',false); void 0;");
     for (const slot of ['top', 'bottom']) {
       for (const enabled of [true, false, true, false]) {
@@ -184,6 +191,8 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     for(const mode of ['failure','cancelled','success']) {
       await evaluate(`qa.buildMode=${JSON.stringify(mode)};qa.finishBuild=null;document.getElementById('export-build').click();void 0;`);
       await until("!!qa.finishBuild && exportInProgress");
+      assert.equal(await evaluate('qa.exportPayload.format'),'zip');
+      assert.equal(await evaluate("document.getElementById('export-format').disabled"),true);
       assert.equal(await evaluate("document.getElementById('export-progress-percent').textContent"),'60%');
       assert.equal(await evaluate("document.getElementById('export-progress-bar').value"),60);
       assert.equal(await evaluate("document.getElementById('export-progress').getAttribute('aria-busy')"),'true');

@@ -279,7 +279,7 @@
     "icon_label": "Значок программы",
     "icon_none": "Значок не задан.",
     "icon_current_prefix": "Текущий значок: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Поддерживаются .png, .jpg и .ico. Выбранный значок используется в окне и на панели задач Windows, а также в Dock Mac во время работы. Для Mac предпочтительны PNG или JPG. Значок файла в Finder остаётся значком шаблона.",
     "icon_must_be_ico": "Пожалуйста, выберите файл .ico",
     "summary_label": "Сводка проекта",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "Автономный EXE. Движок распаковывается при запуске; подготовленные ресурсы экспорта используются повторно. Для больших проектов рекомендуется портативная папка ZIP.",
+      "windows_zip": "Портативный ZIP с быстрым запуском: распакуйте всю папку один раз и откройте исполняемый файл. Храните файлы вместе. Ресурсы подготавливаются при первом запуске.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "Готово",
       "cancelled": "Операция отменена",
       "failed": "Ошибка сборки"
-    }
+    },
+    "format_label": "Формат поставки",
+    "format_fast": "Портативная папка ZIP — быстрый запуск (рекомендуется)",
+    "format_single": "Один EXE — распаковка при запуске"
   },
   "viewer": {
     "menu_empty": "Модули не настроены.",
@@ -444,7 +447,7 @@
     "brand": "Бренд и цвета",
     "brand_hint": "Название, логотип и цвета готового продукта.",
     "icon": "Software icon",
-    "icon_hint": "Иконка, которую ученик видит на файле.",
+    "icon_hint": "Значок приложения, окна и панели задач.",
     "banners": "Баннеры",
     "banners_hint": "Необязательно — реклама или партнёрские ссылки сверху/снизу.",
     "social": "Соцсети",

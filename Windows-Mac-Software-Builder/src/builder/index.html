@@ -500,7 +500,7 @@
           <div class="section-head">
             <div>
               <h2 data-i18n="section.icon">Ícone do software</h2>
-              <p data-i18n="section.icon_hint">O ícone que o aluno vê no ficheiro.</p>
+              <p data-i18n="section.icon_hint">O ícone da aplicação, da janela e da barra de tarefas.</p>
             </div>
           </div>
           <div class="form-card">
@@ -516,7 +516,7 @@
                 <span id="icon-preview-empty" class="logo-empty" data-i18n="icon.preview_empty">Sem ícone carregado</span>
               </div>
               <div class="file-current" id="icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
-              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. O ícone personalizado aplica-se à exportação Windows EXE; os pacotes ZIP usam o ícone do visualizador.</small>
+              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. O ícone escolhido também identifica a janela e a barra de tarefas do Windows; no Mac aparece no Dock enquanto a aplicação está aberta.</small>
             </div>
 
             <div class="form-actions">
@@ -756,6 +756,11 @@
               <select id="export-target" aria-describedby="export-target-description export-target-status">
                 <option value="windows">Windows</option>
                 <option value="mac">Mac (macOS)</option>
+              </select>
+              <label for="export-format" data-i18n="export.format_label">Formato de entrega</label>
+              <select id="export-format" aria-describedby="export-target-description">
+                <option value="zip" data-i18n="export.format_fast">Pasta portable ZIP — abertura rápida (recomendado)</option>
+                <option value="exe" data-i18n="export.format_single">EXE único — extrai ficheiros ao abrir</option>
               </select>
               <small id="export-target-description"></small>
               <div class="export-target-status" id="export-target-status" role="status" aria-live="polite"></div>

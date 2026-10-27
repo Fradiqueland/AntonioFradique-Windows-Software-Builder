@@ -279,7 +279,7 @@
     "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Accepts .png, .jpg or .ico. Uses the chosen icon for the window and Windows taskbar, and the Mac Dock while running. Prefer PNG or JPG on Mac. The Finder file icon keeps the template icon.",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "Self-contained EXE. Extracts the engine at startup; prepared project assets are reused per export. Prefer the portable ZIP folder for large projects.",
+      "windows_zip": "Fast portable ZIP: extract the whole folder once, then open its executable. Keep all files together. No extraction on every launch.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "Completed",
       "cancelled": "Operation cancelled",
       "failed": "Build failed"
-    }
+    },
+    "format_label": "Delivery format",
+    "format_fast": "Portable ZIP folder — fast startup (recommended)",
+    "format_single": "Single EXE — extracts files at startup"
   },
   "viewer": {
     "menu_empty": "No modules configured.",
@@ -444,7 +447,7 @@
     "brand": "Brand and colours",
     "brand_hint": "Title, logo and colours of the final product.",
     "icon": "Software icon",
-    "icon_hint": "The icon students see on the file.",
+    "icon_hint": "The application, window and taskbar icon.",
     "banners": "Banners",
     "banners_hint": "Optional — ads or affiliate links at the top/bottom.",
     "social": "Social networks",

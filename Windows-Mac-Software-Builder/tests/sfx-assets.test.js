@@ -125,3 +125,52 @@ test('SFX checks declared counts and byte totals before extraction',async t=>{
     assert.equal(fs.existsSync(path.join(f.resourcesDir,'dist-assets')),false);
   }
 });
+
+test('cached SFX assets survive closing and reopen without reading or rewriting the payload', async t => {
+  const f=fixture(t), cache=path.join(f.root,'cache');
+  fs.writeFileSync(path.join(f.assetsDir,'large.bin'),crypto.randomBytes(2*1024*1024));
+  await sfx.packAssets(f);
+  const first=await sfx.restoreCachedAssets(f.resourcesDir,cache);
+  assert.equal(first.restored,true);
+  const file=path.join(first.assetsDir,'large.bin'), receipt=path.join(first.assetsDir,sfx.RECEIPT_FILE);
+  const before=fs.statSync(file).mtimeMs, marker=fs.readFileSync(receipt);
+  // A subsequent launch has its own extracted runtime directory. It can reuse
+  // the exact digest cache even if the transport is unavailable for reading.
+  const secondResources=path.join(f.root,'second-resources');fs.mkdirSync(secondResources);
+  fs.copyFileSync(path.join(f.resourcesDir,sfx.DESCRIPTOR_FILE),path.join(secondResources,sfx.DESCRIPTOR_FILE));
+  const next=await sfx.restoreCachedAssets(secondResources,cache);
+  assert.equal(next.reused,true);assert.equal(next.assetsDir,first.assetsDir);
+  assert.equal(fs.statSync(file).mtimeMs,before);assert.deepEqual(fs.readFileSync(receipt),marker);
+  assert.deepEqual(fs.readFileSync(file),fs.readFileSync(path.join(f.assetsDir,'large.bin')));
+  assert.equal(sfx.cleanupTemporaryAssets(f.resourcesDir,f.root),false);
+  assert.ok(fs.existsSync(file));
+});
+
+test('changed exports receive separate cache trees and concurrent first starts commit once', async t => {
+  const f=fixture(t), cache=path.join(f.root,'cache');
+  fs.writeFileSync(path.join(f.assetsDir,'value.txt'),'ORIGINAL');await sfx.packAssets(f);
+  const [a,b]=await Promise.all([sfx.restoreCachedAssets(f.resourcesDir,cache),sfx.restoreCachedAssets(f.resourcesDir,cache)]);
+  assert.equal(a.assetsDir,b.assetsDir);
+  const nextResources=path.join(f.root,'updated');fs.mkdirSync(nextResources);
+  fs.writeFileSync(path.join(f.assetsDir,'value.txt'),'UPDATED');
+  await sfx.packAssets({...f,resourcesDir:nextResources});
+  const next=await sfx.restoreCachedAssets(nextResources,cache);
+  assert.notEqual(a.assetsDir,next.assetsDir);
+  assert.equal(fs.readFileSync(path.join(a.assetsDir,'value.txt'),'utf8'),'ORIGINAL');
+  assert.equal(fs.readFileSync(path.join(next.assetsDir,'value.txt'),'utf8'),'UPDATED');
+  for(const digest of fs.readdirSync(cache))assert.deepEqual(fs.readdirSync(path.join(cache,digest)),['dist-assets']);
+});
+
+test('cache rejects corrupt first payloads and symlink destinations without modifying unrelated files', async t => {
+  const f=fixture(t), cache=path.join(f.root,'cache');
+  fs.writeFileSync(path.join(f.assetsDir,'value.txt'),'ORIGINAL');await sfx.packAssets(f);
+  const d=JSON.parse(fs.readFileSync(path.join(f.resourcesDir,sfx.DESCRIPTOR_FILE)));
+  fs.mkdirSync(cache);const unrelated=path.join(f.root,'unrelated');fs.mkdirSync(unrelated);fs.writeFileSync(path.join(unrelated,'keep'),'SAFE');
+  const link=path.join(cache,d.sha256);fs.symlinkSync(unrelated,link,process.platform==='win32'?'junction':'dir');
+  await assert.rejects(sfx.restoreCachedAssets(f.resourcesDir,cache),/Cache/);
+  fs.unlinkSync(link);
+  fs.writeFileSync(path.join(f.resourcesDir,sfx.PACKAGE_FILE),'broken');
+  await assert.rejects(sfx.restoreCachedAssets(f.resourcesDir,cache),/corrompidos/);
+  assert.equal(fs.readFileSync(path.join(unrelated,'keep'),'utf8'),'SAFE');
+  assert.equal(fs.existsSync(path.join(cache,d.sha256,'dist-assets')),false);
+});

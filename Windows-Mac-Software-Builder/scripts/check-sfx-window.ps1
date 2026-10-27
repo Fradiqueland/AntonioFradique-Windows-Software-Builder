@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Drawing
 # Enumerate the actual visible windows of this test's SFX process tree. The
 # Chromium main window is not necessarily Process.MainWindowHandle.
 Add-Type -TypeDefinition @'
@@ -33,6 +34,10 @@ public static class WsmbWindows {
     }, IntPtr.Zero);
     return result;
   }
+  [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr handle, uint message, IntPtr wParam, IntPtr lParam);
+  public static IntPtr Icon(long handle) {
+    return SendMessage(new IntPtr(handle), 0x007f, new IntPtr(1), IntPtr.Zero);
+  }
   public static void Close(long handle) {
     if (!PostMessage(new IntPtr(handle), 0x0010, IntPtr.Zero, IntPtr.Zero)) throw new Exception("Could not close SFX Viewer window");
   }
@@ -52,6 +57,17 @@ $windows | Select-Object Pid,Handle,Title | ConvertTo-Json -Compress
 $matching = @($windows | Where-Object { $_.Title -ceq $env:WSMB_QA_TITLE })
 if ($matching.Count -gt 0) {
   'READY'
+  if ($env:WSMB_QA_ICON_COLOR) {
+    $handle = [WsmbWindows]::Icon($matching[0].Handle)
+    if ($handle -ne [IntPtr]::Zero) {
+      $icon = [System.Drawing.Icon]::FromHandle($handle)
+      $bitmap = $icon.ToBitmap()
+      try {
+        $color = $bitmap.GetPixel([int]($bitmap.Width / 2), [int]($bitmap.Height / 2)).ToArgb().ToString('X8')
+        if ($color -eq $env:WSMB_QA_ICON_COLOR) { 'ICON-READY' } else { "ICON-COLOR=$color" }
+      } finally { $bitmap.Dispose() }
+    }
+  }
   if ($env:WSMB_QA_CLOSE -eq '1') {
     foreach ($window in $matching) { [WsmbWindows]::Close($window.Handle) }
   }

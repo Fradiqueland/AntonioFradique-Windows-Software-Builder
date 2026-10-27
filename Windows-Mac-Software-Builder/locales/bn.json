@@ -279,7 +279,7 @@
     "icon_label": "সফটওয়্যার আইকন",
     "icon_none": "কোনো আইকন নির্ধারিত নেই।",
     "icon_current_prefix": "বর্তমান আইকন: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": ".png, .jpg বা .ico গ্রহণ করে। নির্বাচিত আইকন Windows উইন্ডো ও টাস্কবারে এবং চলার সময় Mac Dock-এ দেখা যায়। Mac-এ PNG বা JPG ব্যবহার করুন। Finder ফাইলের আইকন টেমপ্লেটের মতোই থাকে।",
     "icon_must_be_ico": "অনুগ্রহ করে একটি .ico ফাইল নির্বাচন করুন",
     "summary_label": "প্রকল্পের সারাংশ",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "স্বতন্ত্র EXE। চালুর সময় ইঞ্জিন বের করে; প্রতিটি রপ্তানির প্রস্তুত রিসোর্স পুনরায় ব্যবহার করে। বড় প্রকল্পের জন্য পোর্টেবল ZIP ফোল্ডার বেছে নিন।",
+      "windows_zip": "দ্রুত পোর্টেবল ZIP: পুরো ফোল্ডার একবার বের করে তার প্রোগ্রাম খুলুন। সব ফাইল একসঙ্গে রাখুন। প্রথমবার চালুর সময় রিসোর্স প্রস্তুত হয়।",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "সম্পন্ন",
       "cancelled": "প্রক্রিয়া বাতিল করা হয়েছে",
       "failed": "নির্মাণ ব্যর্থ হয়েছে"
-    }
+    },
+    "format_label": "বিতরণের ধরন",
+    "format_fast": "পোর্টেবল ZIP ফোল্ডার — দ্রুত চালু (প্রস্তাবিত)",
+    "format_single": "একটি EXE — চালুর সময় ফাইল বের করে"
   },
   "viewer": {
     "menu_empty": "কোনো মডিউল কনফিগার করা হয়নি।",
@@ -444,7 +447,7 @@
     "brand": "ব্র্যান্ড ও রং",
     "brand_hint": "চূড়ান্ত পণ্যের শিরোনাম, লোগো ও রং।",
     "icon": "Software icon",
-    "icon_hint": "ফাইলে শিক্ষার্থী যে আইকন দেখে।",
+    "icon_hint": "অ্যাপ, উইন্ডো এবং টাস্কবারের আইকন।",
     "banners": "ব্যানার",
     "banners_hint": "ঐচ্ছিক — উপরে/নিচে বিজ্ঞাপন বা অ্যাফিলিয়েট লিংক।",
     "social": "সোশ্যাল নেটওয়ার্ক",

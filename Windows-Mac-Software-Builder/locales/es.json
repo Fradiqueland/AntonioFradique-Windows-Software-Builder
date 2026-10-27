@@ -279,7 +279,7 @@
     "icon_label": "Icono del Software",
     "icon_none": "Ningún icono definido.",
     "icon_current_prefix": "Icono actual: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Admite .png, .jpg o .ico. Usa el icono elegido en la ventana y la barra de tareas de Windows, y en el Dock de Mac mientras se ejecuta. En Mac, utiliza PNG o JPG. El icono del archivo en Finder mantiene el del modelo.",
     "icon_must_be_ico": "Por favor, elija un archivo .ico",
     "summary_label": "Resumen del Proyecto",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "EXE autónomo. Extrae el motor al abrir; los recursos preparados se reutilizan por exportación. Para proyectos grandes, usa la carpeta portable ZIP.",
+      "windows_zip": "ZIP portable de inicio rápido: extrae toda la carpeta una vez y abre su ejecutable. Mantén los archivos juntos. Los recursos se preparan en el primer inicio.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "Completado",
       "cancelled": "Operación cancelada",
       "failed": "La construcción ha fallado"
-    }
+    },
+    "format_label": "Formato de entrega",
+    "format_fast": "Carpeta portable ZIP — inicio rápido (recomendado)",
+    "format_single": "EXE único — extrae archivos al abrir"
   },
   "viewer": {
     "menu_empty": "Ningún módulo configurado.",
@@ -444,7 +447,7 @@
     "brand": "Marca y colores",
     "brand_hint": "Título, logo y colores del producto final.",
     "icon": "Software icon",
-    "icon_hint": "El icono que el alumno ve en el archivo.",
+    "icon_hint": "El icono de la aplicación, la ventana y la barra de tareas.",
     "banners": "Banners",
     "banners_hint": "Opcional — publicidad o enlaces de afiliado arriba/abajo.",
     "social": "Redes sociales",

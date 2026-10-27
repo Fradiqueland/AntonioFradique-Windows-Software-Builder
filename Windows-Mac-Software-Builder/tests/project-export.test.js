@@ -908,3 +908,34 @@ test('opaque archive downloads keep every byte in Windows and Mac exports withou
     assert.equal([...entries.keys()].some(name=>name.startsWith(base+'/ffmpeg/') || name.startsWith(base+'/php/')),false);
   }
 });
+
+test('custom icons ship outside the signed bundle in both ZIP formats without altering template bytes', async t=>{
+  const f=fixture(t);fs.mkdirSync(path.join(f.root,'data'));
+  const icon=crypto.randomBytes(512);fs.writeFileSync(path.join(f.root,'data/icon-source.png'),icon);
+  f.config.export={iconPath:'data/icon-source.png'};
+  for(const target of ['windows','mac']) {
+    await writeTemplate(f.templatePath,target==='windows'?WINDOWS:MAC);
+    await exportProject({...f,target});const zip=await readZip(f.outputPath);
+    const base=target==='windows'?'resources':f.projectName+'.data';
+    assert.deepEqual(zip.get(base+'/data/icon-source.png').data,icon);
+    if(target==='mac')for(const item of MAC.filter(e=>e.data))assert.deepEqual(zip.get(f.projectName+'.app'+item.name.slice(APP.length)).data,Buffer.from(item.data));
+  }
+  f.config.export.iconPath='data/../../outside.png';
+  await assert.rejects(exportProject({...f,target:'mac'}),/ícone/);
+});
+
+test('fast Windows ZIP transports long paths under short names and restores them once',async t=>{
+  const f=fixture(t);await writeTemplate(f.templatePath,WINDOWS);
+  const relative=Array(72).fill('d').join('/')+'/file.txt';
+  const filename=path.join(f.assetsDir,...relative.split('/'));fs.mkdirSync(path.toNamespacedPath(path.dirname(filename)),{recursive:true});fs.writeFileSync(path.toNamespacedPath(filename),'LONG DATA');
+  await exportProject({...f,target:'windows',opaqueWindowsAssets:true});
+  const entries=await readZip(f.outputPath);
+  assert.ok(entries.has('resources/project-assets.zip'));assert.ok(entries.has('resources/project-assets.json'));
+  assert.ok([...entries.keys()].every(name=>name.length<200));
+  const resources=path.join(f.root,'expanded','resources');fs.mkdirSync(resources,{recursive:true});
+  const transport=require('../src/shared/sfx-assets');
+  for(const name of [transport.PACKAGE_FILE,transport.DESCRIPTOR_FILE])fs.writeFileSync(path.join(resources,name),entries.get('resources/'+name).data);
+  assert.equal((await transport.restoreAssets(resources)).restored,true);
+  assert.equal(fs.readFileSync(path.toNamespacedPath(path.join(resources,'dist-assets',...relative.split('/'))),'utf8'),'LONG DATA');
+  assert.equal((await transport.restoreAssets(resources)).reused,true);
+});

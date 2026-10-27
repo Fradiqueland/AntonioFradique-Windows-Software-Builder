@@ -2,7 +2,7 @@
 
 // Run with `electron`, never ELECTRON_RUN_AS_NODE. Electron's ASAR-aware fs is
 // the regression boundary: ordinary node:test cannot exercise that runtime.
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, nativeImage } = require('electron');
 const electronFs = require('fs');
 const fs = require('original-fs');
 const path = require('node:path');
@@ -180,6 +180,8 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     projectExport: engine,
     ...appRequire('./src/shared/export-progress'),
     sfxAssets: appRequire('./src/shared/sfx-assets'),
+    nativeImage, require: appRequire,
+    projectIcons: appRequire('./src/shared/project-icon'),
     iptvCipher: appRequire('./src/shared/iptv-cipher'),
     androidRuntime: appRequire('./src/shared/android-runtime'),
     localWeb: appRequire('./src/shared/local-web'),
@@ -196,7 +198,8 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   });
   const helpers = functionBlock(source, 'function copyDirRecursive(', '/* -------- Windows -------- */');
   const build = functionBlock(source, 'async function buildWindowsExe(', "handleTrustedIpc('export:targets'");
-  vm.runInContext(helpers + '\n' + build + '\nthis.realBuildWindowsExe = buildWindowsExe;', context, { filename: 'production-main-export-smoke.js' });
+  const iconHelpers = functionBlock(source, 'async function buildIcoFromSource(', 'function createViewerWindow(');
+  vm.runInContext(helpers + '\n' + iconHelpers + '\n' + build + '\nthis.realBuildWindowsExe = buildWindowsExe;', context, { filename: 'production-main-export-smoke.js' });
   const progressEvents=[];
   const result = await context.realBuildWindowsExe({ sender: { send(channel, item) {
     if(channel==='export:progress')progressEvents.push(item);else console.log('[SFX] ' + item.msg);
@@ -226,6 +229,11 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   // support). No product test hook: the normal Viewer must restore and open.
   const temp = path.join(temporary,'native-sfx-temp');fs.mkdirSync(temp);
   const logFile=path.join(temporary,'native-sfx-electron.log');
+  const isolatedAppData=app.getPath('appData');
+  const descriptor=JSON.parse(fs.readFileSync(path.join(expanded,'resources',transport.DESCRIPTOR_FILE),'utf8'));
+  const cachedAssets=path.join(isolatedAppData,'LaunchBox Viewer','asset-cache',descriptor.sha256,'dist-assets');
+  const started=Date.now();
+  let second;
   const child = spawn(outputPath,[],{env:{...process.env,TEMP:temp,TMP:temp,ELECTRON_ENABLE_LOGGING:'1',ELECTRON_LOG_FILE:logFile},stdio:['ignore','pipe','pipe']});
   let childLog='';
   for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{childLog=(childLog+chunk.toString()).slice(-24000);});
@@ -236,10 +244,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   try {
     for(let i=0;i<300&&!restored;i++) {
       if(spawnError)throw spawnError;if(exit)throw new Error('SFX exited before opening the Viewer: '+JSON.stringify(exit));
-      for(const name of fs.readdirSync(temp)) {
-        const candidate=path.join(temp,name,'resources','dist-assets');
-        if(fs.existsSync(path.join(candidate,transport.RECEIPT_FILE)))restored=candidate;
-      }
+      if(fs.existsSync(path.join(cachedAssets,transport.RECEIPT_FILE)))restored=cachedAssets;
       if(!restored)await wait(200);
     }
     assert.ok(restored,'Real SFX must restore its assets without a path error dialog');
@@ -247,23 +252,43 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
     assert.ok(longFile.length>260);
     assert.equal(fs.readFileSync(longFile,'utf8'),'LONG PATH PRESERVED');
     let opened=false;
-    const env={...process.env,WSMB_QA_TITLE:config.brand.title,WSMB_QA_SFX_PID:String(child.pid)};
+    const env={...process.env,WSMB_QA_TITLE:config.brand.title,WSMB_QA_SFX_PID:String(child.pid),WSMB_QA_ICON_COLOR:'FFE02B4A'};
     const windowCheck=path.join(root,'scripts/check-sfx-window.ps1');
     let snapshot='';
     for(let i=0;i<30&&!opened;i++) {
       const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env,windowsHide:true,timeout:15000});
-      snapshot=check.stdout;opened=snapshot.includes('READY');if(!opened)await wait(200);
+      snapshot=check.stdout;opened=snapshot.includes('ICON-READY');if(!opened)await wait(200);
     }
     assert.ok(opened,'The normal shipped Viewer must open with the exported project title. Owned windows: '+snapshot);
+    const firstLaunchMs=Date.now()-started;
     await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env:{...env,WSMB_QA_CLOSE:'1'},windowsHide:true,timeout:15000});
     await Promise.race([exited,wait(10000)]);
-    assert.equal(fs.existsSync(restored),false,'Closing the actual SFX must clean its long temporary resources');
-    report.checks.push('actual generated SFX opens the normal shipped Viewer, restores >260-character paths and a 72-level resource tree, and cleans temporary resources on close');
+    assert.equal(fs.existsSync(restored),true,'Closing must retain the validated cache for fast reopening');
+    const receipt=path.join(restored,transport.RECEIPT_FILE), before=fs.statSync(receipt).mtimeMs;
+    const reopenedAt=Date.now();
+    second=spawn(outputPath,[],{env:{...process.env,TEMP:temp,TMP:temp},stdio:'ignore'});
+    let secondError;second.once('error',error=>{secondError=error;});
+    const secondEnv={...env,WSMB_QA_SFX_PID:String(second.pid)};
+    let reopened=false;
+    for(let i=0;i<60&&!reopened;i++) {
+      if(secondError)throw secondError;
+      const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env:secondEnv,windowsHide:true,timeout:15000});
+      reopened=check.stdout.includes('ICON-READY');if(!reopened)await wait(200);
+    }
+    assert.ok(reopened,'The actual SFX must reopen with its custom taskbar icon');
+    report.windowsStartup={firstLaunchMs,repeatedLaunchMs:Date.now()-reopenedAt,cacheReceiptUnchanged:fs.statSync(receipt).mtimeMs===before};
+    assert.equal(fs.statSync(receipt).mtimeMs,before);
+    assert.equal(fs.readFileSync(longFile,'utf8'),'LONG PATH PRESERVED');
+    await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env:{...secondEnv,WSMB_QA_CLOSE:'1'},windowsHide:true,timeout:15000});
+    await Promise.race([new Promise(resolve=>second.once('exit',resolve)),wait(10000)]);
+    report.checks.push('actual generated SFX opens with its custom native Windows taskbar icon, restores long resources, retains validated assets after closing and reuses the cache without rewriting');
   } catch(error) {
     if(fs.existsSync(logFile))console.error(fs.readFileSync(logFile,'utf8').slice(-24000));
     if(childLog)console.error(childLog);throw error;
   } finally {
     if(!exit&&child.pid)await execFileP('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true}).catch(()=>{});
+    if(second&&second.exitCode===null&&second.pid)await execFileP('taskkill.exe',['/PID',String(second.pid),'/T','/F'],{windowsHide:true}).catch(()=>{});
+    fs.rmSync(path.dirname(cachedAssets),{recursive:true,force:true});
   }
 }
 
@@ -422,7 +447,10 @@ async function main() {
   fs.writeFileSync(path.join(assetsDir, webFolder, 'index.html'), '<!doctype html><link rel="stylesheet" href="styles/app.css"><h1>Olá, Windows e Mac</h1>');
   fs.writeFileSync(path.join(assetsDir, webFolder, 'styles/app.css'), 'h1 { color: #126; }');
   const projectName = 'Smoke António';
-  const config = { language: 'pt', brand: { title: projectName }, content: [{ id: 'web-smoke', type: 'local-web', title: 'HTML local', data: { root: 'dist-assets/' + webFolder, entry: 'index.html' } }], export: { iconPath: null } };
+  const config = { language: 'pt', brand: { title: projectName }, content: [{ id: 'web-smoke', type: 'local-web', title: 'HTML local', data: { root: 'dist-assets/' + webFolder, entry: 'index.html' } }], export: { iconPath: 'data/icon-source.png' } };
+  fs.mkdirSync(path.join(assetsDir,'..','data'),{recursive:true});
+  const iconBytes=nativeImage.createFromBitmap(Buffer.from(Array(32*32).fill([0x4a,0x2b,0xe0,0xff]).flat()),{width:32,height:32}).toPNG();
+  fs.writeFileSync(path.join(assetsDir,'..','data','icon-source.png'),iconBytes);
   const archiveBytes = Buffer.from('UEsDBAoACQAAACwSVF3znKRmJAAAABgAAAAKABwAcmVhZG1lLnR4dFVUCQADA6XWagOl1mp1eAsAAQQAAAAABAAAAACWurCOwKQ3tkzfU8cAxHGblFHehLud84pZwrl86SehC6TwuPlQSwcI85ykZiQAAAAYAAAAUEsBAh4DCgAJAAAALBJUXfOcpGYkAAAAGAAAAAoAGAAAAAAAAQAAAKSBAAAAAHJlYWRtZS50eHRVVAUAAwOl1mp1eAsAAQQAAAAABAAAAABQSwUGAAAAAAEAAQBQAAAAeAAAAAAA', 'base64');
   fs.writeFileSync(path.join(assetsDir, 'protected.zip'), archiveBytes);
   const longAsset='long-paths/'+Array(72).fill('d').join('/')+'/'+ 'a'.repeat(64)+'-'+'b'.repeat(64)+'.cache';
@@ -455,7 +483,7 @@ async function main() {
     assert.equal(result.target, target);
     const outputAsar = target === 'windows' ? asarEntry : projectName + '.app/Contents/Resources/app.asar';
     const base = target === 'windows' ? 'resources' : projectName + '.data';
-    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif',base+'/dist-assets/'+longAsset]);
+    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/icon-source.png', base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif',base+'/dist-assets/'+longAsset]);
     for (const [name, metadata] of baseline) {
       if (templateRuntime(name, target)) continue;
       const destination = exportEntry(name, target, projectName);
@@ -465,6 +493,7 @@ async function main() {
     const omitted = [...baseline].reduce((sum, [name, metadata]) => sum + (templateRuntime(name, target) ? metadata.size : 0), 0);
     assert.ok(omitted > 0, 'The real native template must allow measurable runtime omission');
     assert.equal(result.omittedRuntimeBytes, omitted);
+    assert.equal(exported.get(base + '/data/icon-source.png').sha256,crypto.createHash('sha256').update(iconBytes).digest('hex'));
     assert.equal(exported.get(base + '/data/project-config.json').sha256, crypto.createHash('sha256').update(JSON.stringify(config, null, 2)).digest('hex'));
     assert.equal(exported.get(base + '/dist-assets/' + webFolder + '/index.html').sha256, await fileHash(path.join(assetsDir, webFolder, 'index.html')));
     assert.equal(exported.get(base + '/dist-assets/protected.zip').sha256, crypto.createHash('sha256').update(archiveBytes).digest('hex'));
@@ -495,6 +524,24 @@ async function main() {
     report.exports.push({ target, htmlBytes, iptvBytes, savedBytes: iptvBytes - htmlBytes, omittedRuntimeBytes: omitted });
     report.checks.push(target + ' IPTV ZIP retains every FFmpeg binary, source, recipe and licence entry');
     if (target === 'windows') {
+      const fastZip=path.join(temporary,'windows-fast.zip');
+      await engine.exportProject({target,templatePath,outputPath:fastZip,projectName,config,assetsDir,opaqueWindowsAssets:true});
+      const fastIndex=await zipIndex(fastZip);
+      assert.ok(fastIndex.has('resources/project-assets.zip'));
+      assert.ok([...fastIndex.keys()].every(name=>!name.includes(longAsset)));
+      const fastExpanded=path.join(temporary,'windows-fast-expanded');
+      if(mac)await execFileP('/usr/bin/ditto',['-x','-k',fastZip,fastExpanded]);
+      else {
+        const sevenZip=packaged?path.join(resources,'sfx/7za.exe'):path.join(root,'src/builder/bin/7za.exe');
+        await execFileP(sevenZip,['x',fastZip,'-o'+fastExpanded,'-y','-bsp0','-bso0'],{windowsHide:true});
+      }
+      const transport=createRequire(path.join(applicationRoot,'package.json'))('./src/shared/sfx-assets');
+      const fastResources=path.join(fastExpanded,'resources');
+      assert.equal((await transport.restoreAssets(fastResources)).restored,true);
+      assert.equal(fs.readFileSync(path.join(fastResources,'dist-assets',longAsset),'utf8'),'LONG PATH PRESERVED');
+      assert.equal((await transport.restoreAssets(fastResources)).reused,true);
+      assert.equal(await fileHash(path.join(fastResources,'data/icon-source.png')),crypto.createHash('sha256').update(iconBytes).digest('hex'));
+      report.checks.push('fast Windows ZIP: short transport paths, native extraction, first resource restore and subsequent reuse, custom icon preserved');
       expectedWindowsAsar = baseline.get(asarEntry).sha256;
       const extracted = path.join(temporary, 'windows-template');
       await engine.extractWindowsTemplate(templatePath, extracted, { config, assetsDir });
@@ -516,6 +563,12 @@ async function main() {
     }
   }
   if (!mac) await verifyRealWindowsSfx({ applicationRoot, resources, engine, config, assetsDir, templates, expectedAsar: expectedWindowsAsar, sharedRuntimeSourcesDir });
+  const iconWindow = new BrowserWindow({show:false});
+  try {
+    const icons=createRequire(path.join(applicationRoot,'package.json'))('./src/shared/project-icon');
+    assert.equal(icons.applyWindowIcon({window:iconWindow,app,nativeImage,config,assetsDir,platform:process.platform,standalone:true}),true);
+    report.checks.push('shipped project icon helper applies the exported image through native Electron on this host');
+  } finally {iconWindow.destroy();}
   await verifyCrossPlatformPortableExport({ applicationRoot, templates, engine });
   await verifyRealPortableLaunch(applicationRoot, assetsDir);
   await verifyAndroidInformation(applicationRoot);

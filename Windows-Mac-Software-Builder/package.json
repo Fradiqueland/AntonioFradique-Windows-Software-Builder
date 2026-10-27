@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "description": "Windows & Mac Software Builder — construtor e exportação de aplicações Windows e macOS",
   "main": "main.js",
   "author": "AntonioFradique.net",

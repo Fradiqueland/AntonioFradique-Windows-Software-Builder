@@ -2214,6 +2214,7 @@ const exportBuildBtn = document.getElementById('export-build');
 const exportLogEl = document.getElementById('export-log');
 const exportOpenReleaseBtn = document.getElementById('export-open-release');
 const exportTargetSelect = document.getElementById('export-target');
+const exportFormatSelect = document.getElementById('export-format');
 const exportTargetDescription = document.getElementById('export-target-description');
 const exportTargetStatus = document.getElementById('export-target-status');
 let exportTargets = [];
@@ -2254,12 +2255,16 @@ function updateExportButton() {
   const moduleCount = lastExportConfig && Array.isArray(lastExportConfig.content) ? lastExportConfig.content.length : 0;
   exportBuildBtn.disabled = exportInProgress || !!contentMutation || !!projectTransition || settingsWrites.size > 0 || moduleCount === 0 || !target || !target.available;
   exportTargetSelect.disabled = exportInProgress;
+  exportFormatSelect.disabled = exportInProgress;
 }
 
 function renderExportTarget() {
   const target = selectedExportTarget();
   const isMac = exportTargetSelect.value === 'mac';
-  const formatKey = isMac ? 'mac_zip' : (target && target.format === 'exe' ? 'windows_exe' : 'windows_zip');
+  const formats = target?.formats || [target?.format || 'zip'];
+  for (const option of exportFormatSelect.options) option.hidden = !formats.includes(option.value);
+  if (!formats.includes(exportFormatSelect.value)) exportFormatSelect.value = formats.includes('zip') ? 'zip' : formats[0];
+  const formatKey = isMac ? 'mac_zip' : (exportFormatSelect.value === 'exe' ? 'windows_exe' : 'windows_zip');
   exportTargetDescription.textContent = t('export.formats.' + formatKey);
   exportTargetStatus.classList.toggle('unavailable', !target || !target.available);
   if (target && target.available) {
@@ -2288,6 +2293,7 @@ async function loadExportTargets() {
 }
 
 exportTargetSelect.addEventListener('change', renderExportTarget);
+exportFormatSelect.addEventListener('change', renderExportTarget);
 
 function updateExportSummary(config) {
   lastExportConfig = config;
@@ -2472,7 +2478,7 @@ exportBuildBtn.addEventListener('click', async () => {
     // The main process chooses the correct extension for this platform.
     const cfg = await window.icurator.loadConfig();
     const suggested = (cfg && cfg.brand && cfg.brand.title) || 'meu-curso';
-    const result = await window.icurator.exportProject({ target: target.id, defaultName: suggested });
+    const result = await window.icurator.exportProject({ target: target.id, format: exportFormatSelect.value, defaultName: suggested });
     if (result && result.cancelled) {
       setExportProgress({ percent: exportProgressState.percent, stage: 'cancelled', status: 'cancelled' });
       appendExportLog(t('export.log.cancelled'));
@@ -2481,7 +2487,7 @@ exportBuildBtn.addEventListener('click', async () => {
       lastExportedPath = result.path;
       exportOpenReleaseBtn.disabled = false;
       appendExportLog(t('export.log.saved_prefix') + result.path, 'success');
-      if (target.id === 'mac' || target.format === 'zip') {
+      if (target.id === 'mac' || result.format === 'zip') {
         appendExportLog(t(target.id === 'mac' ? 'export.mac_delivery_help' : 'export.windows_zip_delivery_help'));
       }
     } else {

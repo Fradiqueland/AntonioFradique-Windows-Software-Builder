@@ -12,6 +12,7 @@ const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
 const projectArchive = require('./src/shared/project-archive');
 const sfxAssets = require('./src/shared/sfx-assets');
+const projectIcons = require('./src/shared/project-icon');
 const { createExportProgress, sevenZipProgress } = require('./src/shared/export-progress');
 const portableApps = require('./src/shared/portable-app');
 const portableRuntime = require('./src/shared/portable-runtime');
@@ -308,7 +309,7 @@ function exportTargets() {
       && portableApps.validatePortableProject({ data: mod.data, assetsDir: ASSETS_DIR }).hasSymlinks);
   } catch (_) { /* The export itself reports the invalid project precisely. */ }
   return { hostPlatform: process.platform, targets: [
-    { id: 'windows', available: windowsTemplate || (sfx && legacy && !portableLinks), format: sfx && !portableLinks ? 'exe' : 'zip',
+    { id: 'windows', available: windowsTemplate || (sfx && legacy && !portableLinks), format: sfx && !portableLinks ? 'exe' : 'zip', formats: [...(windowsTemplate ? ['zip'] : []), ...(sfx && !portableLinks && (windowsTemplate || legacy) ? ['exe'] : [])],
       reason: windowsTemplate || (sfx && legacy && !portableLinks) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
     { id: 'mac', available: fs.existsSync(getExportTemplatePath('mac')), format: 'zip',
       reason: fs.existsSync(getExportTemplatePath('mac')) ? '' : 'Template Mac em falta. Reinstale o construtor ou prepare export-templates/mac-universal.zip.' }
@@ -921,6 +922,12 @@ function createViewerWindow({ standalone = false } = {}) {
       devTools: !app.isPackaged
     }
   });
+
+  try {
+    // Icon data stays outside the signed Mac bundle and is shipped in both ZIP routes.
+    projectIcons.applyWindowIcon({ window: viewerWindow, app, nativeImage, config,
+      assetsDir: path.join(WRITE_BASE, 'dist-assets'), platform: process.platform, standalone });
+  } catch (error) { console.warn('Ícone da aplicação:', error.message); }
 
   /* YouTube: ver ensureYoutubeHost() — o leitor é embutido a partir de uma
    * página servida em http://127.0.0.1, uma origem web real que o YouTube
@@ -2104,6 +2111,8 @@ async function buildWindowsExe(event, payload) {
     // credencial fique em texto simples dentro do curso. O Viewer decifra os
     // canais em memória no config:load. Módulos não-IPTV ficam inalterados.
     fs.writeFileSync(path.join(stageData, 'project-config.json'), JSON.stringify(courseConfig, null, 2), 'utf-8');
+    const projectIcon = projectIcons.projectIcon(courseConfig, ASSETS_DIR);
+    if (projectIcon) fs.copyFileSync(projectIcon.absolute, path.join(stageResources, projectIcon.relative));
     for (const mod of courseConfig.content || []) {
       if (mod.type !== 'local-web') continue;
       const web = localWeb.validateWebProject({ data: mod.data, assetsDir: ASSETS_DIR });
@@ -2114,15 +2123,14 @@ async function buildWindowsExe(event, payload) {
     send('A preparar os recursos para abertura automática…');
     await sfxAssets.packAssets({assetsDir:ASSETS_DIR,resourcesDir:stageResources,config:courseConfig});
 
-    /* 3. Compress the staging tree into a .7z payload. Compressão ultra
-     *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
-     *    final do curso (~60-70 MB típico) e reduzir o tempo de extracção
-     *    em %TEMP% no PC do aluno. -mmt=on usa múltiplos núcleos. */
-    send('A comprimir conteúdos com compressão máxima (pode demorar)…');
+    /* 3. Prefer fast LZMA2 and independent blocks over ultra solid packing.
+     * Project resources are reused after their first validated restoration;
+     * the portable ZIP option avoids SFX extraction altogether. */
+    send('A comprimir conteúdos para abertura mais rápida…');
     progress.update(40, 'compressing');
     const compression = execFileP(sevenZipExe, [
       'a', '-t7z',
-      '-m0=lzma2', '-mx=9', '-md=64m', '-mfb=64',
+      '-m0=lzma2', '-mx=1', '-md=16m', '-mfb=32', '-ms=off',
       '-mmt=on', '-bsp1', '-bso0',
       archivePath, stagingRoot + path.sep + '*'
     ], { maxBuffer: 1024 * 1024 * 64, windowsHide: true });
@@ -2196,7 +2204,11 @@ async function exportProject(event, payload = {}) {
   if (!['windows', 'mac'].includes(target)) throw new Error('Escolha Windows ou Mac.');
   const selected = exportTargets().targets.find((entry) => entry.id === target);
   if (!selected.available) throw new Error(selected.reason);
-  if (target === 'windows' && selected.format === 'exe') return buildWindowsExe(event, payload);
+  if (payload.format && !['exe', 'zip'].includes(payload.format)) throw new Error('Formato de exportação inválido.');
+  const format = payload.format || selected.format;
+  if (payload.format && selected.formats && !selected.formats.includes(format)) throw new Error('Este formato não está disponível para a plataforma escolhida.');
+  if (target === 'mac' && format !== 'zip') throw new Error('A exportação Mac utiliza ZIP.');
+  if (target === 'windows' && format === 'exe') return buildWindowsExe(event, payload);
   exportBusy = true;
   const progress = createExportProgress(event.sender);
   progress.update(0, 'preparing');
@@ -2223,7 +2235,7 @@ async function exportProject(event, payload = {}) {
     send('A empacotar a aplicação…');
     progress.update(5, 'packing');
     const result = await projectExport.exportProject({ target, templatePath: getExportTemplatePath(target),
-      outputPath, projectName: name, config, assetsDir: ASSETS_DIR,
+      outputPath, projectName: name, config, assetsDir: ASSETS_DIR, opaqueWindowsAssets: target === 'windows',
       sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources'), onProgress: ({ completed, total }) => {
         progress.range(5, 95, completed, total, 'packing');
       } });
@@ -2304,7 +2316,19 @@ app.whenReady().then(async () => {
   if (isViewer) {
     if (!await locateMacProject()) { app.quit(); return; }
     if (app.isPackaged && process.platform === 'win32') {
-      await sfxAssets.restoreAssets(WRITE_BASE);
+      if (process.argv.includes('--wsmb-sfx')) {
+        // Keep validated resources per export hash. Reopening no longer writes
+        // thousands of portable files again. The original project is untouched.
+        try {
+          const restored = await sfxAssets.restoreCachedAssets(WRITE_BASE,
+            path.join(app.getPath('appData'), 'LaunchBox Viewer', 'asset-cache'));
+          ASSETS_DIR = restored.assetsDir;
+        } catch (error) {
+          if (!['EACCES', 'EPERM', 'ENOSPC', 'EROFS'].includes(error.code)) throw error;
+          console.warn('Cache indisponível; a abrir com recursos temporários:', error.message);
+          await sfxAssets.restoreAssets(WRITE_BASE);
+        }
+      } else await sfxAssets.restoreAssets(WRITE_BASE);
       if(process.argv.includes('--wsmb-sfx'))app.on('will-quit',()=>{
         try{sfxAssets.cleanupTemporaryAssets(WRITE_BASE,os.tmpdir());}
         catch(error){console.warn('Não foi possível limpar os recursos temporários:',error.message);}

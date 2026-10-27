@@ -279,7 +279,7 @@
     "icon_label": "Ikon Perangkat Lunak",
     "icon_none": "Tidak ada ikon ditentukan.",
     "icon_current_prefix": "Ikon saat ini: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Mendukung .png, .jpg, atau .ico. Ikon pilihan digunakan di jendela dan bilah tugas Windows serta Dock Mac saat berjalan. Untuk Mac, gunakan PNG atau JPG. Ikon berkas Finder tetap mengikuti templat.",
     "icon_must_be_ico": "Silakan pilih file .ico",
     "summary_label": "Ringkasan Proyek",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "EXE mandiri. Mesin diekstrak saat dibuka; sumber daya yang disiapkan digunakan kembali untuk setiap ekspor. Untuk proyek besar, gunakan folder ZIP portabel.",
+      "windows_zip": "ZIP portabel cepat: ekstrak seluruh folder sekali, lalu buka berkas program di dalamnya. Simpan semua berkas bersama. Sumber daya disiapkan saat pertama dibuka.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "Selesai",
       "cancelled": "Operasi dibatalkan",
       "failed": "Pembuatan gagal"
-    }
+    },
+    "format_label": "Format distribusi",
+    "format_fast": "Folder ZIP portabel — mulai cepat (disarankan)",
+    "format_single": "Satu EXE — mengekstrak berkas saat dibuka"
   },
   "viewer": {
     "menu_empty": "Tidak ada modul dikonfigurasi.",
@@ -444,7 +447,7 @@
     "brand": "Merek dan warna",
     "brand_hint": "Judul, logo, dan warna produk akhir.",
     "icon": "Software icon",
-    "icon_hint": "Ikon yang dilihat siswa pada berkas.",
+    "icon_hint": "Ikon aplikasi, jendela, dan bilah tugas.",
     "banners": "Banner",
     "banners_hint": "Opsional — iklan atau tautan afiliasi di atas/bawah.",
     "social": "Media sosial",

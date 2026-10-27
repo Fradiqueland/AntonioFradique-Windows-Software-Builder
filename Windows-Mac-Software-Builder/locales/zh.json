@@ -279,7 +279,7 @@
     "icon_label": "软件图标",
     "icon_none": "未定义图标。",
     "icon_current_prefix": "当前图标：",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "支持 .png、.jpg 或 .ico。所选图标用于 Windows 窗口和任务栏，以及运行时的 Mac Dock。Mac 建议使用 PNG 或 JPG。Finder 文件图标保留模板图标。",
     "icon_must_be_ico": "请选择一个 .ico 文件",
     "summary_label": "项目摘要",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "独立 EXE。启动时解压运行引擎；同一导出的已准备资源会重复使用。大型项目建议使用便携 ZIP 文件夹。",
+      "windows_zip": "快速便携 ZIP：将整个文件夹解压一次，然后打开其中的可执行文件。请将所有文件保存在一起。首次启动时会准备资源。",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "已完成",
       "cancelled": "操作已取消",
       "failed": "构建失败"
-    }
+    },
+    "format_label": "交付格式",
+    "format_fast": "便携 ZIP 文件夹 — 快速启动（推荐）",
+    "format_single": "单个 EXE — 启动时解压文件"
   },
   "viewer": {
     "menu_empty": "未配置任何模块。",
@@ -444,7 +447,7 @@
     "brand": "品牌与颜色",
     "brand_hint": "最终产品的标题、徽标和颜色。",
     "icon": "Software icon",
-    "icon_hint": "学员在文件上看到的图标。",
+    "icon_hint": "应用程序、窗口和任务栏的图标。",
     "banners": "横幅",
     "banners_hint": "可选 — 顶部/底部的广告或推广链接。",
     "social": "社交网络",

@@ -87,9 +87,9 @@ async function packAssets({ assetsDir, resourcesDir, config }) {
   } finally {fs.rmSync(disk(temporary),{force:true});}
 }
 
-async function restoreAssets(resourcesDir) {
+async function restoreAssets(resourcesDir, { destinationRoot = resourcesDir, keepArchive = false } = {}) {
   const descriptor = path.join(resourcesDir,DESCRIPTOR_FILE),archivePath = path.join(resourcesDir,PACKAGE_FILE);
-  const destination = path.join(resourcesDir,'dist-assets');
+  const destination = path.join(destinationRoot,'dist-assets');
   if (!exists(descriptor)) {
     if (exists(archivePath)) throw new Error('Faltam os metadados dos recursos. Volte a exportar a aplicação.');
     return {restored:false,legacy:true};
@@ -102,7 +102,7 @@ async function restoreAssets(resourcesDir) {
   const archive=await engine.archiveIO.openZip(disk(archivePath));
   const entries=[],paths=new Map();let bytes=0,zipError;
   archive.on('error',error=>{zipError=error;});
-  const staging=path.join(resourcesDir,'.assets-unpack-'+crypto.randomUUID());
+  const staging=path.join(destinationRoot,'.assets-unpack-'+crypto.randomUUID());
   try {
     await new Promise((resolve,reject)=>{
       archive.once('error',reject);archive.once('end',resolve);
@@ -146,9 +146,24 @@ async function restoreAssets(resourcesDir) {
     catch(error){if(!ready(destination,d))throw error;}
     // Reclaim the opaque transport after a complete atomic restore. A receipt
     // permits later starts from a manually retained, already expanded folder.
-    try {fs.unlinkSync(disk(archivePath));}catch(_){}
+    if (!keepArchive) { try {fs.unlinkSync(disk(archivePath));}catch(_){} }
     return {restored:true,files:entries.filter(e=>e.kind==='file').length,bytes};
   } finally {archive.close();fs.rmSync(disk(staging),{recursive:true,force:true});}
+}
+async function restoreCachedAssets(resourcesDir, cacheRoot) {
+  const descriptor = path.join(resourcesDir, DESCRIPTOR_FILE);
+  if (!exists(descriptor)) return { ...await restoreAssets(resourcesDir), assetsDir: path.join(resourcesDir, 'dist-assets') };
+  const d = validateDescriptor(metadata(descriptor));
+  // Use an exact digest directory, not a title: changed exports cannot reuse stale assets.
+  fs.mkdirSync(disk(cacheRoot), { recursive: true, mode: 0o700 });
+  if (fs.lstatSync(disk(cacheRoot)).isSymbolicLink()) throw new Error('Cache de recursos inválida.');
+  // Return a normal canonical path to the renderer; Windows extended-path
+  // prefixes are only for filesystem I/O, never file:// URLs.
+  const destinationRoot = path.join(fs.realpathSync.native(cacheRoot), d.sha256);
+  fs.mkdirSync(disk(destinationRoot), { recursive: true, mode: 0o700 });
+  if (fs.lstatSync(disk(destinationRoot)).isSymbolicLink()) throw new Error('Cache de recursos inválida.');
+  const result = await restoreAssets(resourcesDir, { destinationRoot, keepArchive: true });
+  return { ...result, assetsDir: path.join(destinationRoot, 'dist-assets') };
 }
 function cleanupTemporaryAssets(resourcesDir,temporaryRoot) {
   // Only the SFX launch flag calls this, and only inside its temporary root.
@@ -164,4 +179,4 @@ function cleanupTemporaryAssets(resourcesDir,temporaryRoot) {
   fs.rmSync(disk(destination),{recursive:true,force:true,maxRetries:3,retryDelay:100});
   return true;
 }
-module.exports={PACKAGE_FILE,DESCRIPTOR_FILE,RECEIPT_FILE,packAssets,restoreAssets,cleanupTemporaryAssets};
+module.exports={PACKAGE_FILE,DESCRIPTOR_FILE,RECEIPT_FILE,packAssets,restoreAssets,restoreCachedAssets,cleanupTemporaryAssets};

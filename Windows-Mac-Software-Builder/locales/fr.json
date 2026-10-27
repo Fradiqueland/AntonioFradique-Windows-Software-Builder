@@ -279,7 +279,7 @@
     "icon_label": "Icône du Logiciel",
     "icon_none": "Aucune icône définie.",
     "icon_current_prefix": "Icône actuelle : ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Accepte .png, .jpg ou .ico. Utilise l’icône choisie pour la fenêtre et la barre des tâches Windows, ainsi que le Dock Mac pendant l’exécution. Sur Mac, préférez PNG ou JPG. L’icône du fichier Finder reste celle du modèle.",
     "icon_must_be_ico": "Veuillez choisir un fichier .ico",
     "summary_label": "Résumé du Projet",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "EXE autonome. Extrait le moteur au démarrage ; les ressources préparées sont réutilisées pour chaque exportation. Pour les gros projets, préférez le dossier portable ZIP.",
+      "windows_zip": "ZIP portable à démarrage rapide : extrayez tout le dossier une fois, puis ouvrez son exécutable. Gardez les fichiers ensemble. Les ressources sont préparées au premier lancement.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "Terminé",
       "cancelled": "Opération annulée",
       "failed": "Échec de la création"
-    }
+    },
+    "format_label": "Format de livraison",
+    "format_fast": "Dossier portable ZIP — démarrage rapide (recommandé)",
+    "format_single": "EXE unique — extrait les fichiers au démarrage"
   },
   "viewer": {
     "menu_empty": "Aucun module configuré.",
@@ -444,7 +447,7 @@
     "brand": "Marque et couleurs",
     "brand_hint": "Titre, logo et couleurs du produit final.",
     "icon": "Software icon",
-    "icon_hint": "L'icône que l'élève voit sur le fichier.",
+    "icon_hint": "L’icône de l’application, de la fenêtre et de la barre des tâches.",
     "banners": "Bannières",
     "banners_hint": "Facultatif — publicité ou liens affiliés en haut/bas.",
     "social": "Réseaux sociaux",

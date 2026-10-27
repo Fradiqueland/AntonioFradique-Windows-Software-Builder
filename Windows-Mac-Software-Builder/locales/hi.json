@@ -279,7 +279,7 @@
     "icon_label": "सॉफ़्टवेयर आइकन",
     "icon_none": "कोई आइकन परिभाषित नहीं।",
     "icon_current_prefix": "वर्तमान आइकन: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": " .png, .jpg या .ico स्वीकार करता है। चुना आइकन Windows विंडो और टास्कबार तथा चलते समय Mac Dock में दिखता है। Mac पर PNG या JPG चुनें। Finder फ़ाइल आइकन टेम्पलेट का रहता है।",
     "icon_must_be_ico": "कृपया एक .ico फ़ाइल चुनें",
     "summary_label": "परियोजना सारांश",
     "build_btn": "Export application",
@@ -320,8 +320,8 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "स्वतंत्र EXE। शुरुआत में इंजन निकालता है; हर निर्यात के तैयार संसाधन दोबारा उपयोग होते हैं। बड़े प्रोजेक्ट के लिए पोर्टेबल ZIP फ़ोल्डर चुनें।",
+      "windows_zip": "तेज़ पोर्टेबल ZIP: पूरा फ़ोल्डर एक बार निकालें, फिर उसके प्रोग्राम को खोलें। सभी फ़ाइलें साथ रखें। संसाधन पहली शुरुआत में तैयार होते हैं।",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
@@ -338,7 +338,10 @@
       "complete": "पूर्ण",
       "cancelled": "प्रक्रिया रद्द की गई",
       "failed": "निर्माण विफल"
-    }
+    },
+    "format_label": "वितरण प्रारूप",
+    "format_fast": "पोर्टेबल ZIP फ़ोल्डर — तेज़ शुरुआत (अनुशंसित)",
+    "format_single": "एक EXE — शुरू करते समय फ़ाइलें निकालता है"
   },
   "viewer": {
     "menu_empty": "कोई मॉड्यूल कॉन्फ़िगर नहीं किया गया।",
@@ -444,7 +447,7 @@
     "brand": "ब्रांड और रंग",
     "brand_hint": "अंतिम उत्पाद का शीर्षक, लोगो और रंग।",
     "icon": "Software icon",
-    "icon_hint": "फ़ाइल पर छात्र को दिखने वाला आइकन।",
+    "icon_hint": "ऐप, विंडो और टास्कबार का आइकन।",
     "banners": "बैनर",
     "banners_hint": "वैकल्पिक — ऊपर/नीचे विज्ञापन या एफ़िलिएट लिंक।",
     "social": "सोशल नेटवर्क",

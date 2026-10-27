@@ -255,3 +255,11 @@ test('Mac optional runtimes follow the relocated data folder and retain sealed-r
   ctx.fs.existsSync = () => false;
   assert.equal(ctx.runtimeDirectory('ffmpeg'), path.join(resources, 'ffmpeg'), 'Older sealed Viewer runtimes remain usable');
 });
+
+test('explicit fast ZIP bypasses SFX on Windows and invalid formats cannot silently fall back',async()=>{
+  const h=routeHarness({target:'windows',format:'exe'});
+  assert.equal((await h.run({target:'windows',format:'zip'})).format,'zip');
+  assert.equal(h.calls[0].target,'windows');assert.notEqual(h.calls[0],'sfx');
+  await assert.rejects(h.run({target:'windows',format:'dmg'}),/Formato/);
+  const mac=routeHarness();await assert.rejects(mac.run({target:'mac',format:'exe'}),/Mac/);
+});

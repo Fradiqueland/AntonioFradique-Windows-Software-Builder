@@ -4,15 +4,15 @@ Crie aplicações de conteúdos para **Windows e Mac**: cursos, bibliotecas, apr
 
 O **Builder** é o programa de edição instalado no seu computador. As **aplicações exportadas** são os produtos que cria e distribui; os destinatários não precisam de instalar o Builder.
 
-## Novidades da v2.6.6
+## Novidades da v2.6.7
 
-Acrescenta os créditos com fotografia e link no menu do construtor e das aplicações exportadas, e uma barra com percentagem durante a construção dos projetos. Mantém a correção da janela vazia do Windows e os testes de instalação e abertura nos dois sistemas. Consulte [as alterações da v2.6.6](Windows-Mac-Software-Builder/V2.6.6.md).
+Usa o ícone escolhido em Aparência na janela e barra de tarefas do Windows e no Dock do Mac. Acrescenta a escolha de uma pasta portable ZIP para abertura rápida e reutiliza os recursos preparados nas aberturas seguintes do EXE único. Mantém os créditos com fotografia, o link e a barra de progresso. Mantém a correção da janela vazia do Windows e os testes de instalação e abertura nos dois sistemas. Consulte [as alterações da v2.6.7](Windows-Mac-Software-Builder/V2.6.7.md).
 
 ## Projetos editáveis
 
 Em **Projetos**, use **Exportar projeto** para guardar uma cópia editável `.wsmb` e **Importar projeto** para abrir uma cópia independente. As alterações de aparência são gravadas antes de mudar de projeto, pré-visualizar ou criar a aplicação. A atualização reforça a gravação dos banners e a recuperação do editor. Consulte [os detalhes da v2.6](Windows-Mac-Software-Builder/V2.6.md).
 
-Mantém a compressão máxima sem perdas e remoção de ferramentas usadas apenas pelo editor dos modelos de visualização. Os projetos exportados incluem FFmpeg apenas quando têm IPTV e PHP apenas quando o site importado necessita dele. Os ficheiros de imagem, áudio e vídeo do utilizador não são recomprimidos.
+Mantém o empacotamento sem perdas e remoção de ferramentas usadas apenas pelo editor dos modelos de visualização. Os projetos exportados incluem FFmpeg apenas quando têm IPTV e PHP apenas quando o site importado necessita dele. Os ficheiros de imagem, áudio e vídeo do utilizador não são recomprimidos.
 
 **Android / APK — Experimental:** existe um painel informativo, mas a importação e execução continuam indisponíveis. Não há um motor Android incorporado e validado nesta versão. A opção não descarrega nem abre emuladores externos e não permite exportar um produto APK que não funcione no computador do destinatário. iOS/IPA não é suportado.
 
@@ -20,12 +20,12 @@ Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md
 
 ## Descarregar e instalar o Builder
 
-Na [Release v2.6.6](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.6), descarregue o instalador correspondente ao seu computador em **Assets**:
+Na [Release v2.6.7](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.7), descarregue o instalador correspondente ao seu computador em **Assets**:
 
-| Computador | Instalador v2.6.6 |
+| Computador | Instalador v2.6.7 |
 | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.6.6-windows-x64-setup.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.6-mac-universal.dmg` |
+| Windows x64 | `Windows-Mac-Software-Builder-2.6.7-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.7-mac-universal.dmg` |
 
 A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
 
@@ -47,7 +47,7 @@ Em **Publicar → Exportar**, selecione **Windows** ou **Mac**. Cada instalador 
 
 | Sistema onde utiliza o Builder | Exportar para Windows | Exportar para Mac |
 | --- | --- | --- |
-| Windows x64 | EXE único auto-extraível | ZIP com aplicação `.app` universal e pasta `.data` |
+| Windows x64 | Pasta portable ZIP (abertura rápida) ou EXE único | ZIP com aplicação `.app` universal e pasta `.data` |
 | Mac Intel / Apple Silicon | ZIP portátil com EXE e dependências | ZIP com aplicação `.app` universal e pasta `.data` |
 
 Estes produtos são diferentes dos instaladores do Builder. Extraia o ZIP completo antes de abrir um produto. No Mac, mantenha a `.app` e a pasta `.data` juntas; no Windows portátil, mantenha o EXE e as suas dependências juntos. Para distribuir nas duas plataformas, exporte o projeto duas vezes.

@@ -74,6 +74,10 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
     '',
+    'Choose a fast portable ZIP folder (recommended) or a self-contained Windows EXE. ZIP is extracted once, then starts directly from its folder. Windows EXE resources use a per-export SHA-256 cache: verified resources are restored once and reused on subsequent starts. The SFX engine still extracts at startup. Old cache directories may be deleted while their applications are closed; they are recreated on demand.',
+    '',
+    'The icon selected in Appearance is now included in Windows EXE and Windows/Mac ZIP exports and applied to the running Windows window/taskbar or Mac Dock. Mac bundle signatures stay intact; the Finder file icon is unchanged. Prefer PNG/JPG for cross-platform icons.',
+    '',
     'The Builder and exported Windows/Mac applications include an author card in the sidebar: Created by Antonio Fradique, the bundled photograph and More Products at https://AntonioFradique.net. The link opens in the system browser; the photograph is available offline.',
     '',
     'Project builds now display a progress bar and percentage for Windows EXE and Windows/Mac ZIP exports. The percentage follows build stages and actual compressor or archive progress; 100% is reserved for the successfully saved final file. Failed or cancelled builds retain their status and can be retried.',
