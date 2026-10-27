@@ -279,7 +279,7 @@
     "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "Accepts .png, .jpg or .ico. Uses the chosen icon for the window and Windows taskbar, and the Mac Dock while running. Prefer PNG or JPG on Mac. The Finder file icon keeps the template icon.",
+    "icon_help": "Accepts PNG, JPG or ICO. On Windows, the chosen icon identifies the EXE file, window and taskbar. On Mac it appears in the running Dock; the Finder icon stays the template icon. Prefer PNG or JPG across both platforms.",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
     "build_btn": "Export application",
@@ -320,7 +320,7 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Self-contained EXE. Extracts the engine at startup; prepared project assets are reused per export. Prefer the portable ZIP folder for large projects.",
+      "windows_exe": "Self-contained EXE. The first launch prepares the engine and content. Later launches open the prepared application directly without repeating extraction.",
       "windows_zip": "Fast portable ZIP: extract the whole folder once, then open its executable. Keep all files together. No extraction on every launch.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
@@ -340,8 +340,8 @@
       "failed": "Build failed"
     },
     "format_label": "Delivery format",
-    "format_fast": "Portable ZIP folder — fast startup (recommended)",
-    "format_single": "Single EXE — extracts files at startup"
+    "format_fast": "Portable ZIP folder",
+    "format_single": "Single EXE — direct startup (recommended)"
   },
   "viewer": {
     "menu_empty": "No modules configured.",

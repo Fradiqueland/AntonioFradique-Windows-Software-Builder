@@ -279,7 +279,7 @@
     "icon_label": "أيقونة البرنامج",
     "icon_none": "لم يتم تحديد أيقونة.",
     "icon_current_prefix": "الأيقونة الحالية: ",
-    "icon_help": "يدعم .png و.jpg و.ico. تُستخدم الأيقونة المختارة للنافذة وشريط مهام Windows وDock على Mac أثناء التشغيل. يُفضّل PNG أو JPG على Mac. تبقى أيقونة ملف Finder كما في القالب.",
+    "icon_help": "يدعم PNG وJPG وICO. في Windows تستخدم الأيقونة المختارة لملف EXE والنافذة وشريط المهام. على Mac تظهر في Dock أثناء التشغيل، ويحتفظ Finder بأيقونة القالب. يفضل PNG أو JPG للمنصتين.",
     "icon_must_be_ico": "يرجى اختيار ملف .ico",
     "summary_label": "ملخص المشروع",
     "build_btn": "Export application",
@@ -320,7 +320,7 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "EXE مستقل. يفك المحرك عند التشغيل ويعيد استخدام الموارد المجهزة لكل تصدير. للمشاريع الكبيرة، يُفضّل مجلد ZIP المحمول.",
+      "windows_exe": "EXE مستقل. يجهز التشغيل الأول المحرك والمحتوى. يفتح التشغيل التالي التطبيق المجهز مباشرة دون تكرار فك الضغط.",
       "windows_zip": "ZIP محمول سريع: فك المجلد بالكامل مرة واحدة ثم افتح الملف التنفيذي داخله. احتفظ بالملفات معاً. تُجهّز الموارد عند التشغيل الأول.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
@@ -340,8 +340,8 @@
       "failed": "فشل الإنشاء"
     },
     "format_label": "صيغة التسليم",
-    "format_fast": "مجلد ZIP محمول — تشغيل سريع (موصى به)",
-    "format_single": "ملف EXE واحد — يفك الملفات عند التشغيل"
+    "format_fast": "مجلد ZIP محمول",
+    "format_single": "ملف EXE واحد — تشغيل مباشر (موصى به)"
   },
   "viewer": {
     "menu_empty": "لم يتم تكوين أي وحدة.",

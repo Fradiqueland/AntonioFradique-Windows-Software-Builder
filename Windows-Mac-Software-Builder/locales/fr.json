@@ -279,7 +279,7 @@
     "icon_label": "Icône du Logiciel",
     "icon_none": "Aucune icône définie.",
     "icon_current_prefix": "Icône actuelle : ",
-    "icon_help": "Accepte .png, .jpg ou .ico. Utilise l’icône choisie pour la fenêtre et la barre des tâches Windows, ainsi que le Dock Mac pendant l’exécution. Sur Mac, préférez PNG ou JPG. L’icône du fichier Finder reste celle du modèle.",
+    "icon_help": "Accepte PNG, JPG ou ICO. Sous Windows, l’icône choisie identifie le fichier EXE, la fenêtre et la barre des tâches. Sur Mac elle apparaît dans le Dock pendant l’exécution ; Finder conserve l’icône du modèle. Préférez PNG ou JPG sur les deux plateformes.",
     "icon_must_be_ico": "Veuillez choisir un fichier .ico",
     "summary_label": "Résumé du Projet",
     "build_btn": "Export application",
@@ -320,7 +320,7 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "EXE autonome. Extrait le moteur au démarrage ; les ressources préparées sont réutilisées pour chaque exportation. Pour les gros projets, préférez le dossier portable ZIP.",
+      "windows_exe": "EXE autonome. Le premier lancement prépare le moteur et le contenu. Les suivants ouvrent directement l’application préparée, sans répéter l’extraction.",
       "windows_zip": "ZIP portable à démarrage rapide : extrayez tout le dossier une fois, puis ouvrez son exécutable. Gardez les fichiers ensemble. Les ressources sont préparées au premier lancement.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
@@ -340,8 +340,8 @@
       "failed": "Échec de la création"
     },
     "format_label": "Format de livraison",
-    "format_fast": "Dossier portable ZIP — démarrage rapide (recommandé)",
-    "format_single": "EXE unique — extrait les fichiers au démarrage"
+    "format_fast": "Dossier portable ZIP",
+    "format_single": "EXE unique — démarrage direct (recommandé)"
   },
   "viewer": {
     "menu_empty": "Aucun module configuré.",

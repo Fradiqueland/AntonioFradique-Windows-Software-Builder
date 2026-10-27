@@ -279,7 +279,7 @@
     "icon_label": "Ícone do Software",
     "icon_none": "Nenhum ícone definido.",
     "icon_current_prefix": "Ícone atual: ",
-    "icon_help": "Aceita .png, .jpg ou .ico. Usa o ícone escolhido na janela e barra de tarefas do Windows e no Dock do Mac enquanto a aplicação está aberta. No Mac, prefira PNG ou JPG. O ícone do ficheiro no Finder mantém o modelo.",
+    "icon_help": "Aceita PNG, JPG ou ICO. No Windows, o ícone escolhido identifica o ficheiro EXE, a janela e a barra de tarefas. No Mac, aparece no Dock durante a execução; o ícone no Finder mantém o modelo. Prefira PNG ou JPG para as duas plataformas.",
     "icon_must_be_ico": "Por favor, escolha um ficheiro .ico",
     "summary_label": "Resumo do Projeto",
     "build_btn": "Exportar aplicação",
@@ -320,7 +320,7 @@
     "target_check_failed": "Não foi possível verificar as plataformas de exportação disponíveis.",
     "compatibility_help": "Os ficheiros e programas incluídos nos módulos têm de ser compatíveis com a plataforma escolhida. PHP requer o runtime dessa plataforma.",
     "formats": {
-      "windows_exe": "EXE autónomo. Extrai o motor ao abrir; os recursos já preparados são reutilizados por exportação. Para projetos grandes, prefira a pasta portable ZIP.",
+      "windows_exe": "EXE autónomo. A primeira abertura prepara o motor e os conteúdos. As seguintes abrem diretamente a aplicação já preparada, sem repetir a descompressão.",
       "windows_zip": "ZIP portable com abertura rápida: extraia a pasta uma vez e abra o executável dentro dela. Mantenha todos os ficheiros juntos. Não volta a descomprimir em cada arranque.",
       "mac_zip": "Mac — ZIP com aplicação .app e pasta de dados"
     },
@@ -340,8 +340,8 @@
       "failed": "A construção falhou"
     },
     "format_label": "Formato de entrega",
-    "format_fast": "Pasta portable ZIP — abertura rápida (recomendado)",
-    "format_single": "EXE único — extrai ficheiros ao abrir"
+    "format_fast": "Pasta portable ZIP",
+    "format_single": "EXE único — arranque direto (recomendado)"
   },
   "viewer": {
     "menu_empty": "Nenhum módulo configurado.",

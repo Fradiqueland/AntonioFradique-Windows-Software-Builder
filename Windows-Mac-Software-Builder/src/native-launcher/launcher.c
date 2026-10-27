@@ -16,7 +16,7 @@
 
 #define PATH_CHARS 32768
 #define FOOTER_BYTES 256
-static const unsigned char MAGIC[16]="WSMB-LAUNCH-V1\0\0";
+static const unsigned char MAGIC[16]={'W','S','M','B','-','L','A','U','N','C','H','-','V','1',0,0};
 typedef struct Bundle {
   wchar_t *self, *base, *root, *stage;
   unsigned char footer[FOOTER_BYTES];

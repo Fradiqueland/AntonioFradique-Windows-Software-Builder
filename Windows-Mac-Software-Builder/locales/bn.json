@@ -279,7 +279,7 @@
     "icon_label": "সফটওয়্যার আইকন",
     "icon_none": "কোনো আইকন নির্ধারিত নেই।",
     "icon_current_prefix": "বর্তমান আইকন: ",
-    "icon_help": ".png, .jpg বা .ico গ্রহণ করে। নির্বাচিত আইকন Windows উইন্ডো ও টাস্কবারে এবং চলার সময় Mac Dock-এ দেখা যায়। Mac-এ PNG বা JPG ব্যবহার করুন। Finder ফাইলের আইকন টেমপ্লেটের মতোই থাকে।",
+    "icon_help": "PNG, JPG বা ICO গ্রহণ করে। Windows-এ নির্বাচিত আইকন EXE ফাইল, উইন্ডো এবং টাস্কবারে দেখায়। Mac-এ চলার সময় Dock-এ দেখায়; Finder টেমপ্লেট আইকন রাখে। দুই প্ল্যাটফর্মের জন্য PNG বা JPG বেছে নিন।",
     "icon_must_be_ico": "অনুগ্রহ করে একটি .ico ফাইল নির্বাচন করুন",
     "summary_label": "প্রকল্পের সারাংশ",
     "build_btn": "Export application",
@@ -320,7 +320,7 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "স্বতন্ত্র EXE। চালুর সময় ইঞ্জিন বের করে; প্রতিটি রপ্তানির প্রস্তুত রিসোর্স পুনরায় ব্যবহার করে। বড় প্রকল্পের জন্য পোর্টেবল ZIP ফোল্ডার বেছে নিন।",
+      "windows_exe": "স্বতন্ত্র EXE। প্রথমবার ইঞ্জিন ও বিষয়বস্তু প্রস্তুত করে। পরেরবার প্রস্তুত অ্যাপটি সরাসরি খোলে, আবার ফাইল বের করে না।",
       "windows_zip": "দ্রুত পোর্টেবল ZIP: পুরো ফোল্ডার একবার বের করে তার প্রোগ্রাম খুলুন। সব ফাইল একসঙ্গে রাখুন। প্রথমবার চালুর সময় রিসোর্স প্রস্তুত হয়।",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
@@ -340,8 +340,8 @@
       "failed": "নির্মাণ ব্যর্থ হয়েছে"
     },
     "format_label": "বিতরণের ধরন",
-    "format_fast": "পোর্টেবল ZIP ফোল্ডার — দ্রুত চালু (প্রস্তাবিত)",
-    "format_single": "একটি EXE — চালুর সময় ফাইল বের করে"
+    "format_fast": "পোর্টেবল ZIP ফোল্ডার",
+    "format_single": "একটি EXE — সরাসরি চালু (প্রস্তাবিত)"
   },
   "viewer": {
     "menu_empty": "কোনো মডিউল কনফিগার করা হয়নি।",

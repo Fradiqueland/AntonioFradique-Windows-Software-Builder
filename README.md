@@ -4,9 +4,9 @@ Crie aplicações de conteúdos para **Windows e Mac**: cursos, bibliotecas, apr
 
 O **Builder** é o programa de edição instalado no seu computador. As **aplicações exportadas** são os produtos que cria e distribui; os destinatários não precisam de instalar o Builder.
 
-## Novidades da v2.6.7
+## Novidades da v2.6.8
 
-Usa o ícone escolhido em Aparência na janela e barra de tarefas do Windows e no Dock do Mac. Acrescenta a escolha de uma pasta portable ZIP para abertura rápida e reutiliza os recursos preparados nas aberturas seguintes do EXE único. Mantém os créditos com fotografia, o link e a barra de progresso. Mantém a correção da janela vazia do Windows e os testes de instalação e abertura nos dois sistemas. Consulte [as alterações da v2.6.7](Windows-Mac-Software-Builder/V2.6.7.md).
+O EXE único prepara a aplicação na primeira abertura e passa a arrancar diretamente nas seguintes, sem voltar a descomprimir o motor. A opção ZIP mantém-se e inclui agora o executável com o nome e o ícone escolhidos para o software. Mantém os créditos, fotografia, barra de progresso e correções anteriores. Consulte [as alterações da v2.6.8](Windows-Mac-Software-Builder/V2.6.8.md).
 
 ## Projetos editáveis
 
@@ -20,12 +20,12 @@ Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md
 
 ## Descarregar e instalar o Builder
 
-Na [Release v2.6.7](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.7), descarregue o instalador correspondente ao seu computador em **Assets**:
+Na [Release v2.6.8](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.8), descarregue o instalador correspondente ao seu computador em **Assets**:
 
-| Computador | Instalador v2.6.7 |
+| Computador | Instalador v2.6.8 |
 | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.6.7-windows-x64-setup.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.7-mac-universal.dmg` |
+| Windows x64 | `Windows-Mac-Software-Builder-2.6.8-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.8-mac-universal.dmg` |
 
 A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
 

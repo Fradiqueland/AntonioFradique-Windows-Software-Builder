@@ -279,7 +279,7 @@
     "icon_label": "सॉफ़्टवेयर आइकन",
     "icon_none": "कोई आइकन परिभाषित नहीं।",
     "icon_current_prefix": "वर्तमान आइकन: ",
-    "icon_help": " .png, .jpg या .ico स्वीकार करता है। चुना आइकन Windows विंडो और टास्कबार तथा चलते समय Mac Dock में दिखता है। Mac पर PNG या JPG चुनें। Finder फ़ाइल आइकन टेम्पलेट का रहता है।",
+    "icon_help": "PNG, JPG या ICO स्वीकार करता है। Windows में चुना आइकन EXE फ़ाइल, विंडो और टास्कबार पर दिखता है। Mac में चलते समय Dock में दिखता है; Finder टेम्पलेट आइकन रखता है। दोनों प्लेटफ़ॉर्म के लिए PNG या JPG चुनें।",
     "icon_must_be_ico": "कृपया एक .ico फ़ाइल चुनें",
     "summary_label": "परियोजना सारांश",
     "build_btn": "Export application",
@@ -320,7 +320,7 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "स्वतंत्र EXE। शुरुआत में इंजन निकालता है; हर निर्यात के तैयार संसाधन दोबारा उपयोग होते हैं। बड़े प्रोजेक्ट के लिए पोर्टेबल ZIP फ़ोल्डर चुनें।",
+      "windows_exe": "स्वतंत्र EXE। पहली शुरुआत इंजन और सामग्री तैयार करती है। बाद की शुरुआत तैयार ऐप को सीधे खोलती है, फिर से फ़ाइलें नहीं निकालती।",
       "windows_zip": "तेज़ पोर्टेबल ZIP: पूरा फ़ोल्डर एक बार निकालें, फिर उसके प्रोग्राम को खोलें। सभी फ़ाइलें साथ रखें। संसाधन पहली शुरुआत में तैयार होते हैं।",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
@@ -340,8 +340,8 @@
       "failed": "निर्माण विफल"
     },
     "format_label": "वितरण प्रारूप",
-    "format_fast": "पोर्टेबल ZIP फ़ोल्डर — तेज़ शुरुआत (अनुशंसित)",
-    "format_single": "एक EXE — शुरू करते समय फ़ाइलें निकालता है"
+    "format_fast": "पोर्टेबल ZIP फ़ोल्डर",
+    "format_single": "एक EXE — सीधी शुरुआत (अनुशंसित)"
   },
   "viewer": {
     "menu_empty": "कोई मॉड्यूल कॉन्फ़िगर नहीं किया गया।",

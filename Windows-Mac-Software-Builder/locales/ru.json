@@ -279,7 +279,7 @@
     "icon_label": "Значок программы",
     "icon_none": "Значок не задан.",
     "icon_current_prefix": "Текущий значок: ",
-    "icon_help": "Поддерживаются .png, .jpg и .ico. Выбранный значок используется в окне и на панели задач Windows, а также в Dock Mac во время работы. Для Mac предпочтительны PNG или JPG. Значок файла в Finder остаётся значком шаблона.",
+    "icon_help": "Поддерживаются PNG, JPG и ICO. В Windows выбранный значок используется для файла EXE, окна и панели задач. На Mac он отображается в Dock во время работы; Finder сохраняет значок шаблона. Для обеих платформ предпочтительны PNG или JPG.",
     "icon_must_be_ico": "Пожалуйста, выберите файл .ico",
     "summary_label": "Сводка проекта",
     "build_btn": "Export application",
@@ -320,7 +320,7 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Автономный EXE. Движок распаковывается при запуске; подготовленные ресурсы экспорта используются повторно. Для больших проектов рекомендуется портативная папка ZIP.",
+      "windows_exe": "Автономный EXE. При первом запуске подготавливаются движок и содержимое. Последующие запуски открывают подготовленное приложение напрямую без повторной распаковки.",
       "windows_zip": "Портативный ZIP с быстрым запуском: распакуйте всю папку один раз и откройте исполняемый файл. Храните файлы вместе. Ресурсы подготавливаются при первом запуске.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
@@ -340,8 +340,8 @@
       "failed": "Ошибка сборки"
     },
     "format_label": "Формат поставки",
-    "format_fast": "Портативная папка ZIP — быстрый запуск (рекомендуется)",
-    "format_single": "Один EXE — распаковка при запуске"
+    "format_fast": "Портативная папка ZIP",
+    "format_single": "Один EXE — прямой запуск (рекомендуется)"
   },
   "viewer": {
     "menu_empty": "Модули не настроены.",
