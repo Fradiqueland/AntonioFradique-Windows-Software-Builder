@@ -544,6 +544,26 @@ async function main() {
       assert.equal(fs.readFileSync(path.join(fastResources,'dist-assets',longAsset),'utf8'),'LONG PATH PRESERVED');
       assert.equal((await transport.restoreAssets(fastResources)).reused,true);
       assert.equal(await fileHash(path.join(fastResources,'data/icon-source.png')),crypto.createHash('sha256').update(iconBytes).digest('hex'));
+      if(!mac){
+        const child=spawn(namedExe,[],{env:{...process.env,ELECTRON_ENABLE_LOGGING:'1',ELECTRON_LOG_FILE:path.join(temporary,'named-zip.log')},stdio:'ignore'});
+        let exit,spawnError;const ended=new Promise(resolve=>child.once('exit',(code,signal)=>{exit={code,signal};resolve();}));child.once('error',error=>{spawnError=error;});
+        const env={...process.env,WSMB_QA_TITLE:projectName,WSMB_QA_SFX_PID:String(child.pid),WSMB_QA_ICON_COLOR:'FFE02B4A'};
+        const ps=path.join(root,'scripts/check-sfx-window.ps1');
+        try{
+          let opened=false;
+          for(let i=0;i<30&&!opened;i++){
+            if(spawnError)throw spawnError;if(exit)throw new Error('Branded ZIP executable exited before opening: '+JSON.stringify(exit));
+            const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',ps],{env,windowsHide:true,timeout:15000});
+            opened=check.stdout.includes('ICON-READY');if(!opened)await new Promise(resolve=>setTimeout(resolve,100));
+          }
+          assert.ok(opened,'The renamed and icon-branded ZIP executable must actually open the project');
+          await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',ps],{env:{...env,WSMB_QA_CLOSE:'1'},windowsHide:true,timeout:15000});
+          await Promise.race([ended,new Promise(resolve=>setTimeout(resolve,10000))]);assert.ok(exit);
+          report.checks.push('renamed Windows ZIP EXE actually opens its project with the chosen native window/taskbar icon');
+        }catch(error){const log=path.join(temporary,'named-zip.log');if(fs.existsSync(log))console.error(fs.readFileSync(log,'utf8').slice(-12000));throw error;}
+        finally{if(!exit&&child.pid)await execFileP('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true}).catch(()=>{});}
+      }
+
       report.checks.push('fast Windows ZIP: short transport paths, native extraction, first resource restore and subsequent reuse, custom icon preserved');
       expectedWindowsAsar = baseline.get(asarEntry).sha256;
       const extracted = path.join(temporary, 'windows-template');
