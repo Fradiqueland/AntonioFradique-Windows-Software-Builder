@@ -2107,6 +2107,7 @@ async function buildWindowsExe(event, payload) {
     } else if (!fs.existsSync(stagedAsar)) {
       throw new Error('Template do Viewer sem app.asar após a cópia. Reconstrua: npm run build:viewer-template');
     }
+    windowsLauncher.writeEngineManifest(stagingRoot);
 
     /* 2. Inject the current project under <stage>/resources/ so the Viewer
      *    finds it at process.resourcesPath/data/* exactly like in dev. */

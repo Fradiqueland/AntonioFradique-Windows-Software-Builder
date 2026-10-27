@@ -2,7 +2,7 @@
 // A small native Windows-only gate runs before the expensive installer jobs.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {execFileSync,spawn}=require('node:child_process');
-const {packBundle}=require('../src/shared/windows-launcher');
+const {packBundle,writeEngineManifest}=require('../src/shared/windows-launcher');
 test('native bootstrap prepares once, skips all payload I/O on warm starts and repairs missing runtime', {skip:process.platform!=='win32'},async t=>{
  const root=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'wsmb-native-check-')));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
  const stage=path.join(root,'stage'),resources=path.join(stage,'resources');fs.mkdirSync(path.join(resources,'data'),{recursive:true});
@@ -11,6 +11,7 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
   const file=path.join(stage,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,'native engine fixture');
  }
  fs.writeFileSync(path.join(resources,'app.asar'),'native fixture');fs.writeFileSync(path.join(resources,'data/project-config.json'),'{}');fs.writeFileSync(path.join(resources,'project-assets.json'),'{}');fs.writeFileSync(path.join(resources,'project-assets.zip'),'fixture');
+ writeEngineManifest(stage);
  const sevenZip=path.resolve(__dirname,'../src/builder/bin/7za.exe'),archive=path.join(root,'payload.7z'),output=path.join(root,'Prepared app.exe');
  execFileSync(sevenZip,['a','-t7z','-mx=1',archive,stage+path.sep+'*'],{stdio:'ignore',windowsHide:true});
  const info=await packBundle({stubPath:path.resolve(__dirname,'../dist/native-launcher/windows-launcher.exe'),extractorPath:sevenZip,archivePath:archive,outputPath:output});
@@ -25,6 +26,7 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
   fs.unlinkSync(path.join(cache,name));const fixed=await run('missing-'+path.basename(name));assert.equal(fixed.cacheHit,false);assert.equal(fixed.archiveExtractions,1);assert.ok(fs.statSync(path.join(cache,name)).size>0);
  }
  fs.truncateSync(path.join(cache,'resources.pak'),0);const truncated=await run('truncated');assert.equal(truncated.cacheHit,false);assert.equal(truncated.archiveExtractions,1);assert.ok(fs.statSync(path.join(cache,'resources.pak')).size>0);
+ fs.writeFileSync(path.join(cache,'ffmpeg.dll'),'truncated but nonempty');const resized=await run('resized');assert.equal(resized.cacheHit,false);assert.equal(resized.archiveExtractions,1);
  const finalWarm=await run('final-warm');assert.equal(finalWarm.cacheHit,true);assert.equal(finalWarm.payloadBytesRead,0);assert.equal(finalWarm.archiveExtractions,0);
  console.log('NATIVE_BOOTSTRAP_PASS',JSON.stringify({first,warm,repaired,truncated,finalWarm}));
 });

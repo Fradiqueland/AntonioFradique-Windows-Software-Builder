@@ -5,6 +5,27 @@ const { pipeline } = require('stream/promises');
 const { Readable } = require('stream');
 const MAGIC = Buffer.from('WSMB-LAUNCH-V1\0\0', 'ascii');
 const FOOTER_BYTES = 256;
+const ENGINE_MANIFEST = '.wsmb-engine-files';
+function writeEngineManifest(root) {
+  const path = require('path');
+  const names = fs.readdirSync(root).filter(name => /\.(?:exe|dll|pak|bin|dat|json)$/i.test(name));
+  names.push('resources/app.asar', 'resources/app-mode.json');
+  if (fs.existsSync(path.join(root, 'locales/en-US.pak'))) names.push('locales/en-US.pak');
+  const files = names.map(name => ({ name, stat: fs.lstatSync(path.join(root, name)) }))
+    .filter(({stat}) => stat.isFile() && !stat.isSymbolicLink() && stat.size > 0)
+    .map(({name,stat}) => ({ name, size: stat.size }));
+  if (!files.some(f => f.name === 'LaunchBox Viewer.exe') || !files.some(f => f.name === 'resources/app.asar') || !files.some(f => f.name === 'resources/app-mode.json') || files.length > 64) throw new Error('Motor Windows incompleto.');
+  const bytes = Buffer.alloc(24 + files.length * 264);
+  bytes.write('WSMB-RUNTIME-V1\0', 0, 'ascii'); bytes.writeUInt32LE(files.length, 16);
+  files.forEach(({name,size}, index) => {
+    if (!/^[A-Za-z0-9._ /-]+$/.test(name) || name.includes('..') || name.startsWith('/') || name.length > 127 || !Number.isSafeInteger(size)) throw new Error('Componente Windows inválido.');
+    const offset = 24 + index * 264;
+    bytes.write(name.replace(/\//g, '\\'), offset, 254, 'utf16le');
+    bytes.writeBigUInt64LE(BigInt(size), offset + 256);
+  });
+  fs.writeFileSync(path.join(root, ENGINE_MANIFEST), bytes, {flag:'wx'});
+  return files;
+}
 async function hashFile(file) {
   const hash=crypto.createHash('sha256');
   for await(const bytes of fs.createReadStream(file))hash.update(bytes);
@@ -60,4 +81,4 @@ async function extractTransport(file,{extractorPath,archivePath}) {
   }
   return info;
 }
-module.exports={MAGIC,FOOTER_BYTES,footerFor,parseFooter,readBundle,packBundle,extractTransport};
+module.exports={MAGIC,FOOTER_BYTES,ENGINE_MANIFEST,writeEngineManifest,footerFor,parseFooter,readBundle,packBundle,extractTransport};

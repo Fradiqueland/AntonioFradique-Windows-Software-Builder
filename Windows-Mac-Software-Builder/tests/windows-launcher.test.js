@@ -17,3 +17,18 @@ test('footer rejects truncation, overflow, unsupported versions and changed iden
  for(const offset of [0,16,20,24,48,80,224]){const changed=Buffer.from(footer);changed[offset]^=1;assert.throws(()=>bundle.parseFooter(changed,size));}
  assert.throws(()=>bundle.parseFooter(footer,size-1));assert.throws(()=>bundle.footerFor({...info,archiveBytes:Number.MAX_SAFE_INTEGER}));
 });
+
+test('engine receipts describe the shipped engine and exact sizes without assuming optional upstream files',t=>{
+ const root=fixture(t);fs.mkdirSync(path.join(root,'resources'));
+ for(const name of ['LaunchBox Viewer.exe','icudtl.dat','ffmpeg.dll','resources/app.asar','resources/app-mode.json'])fs.writeFileSync(path.join(root,name),'ENGINE '+name);
+ fs.writeFileSync(path.join(root,'optional-empty.bin'),'');
+ const files=bundle.writeEngineManifest(root),bytes=fs.readFileSync(path.join(root,bundle.ENGINE_MANIFEST));
+ assert.equal(bytes.subarray(0,16).toString('ascii'),'WSMB-RUNTIME-V1\0');assert.equal(bytes.readUInt32LE(16),5);assert.equal(bytes.length,24+5*264);
+ assert.ok(!files.some(f=>f.name==='optional-empty.bin'||f.name==='v8_context_snapshot.bin'));
+ for(let i=0;i<files.length;i++){
+  assert.equal(bytes.subarray(24+i*264,24+i*264+256).toString('utf16le').replace(/\0.*$/s,''),files[i].name.replace(/\//g,'\\'));
+  assert.equal(Number(bytes.readBigUInt64LE(24+i*264+256)),fs.statSync(path.join(root,files[i].name)).size);
+ }
+ const old=fs.readFileSync(path.join(root,bundle.ENGINE_MANIFEST));assert.throws(()=>bundle.writeEngineManifest(root));assert.deepEqual(fs.readFileSync(path.join(root,bundle.ENGINE_MANIFEST)),old);
+ fs.unlinkSync(path.join(root,bundle.ENGINE_MANIFEST));fs.unlinkSync(path.join(root,'resources/app-mode.json'));assert.throws(()=>bundle.writeEngineManifest(root));assert.equal(fs.existsSync(path.join(root,bundle.ENGINE_MANIFEST)),false);
+});

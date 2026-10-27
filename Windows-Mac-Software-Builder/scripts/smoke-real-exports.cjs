@@ -219,6 +219,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
   await execFileP(sevenZip, ['t', archivePath, '-bsp0', '-bso0'], { windowsHide: true });
   const expanded = path.join(temporary, 'sfx-expanded');
   await execFileP(sevenZip, ['x', archivePath, '-o' + expanded, '-y', '-bsp0', '-bso0'], { windowsHide: true });
+  console.log('NATIVE_ENGINE_FILES '+JSON.stringify(fs.readdirSync(expanded).map(name=>({name,size:fs.statSync(path.join(expanded,name)).size}))));
   const transport = appRequire('./src/shared/sfx-assets');
   assert.ok(fs.existsSync(path.join(expanded,'resources',transport.PACKAGE_FILE)));
   await transport.restoreAssets(path.join(expanded,'resources'));
@@ -247,7 +248,7 @@ async function verifyRealWindowsSfx({ applicationRoot, resources, engine, config
         const check=await execFileP('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',windowCheck],{env,windowsHide:true,timeout:15000});
         snapshot=check.stdout;opened=snapshot.includes(expectIcon?'ICON-READY':'READY');if(!opened)await wait(100);
       }
-      assert.ok(opened,name+' must display the project window and icon: '+snapshot);
+      assert.ok(opened,name+' must display the project window and icon: '+snapshot+'; bootstrap report: '+(bootReport&&fs.existsSync(bootReport)?fs.readFileSync(bootReport,'utf8'):'none'));
       const visibleMs=Date.now()-started;
       let metrics;
       if(bootReport){metrics=JSON.parse(fs.readFileSync(bootReport));assert.equal(metrics.cacheHit,expectCache);assert.equal(metrics.archiveExtractions,expectCache?0:1);if(expectCache)assert.equal(metrics.payloadBytesRead,0);else assert.equal(metrics.payloadBytesRead,bundleInfo.archiveBytes+bundleInfo.extractorBytes);}

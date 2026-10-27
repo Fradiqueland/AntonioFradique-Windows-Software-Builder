@@ -104,13 +104,32 @@ static BOOL read_footer(Bundle *b) {
   for(i=0;i<32;i++)swprintf_s(b->key+2*i,65-2*i,L"%02x",(unsigned int)b->footer[80+i]);
   return TRUE;
 }
+static BOOL engine_ready(Bundle *b) {
+  static const unsigned char magic[16]={'W','S','M','B','-','R','U','N','T','I','M','E','-','V','1',0};
+  wchar_t *p=joined(b->root,L".wsmb-engine-files"),name[128];HANDLE file;
+  unsigned char bytes[24+64*264];LARGE_INTEGER size;DWORD count,i,n;BOOL ok=FALSE;WIN32_FILE_ATTRIBUTE_DATA data;
+  if(!p)return FALSE;
+  file=CreateFileW(p,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,NULL);free(p);
+  if(file==INVALID_HANDLE_VALUE)return FALSE;
+  if(!GetFileSizeEx(file,&size)||size.QuadPart<24||size.QuadPart>(LONGLONG)sizeof(bytes))goto done;
+  if(!ReadFile(file,bytes,(DWORD)size.QuadPart,&count,NULL)||count!=(DWORD)size.QuadPart||memcmp(bytes,magic,16))goto done;
+  n=read_u32(bytes+16);if(!n||n>64||24+n*264!=count)goto done;
+  for(i=0;i<n;i++) {
+    const unsigned char *record=bytes+24+i*264;uint64_t expected=read_u64(record+256),actual;
+    memcpy(name,record,256);
+    if(!name[0]||name[127]||name[0]==L'\\'||wcschr(name,L':')||wcschr(name,L'/')||wcsstr(name,L"..")||!expected)goto done;
+    p=joined(b->root,name);if(!p)goto done;
+    {BOOL found=GetFileAttributesExW(p,GetFileExInfoStandard,&data)&&!(data.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT));free(p);if(!found)goto done;}
+    actual=((uint64_t)data.nFileSizeHigh<<32)|data.nFileSizeLow;
+    if(actual!=expected)goto done;
+  }
+  ok=TRUE;
+done:
+  CloseHandle(file);return ok;
+}
 static BOOL ready(Bundle *b) {
   wchar_t *p;HANDLE file;char receipt[64],expected[65];DWORD count;size_t i;BOOL ok=FALSE;
-  // These small metadata checks also catch an interrupted/quarantined engine.
-  // Never hash the engine or scan the appended payload on a warm launch.
-  const wchar_t *required[]={L"LaunchBox Viewer.exe",L"icudtl.dat",L"resources.pak",L"v8_context_snapshot.bin",
-    L"ffmpeg.dll",L"libEGL.dll",L"libGLESv2.dll",L"locales\\en-US.pak",
-    L"resources\\app.asar",L"resources\\app-mode.json",L"resources\\data\\project-config.json",L"resources\\project-assets.json"};
+  const wchar_t *required[]={L"LaunchBox Viewer.exe",L"resources\\app.asar",L"resources\\data\\project-config.json",L"resources\\project-assets.json"};
   if(!normal_directory(b->root))return FALSE;
   p=joined(b->root,L".wsmb-runtime-ready");if(!p)return FALSE;
   file=CreateFileW(p,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,NULL);free(p);
@@ -118,6 +137,7 @@ static BOOL ready(Bundle *b) {
   if(ReadFile(file,receipt,64,&count,NULL)&&count==64)ok=TRUE;CloseHandle(file);
   for(i=0;i<64;i++)expected[i]=(char)b->key[i];expected[64]=0;
   if(!ok||memcmp(receipt,expected,64))return FALSE;
+  if(!engine_ready(b))return FALSE;
   for(i=0;i<sizeof(required)/sizeof(required[0]);i++){p=joined(b->root,required[i]);if(!p)return FALSE;ok=normal_file(p);free(p);if(!ok)return FALSE;}
   p=joined(b->root,L"resources\\project-assets.zip");if(!p)return FALSE;ok=normal_file(p);free(p);
   if(!ok){p=joined(b->root,L"resources\\dist-assets\\.wsmb-assets-ready.json");if(!p)return FALSE;ok=normal_file(p);free(p);}
