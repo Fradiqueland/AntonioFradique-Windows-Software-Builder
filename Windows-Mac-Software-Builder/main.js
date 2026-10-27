@@ -899,7 +899,7 @@ function applyViewerAppearance(standalone, config) {
   viewerWindow.setBackgroundColor(config.brand?.colors?.background || '#f8fafc');
   try {
     projectIcons.applyWindowIcon({ window: viewerWindow, app, nativeImage, config,
-      assetsDir: path.join(WRITE_BASE, 'dist-assets'), platform: process.platform, standalone,
+      assetsDir: standalone ? path.join(WRITE_BASE, 'dist-assets') : ASSETS_DIR, platform: process.platform, standalone,
       defaultIconPath: standalone ? undefined : path.join(PROJECT_ROOT, 'src/builder/app-icon.png') });
   } catch (error) { console.warn('Ícone da aplicação:', error.message); }
 }
