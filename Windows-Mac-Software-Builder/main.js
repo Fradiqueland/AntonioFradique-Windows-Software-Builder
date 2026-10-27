@@ -44,25 +44,14 @@ function handleTrustedIpc(channel, handler) {
  * APP MODE: Builder vs Viewer (SFX-stamped)
  * =========================================================
  *
- * Distribution model is now "single self-extracting .exe per course":
- *
- *   - Builder (.exe) — the creator's tool. Edits project-config.json and
- *     copies assets into dist-assets/. On "Export" it stamps the current
- *     project into a copy of the Viewer template, compresses everything
- *     with 7-Zip and concatenates the 7-Zip SFX module to produce a single
- *     self-extracting .exe — e.g. "Curso de Photoshop.exe".
- *
- *   - Viewer (Electron app) — the player. NEVER distributed standalone.
- *     It is built once by the developer (`npm run build:viewer-template`)
- *     into `src/builder/templates/viewer-core/win-unpacked/` and shipped
- *     INSIDE the Builder install as an extraResource. The Builder uses it
- *     as a template for every course export.
- *
- *     When the student double-clicks Curso.exe the SFX module extracts the
- *     whole payload to a fresh `%TEMP%\7zXXXX\` folder and launches the
- *     stamped Viewer from there. The course's project-config.json and
- *     dist-assets/ live next to the Viewer's app.asar (under resources/),
- *     so the Viewer just reads them from `process.resourcesPath`.
+ * The Builder edits projects and exports self-contained Windows applications.
+ * A native Win32 launcher carries the verified extractor and a 7z payload.
+ * First launch prepares the Viewer in LocalAppData/WSMB/runtimes/<payload-hash>.
+ * Later launches read the fixed-size footer and completion markers, then start
+ * the retained Viewer directly, without reading/extracting the payload again.
+ * Windows ZIPs use the project's executable name and selected PE icon. Mac
+ * exports preserve their signed universal .app and sibling project .data folder.
+ * Legacy SFX launch flags remain readable for older products and timing tests.
  *
  * Mode is decided by `app-mode.json`, injected as an extraResource by each
  * build config. In dev we default to Builder; set LAUNCHBOX_MODE=viewer to
@@ -87,9 +76,9 @@ const isViewer = APP_MODE === 'viewer';
 // Per-mode app naming + cache location.
 //
 // Builder packaged → standalone install → userData in %AppData%\LaunchBox Builder.
-// Viewer packaged → SFX-extracted to %TEMP% → redirect userData INTO the
-//   same temp folder so all Electron cache (Cache, Cookies, GPUCache, …)
-//   disappears with the SFX cleanup when the student closes the course.
+// Windows Viewer → its prepared application's .electron-cache directory.
+// Cached EXEs retain Chromium caches between starts; legacy SFX directories
+// remain temporary. Signed Mac bundles keep their user data outside the bundle.
 if (isViewer) {
   app.setName('LaunchBox Viewer');
   if (app.isPackaged) {
@@ -2110,6 +2099,8 @@ async function buildWindowsExe(event, payload) {
      *    finds it at process.resourcesPath/data/* exactly like in dev. */
     send('A injectar configuração do curso…');
     progress.update(25, 'resources');
+    const extractorLicense=path.join(sfxBinDir,'LICENSE-7zip.txt');
+    if(fs.existsSync(extractorLicense))fs.copyFileSync(extractorLicense,path.join(stagingRoot,'LICENSE-7zip.txt'));
     const stageResources = path.join(stagingRoot, 'resources');
     if (!fs.existsSync(stageResources)) fs.mkdirSync(stageResources, { recursive: true });
     const stageData = path.join(stageResources, 'data');

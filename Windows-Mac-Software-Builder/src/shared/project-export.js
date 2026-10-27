@@ -473,8 +473,8 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
   const template = await inspectTemplate(templatePath, target);
   let temporary, opaqueDirectory, opaque;
   let windowsIconIco;
-  if (target === 'windows' && icon) windowsIconIco = await require('./windows-pe').iconFileBytes(icon);
   try {
+    if (target === 'windows' && icon) windowsIconIco = await require('./windows-pe').iconFileBytes(icon);
     if (target === 'windows' && opaqueWindowsAssets && !assets.links.length) {
       // A short transport also protects Windows ZIP extraction from legacy
       // path limits. The Viewer expands it once with native long-path APIs.
