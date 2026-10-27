@@ -6,7 +6,7 @@ const path=require('node:path');
 const os=require('node:os');
 const {projectIcon,applyWindowIcon}=require('../src/shared/project-icon');
 function fixture(t) {
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'project-icon-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const root=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'project-icon-')));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   fs.mkdirSync(path.join(root,'data'));fs.mkdirSync(path.join(root,'dist-assets'));
   fs.writeFileSync(path.join(root,'data/icon-source.png'),'IMAGE');
   return {root,assetsDir:path.join(root,'dist-assets'),config:{brand:{title:'App'},export:{iconPath:'data/icon-source.png'}}};
