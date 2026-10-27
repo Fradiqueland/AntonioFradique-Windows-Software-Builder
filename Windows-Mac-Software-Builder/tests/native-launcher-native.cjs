@@ -16,6 +16,7 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
  const first=await run('first');assert.equal(first.cacheHit,false);assert.equal(first.archiveExtractions,1);assert.equal(first.payloadBytesRead,info.archiveBytes+info.extractorBytes);
  const marker=path.join(cache,'.wsmb-runtime-ready'),before=fs.statSync(marker).mtimeMs;
  const warm=await run('warm');assert.equal(warm.cacheHit,true);assert.equal(warm.payloadBytesRead,0);assert.equal(warm.archiveExtractions,0);assert.equal(fs.statSync(marker).mtimeMs,before);
- fs.unlinkSync(path.join(cache,'LaunchBox Viewer.exe'));const repaired=await run('repair');assert.equal(repaired.cacheHit,false);assert.equal(repaired.archiveExtractions,1);
+ const deep=path.join(cache,'deep',...Array(72).fill('d'),'profile.cache');fs.mkdirSync(path.toNamespacedPath(path.dirname(deep)),{recursive:true});fs.writeFileSync(path.toNamespacedPath(deep),'LONG CACHED DATA');
+ fs.unlinkSync(path.join(cache,'LaunchBox Viewer.exe'));const repaired=await run('repair');assert.equal(repaired.cacheHit,false);assert.equal(repaired.archiveExtractions,1);assert.equal(fs.existsSync(path.toNamespacedPath(deep)),false);
  console.log('NATIVE_BOOTSTRAP_PASS',JSON.stringify({first,warm,repaired}));
 });

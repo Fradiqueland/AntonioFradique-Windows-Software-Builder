@@ -46,7 +46,15 @@ static BOOL make_directory(const wchar_t *p) {
 }
 // Only private staging/incomplete digest directories are removed. Never follow
 // a junction or symlink out of those directories.
-static BOOL remove_tree(const wchar_t *p) {
+static wchar_t *filesystem_path(const wchar_t *p) {
+  wchar_t *out=allocate_path();if(!out)return NULL;
+  if(!wcsncmp(p,L"\\\\?\\",4)){wcscpy_s(out,PATH_CHARS,p);return out;}
+  if(!wcsncmp(p,L"\\\\",2))swprintf_s(out,PATH_CHARS,L"\\\\?\\UNC\\%s",p+2);
+  else if(wcslen(p)>2&&p[1]==L':')swprintf_s(out,PATH_CHARS,L"\\\\?\\%s",p);
+  else wcscpy_s(out,PATH_CHARS,p);
+  return out;
+}
+static BOOL remove_tree_namespaced(const wchar_t *p) {
   DWORD a=GetFileAttributesW(p);BOOL ok=TRUE;WIN32_FIND_DATAW data;HANDLE find;
   wchar_t *pattern,*child;
   if(a==INVALID_FILE_ATTRIBUTES)return GetLastError()==ERROR_FILE_NOT_FOUND||GetLastError()==ERROR_PATH_NOT_FOUND;
@@ -57,9 +65,19 @@ static BOOL remove_tree(const wchar_t *p) {
   if(find!=INVALID_HANDLE_VALUE){do {
     if(!wcscmp(data.cFileName,L".")||!wcscmp(data.cFileName,L".."))continue;
     child=joined(p,data.cFileName);if(!child){ok=FALSE;break;}
-    if(!remove_tree(child))ok=FALSE;free(child);
+    if(!remove_tree_namespaced(child))ok=FALSE;free(child);
   }while(FindNextFileW(find,&data));FindClose(find);}
   return ok&&RemoveDirectoryW(p);
+}
+static BOOL remove_tree(const wchar_t *p) {
+  wchar_t *extended=filesystem_path(p);BOOL ok;DWORD error;
+  if(!extended)return FALSE;ok=remove_tree_namespaced(extended);error=GetLastError();free(extended);SetLastError(error);return ok;
+}
+static HANDLE open_bundle(const wchar_t *p,BOOL sequential) {
+  wchar_t *extended=filesystem_path(p);HANDLE file;DWORD error;
+  if(!extended)return INVALID_HANDLE_VALUE;
+  file=CreateFileW(extended,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL|(sequential?FILE_FLAG_SEQUENTIAL_SCAN:FILE_FLAG_RANDOM_ACCESS),NULL);
+  error=GetLastError();free(extended);SetLastError(error);return file;
 }
 static BOOL digest_memory(const unsigned char *bytes,ULONG count,unsigned char result[32]) {
   BCRYPT_ALG_HANDLE algorithm=NULL;BCRYPT_HASH_HANDLE hash=NULL;BOOL ok=FALSE;
@@ -71,7 +89,7 @@ static uint64_t read_u64(const unsigned char *p){uint64_t n;memcpy(&n,p,8);retur
 static uint32_t read_u32(const unsigned char *p){uint32_t n;memcpy(&n,p,4);return n;}
 static BOOL read_footer(Bundle *b) {
   HANDLE file;LARGE_INTEGER size,pos;DWORD count;unsigned char digest[32];size_t i;
-  file=CreateFileW(b->self,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+  file=open_bundle(b->self,FALSE);
   if(file==INVALID_HANDLE_VALUE)return FALSE;
   if(!GetFileSizeEx(file,&size)||size.QuadPart<FOOTER_BYTES){CloseHandle(file);return FALSE;}
   pos.QuadPart=size.QuadPart-FOOTER_BYTES;
@@ -146,7 +164,7 @@ static DWORD WINAPI prepare(void *argument) {
   if(!b->stage||!CreateDirectoryW(b->stage,NULL))goto done;
   extractor=joined(b->stage,L".wsmb-7za.exe");archive=joined(b->stage,L".wsmb-payload.7z");marker=joined(b->stage,L".wsmb-runtime-ready");
   if(!extractor||!archive||!marker)goto done;
-  input=CreateFileW(b->self,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL|FILE_FLAG_SEQUENTIAL_SCAN,NULL);
+  input=open_bundle(b->self,TRUE);
   if(input==INVALID_HANDLE_VALUE||!copy_region(b,input,b->stubBytes,b->extractorBytes,extractor,b->footer+48)||!copy_region(b,input,b->stubBytes+b->extractorBytes,b->archiveBytes,archive,b->footer+80)||!extract(b,extractor,archive))goto done;
   CloseHandle(input);input=INVALID_HANDLE_VALUE;DeleteFileW(extractor);DeleteFileW(archive);
   if(InterlockedCompareExchange(&b->cancel,0,0)){b->error=ERROR_CANCELLED;goto done;}
