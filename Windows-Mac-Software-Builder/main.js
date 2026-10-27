@@ -11,6 +11,10 @@ const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
 const projectArchive = require('./src/shared/project-archive');
+const windowsLauncher = require('./src/shared/windows-launcher');
+const sfxAssets = require('./src/shared/sfx-assets');
+const projectIcons = require('./src/shared/project-icon');
+const { createExportProgress, sevenZipProgress } = require('./src/shared/export-progress');
 const portableApps = require('./src/shared/portable-app');
 const portableRuntime = require('./src/shared/portable-runtime');
 const androidRuntime = require('./src/shared/android-runtime');
@@ -27,9 +31,9 @@ const VIEWER_CHANNELS = new Set([
 ]);
 function handleTrustedIpc(channel, handler) {
   ipcMain.handle(channel, (event, ...args) => {
-    const fromBuilder = isTrustedFrame(event, builderWindow, path.join(__dirname, 'src/builder/index.html'));
+    const fromBuilder = isTrustedFrame(event, builderWindow, path.join(PROJECT_ROOT, 'src/builder/index.html'));
     const fromViewer = VIEWER_CHANNELS.has(channel)
-      && isTrustedFrame(event, viewerWindow, path.join(__dirname, 'src/viewer/index.html'));
+      && isTrustedFrame(event, viewerWindow, path.join(PROJECT_ROOT, 'src/viewer/index.html'));
     if (!fromBuilder && !fromViewer) throw new Error('Origem IPC não autorizada.');
     return handler(event, ...args);
   });
@@ -40,25 +44,14 @@ function handleTrustedIpc(channel, handler) {
  * APP MODE: Builder vs Viewer (SFX-stamped)
  * =========================================================
  *
- * Distribution model is now "single self-extracting .exe per course":
- *
- *   - Builder (.exe) — the creator's tool. Edits project-config.json and
- *     copies assets into dist-assets/. On "Export" it stamps the current
- *     project into a copy of the Viewer template, compresses everything
- *     with 7-Zip and concatenates the 7-Zip SFX module to produce a single
- *     self-extracting .exe — e.g. "Curso de Photoshop.exe".
- *
- *   - Viewer (Electron app) — the player. NEVER distributed standalone.
- *     It is built once by the developer (`npm run build:viewer-template`)
- *     into `src/builder/templates/viewer-core/win-unpacked/` and shipped
- *     INSIDE the Builder install as an extraResource. The Builder uses it
- *     as a template for every course export.
- *
- *     When the student double-clicks Curso.exe the SFX module extracts the
- *     whole payload to a fresh `%TEMP%\7zXXXX\` folder and launches the
- *     stamped Viewer from there. The course's project-config.json and
- *     dist-assets/ live next to the Viewer's app.asar (under resources/),
- *     so the Viewer just reads them from `process.resourcesPath`.
+ * The Builder edits projects and exports self-contained Windows applications.
+ * A native Win32 launcher carries the verified extractor and a 7z payload.
+ * First launch prepares the Viewer in LocalAppData/WSMB/runtimes/<payload-hash>.
+ * Later launches read the fixed-size footer and completion markers, then start
+ * the retained Viewer directly, without reading/extracting the payload again.
+ * Windows ZIPs use the project's executable name and selected PE icon. Mac
+ * exports preserve their signed universal .app and sibling project .data folder.
+ * Legacy SFX launch flags remain readable for older products and timing tests.
  *
  * Mode is decided by `app-mode.json`, injected as an extraResource by each
  * build config. In dev we default to Builder; set LAUNCHBOX_MODE=viewer to
@@ -83,9 +76,9 @@ const isViewer = APP_MODE === 'viewer';
 // Per-mode app naming + cache location.
 //
 // Builder packaged → standalone install → userData in %AppData%\LaunchBox Builder.
-// Viewer packaged → SFX-extracted to %TEMP% → redirect userData INTO the
-//   same temp folder so all Electron cache (Cache, Cookies, GPUCache, …)
-//   disappears with the SFX cleanup when the student closes the course.
+// Windows Viewer → its prepared application's .electron-cache directory.
+// Cached EXEs retain Chromium caches between starts; legacy SFX directories
+// remain temporary. Signed Mac bundles keep their user data outside the bundle.
 if (isViewer) {
   app.setName('LaunchBox Viewer');
   if (app.isPackaged) {
@@ -101,6 +94,9 @@ if (isViewer) {
 } else {
   app.setName('LaunchBox Builder');
 }
+
+const ownsViewerInstance = !(isViewer && app.isPackaged && process.argv.includes('--wsmb-cached')) || app.requestSingleInstanceLock();
+if (!ownsViewerInstance) app.quit();
 
 /* O User-Agent predefinido do Electron inclui "LaunchBox Viewer/1.x" e
  * "Electron/32". O YouTube (e outros serviços Google) servem um leitor
@@ -120,7 +116,12 @@ app.userAgentFallback = 'Mozilla/5.0 (' + (process.platform === 'darwin' ? 'Maci
  *                    folder, sibling of app.asar — read & write OK because
  *                    it's a fresh %TEMP% extraction every launch)
  * ========================================================= */
-const PROJECT_ROOT = __dirname;
+// Canonicalise the physical parent but retain Electron's actual app basename:
+// the Windows Builder uses resources/app; the Viewer uses resources/app.asar.
+// Resolve 8.3 aliases consistently for UI loading and the exact IPC URL gate.
+const PROJECT_ROOT = app.isPackaged && process.platform === 'win32'
+  ? path.join(fs.realpathSync.native(path.dirname(app.getAppPath())), path.basename(app.getAppPath()))
+  : __dirname;
 function macProjectDirectory(resourcesPath) {
   const bundle = path.resolve(resourcesPath, '..', '..');
   const name = path.basename(bundle).replace(/\.app$/i, '');
@@ -262,15 +263,15 @@ handleTrustedIpc('android:status', (_event, payload) => androidRuntime.getAndroi
 }));
 
 
-const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault']);
+const SINGLE_FILE_TYPES = new Set(['pdf', 'launch', 'local-video', 'local-audio', 'download-vault', 'archive-download']);
 const GALLERY_TYPES = new Set(['image-gallery']);
 const ALL_TYPES = new Set([
   'youtube', 'html', 'pdf', 'webview', 'external', 'launch',
-  'local-video', 'local-audio', 'download-vault', 'image-gallery',
+  'local-video', 'local-audio', 'download-vault', 'archive-download', 'image-gallery',
   'article-reader', 'smart-embed', 'iptv', 'local-web', 'portable'
 ]);
 
-const LOCALES_DIR = path.join(__dirname, 'locales');
+const LOCALES_DIR = path.join(PROJECT_ROOT, 'locales');
 const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr', 'hi', 'ar', 'zh', 'bn', 'ru', 'id']);
 
 /* SFX export resources (Builder packaged only).
@@ -279,6 +280,9 @@ const ALLOWED_LANGS = new Set(['pt', 'en', 'es', 'fr', 'hi', 'ar', 'zh', 'bn', '
 function getSfxBinDir() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'sfx');
   return path.join(PROJECT_ROOT, 'src', 'builder', 'bin');
+}
+function getWindowsLauncherPath() {
+  return app.isPackaged ? path.join(getSfxBinDir(), 'windows-launcher.exe') : path.join(PROJECT_ROOT, 'dist/native-launcher/windows-launcher.exe');
 }
 function getViewerTemplateDir() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'viewer-template');
@@ -292,7 +296,7 @@ function exportTargets() {
   const windowsTemplate = fs.existsSync(getExportTemplatePath('windows'));
   const legacy = fs.existsSync(path.join(getViewerTemplateDir(), 'LaunchBox Viewer.exe'));
   const sfx = process.platform === 'win32' && fs.existsSync(path.join(getSfxBinDir(), '7za.exe'))
-    && fs.existsSync(path.join(getSfxBinDir(), '7zsd_All_x64.sfx'));
+    && fs.existsSync(getWindowsLauncherPath());
   // A mixed portable folder may contain Mac framework symlinks. ZIP preserves
   // them; the Windows SFX extractor cannot reliably recreate those links.
   let portableLinks = false;
@@ -301,7 +305,7 @@ function exportTargets() {
       && portableApps.validatePortableProject({ data: mod.data, assetsDir: ASSETS_DIR }).hasSymlinks);
   } catch (_) { /* The export itself reports the invalid project precisely. */ }
   return { hostPlatform: process.platform, targets: [
-    { id: 'windows', available: windowsTemplate || (sfx && legacy && !portableLinks), format: sfx && !portableLinks ? 'exe' : 'zip',
+    { id: 'windows', available: windowsTemplate || (sfx && legacy && !portableLinks), format: sfx && !portableLinks ? 'exe' : 'zip', formats: [...(windowsTemplate ? ['zip'] : []), ...(sfx && !portableLinks && (windowsTemplate || legacy) ? ['exe'] : [])],
       reason: windowsTemplate || (sfx && legacy && !portableLinks) ? '' : 'Template Windows em falta. Reinstale o construtor ou prepare export-templates/windows-x64.zip.' },
     { id: 'mac', available: fs.existsSync(getExportTemplatePath('mac')), format: 'zip',
       reason: fs.existsSync(getExportTemplatePath('mac')) ? '' : 'Template Mac em falta. Reinstale o construtor ou prepare export-templates/mac-universal.zip.' }
@@ -319,8 +323,8 @@ const DEFAULT_CONFIG = {
   marketing: {
     leads: { enabled: false, heading: 'Insira o seu email para aceder ao conteúdo', formHtml: '' },
     banners: {
-      top: { enabled: false, image: null, url: '' },
-      bottom: { enabled: false, image: null, url: '' }
+      top: { enabled: false, dismissible: false, image: null, url: '' },
+      bottom: { enabled: false, dismissible: false, image: null, url: '' }
     },
     social: {
       site: '', instagram: '', facebook: '', x: '', tiktok: '',
@@ -333,6 +337,9 @@ const DEFAULT_CONFIG = {
 
 let builderWindow = null;
 let viewerWindow = null;
+if (isViewer && ownsViewerInstance && process.argv.includes('--wsmb-cached')) app.on('second-instance', () => {
+  if (viewerWindow && !viewerWindow.isDestroyed()) { if (viewerWindow.isMinimized()) viewerWindow.restore(); viewerWindow.show(); viewerWindow.focus(); }
+});
 
 /* -------- FS helpers -------- */
 
@@ -520,14 +527,15 @@ function migrateConfig(cfg) {
     const old = cfg.marketing.banner;
     if (!cfg.marketing.banners || typeof cfg.marketing.banners !== 'object') {
       cfg.marketing.banners = {
-        top: { enabled: false, image: null, url: '' },
-        bottom: { enabled: false, image: null, url: '' }
+        top: { enabled: false, dismissible: false, image: null, url: '' },
+        bottom: { enabled: false, dismissible: false, image: null, url: '' }
       };
     }
     if (old.image || old.enabled) {
       const slot = old.position === 'top' ? 'top' : 'bottom';
       cfg.marketing.banners[slot] = {
         enabled: !!old.enabled,
+        dismissible: false,
         image: old.image || null,
         url: typeof old.url === 'string' ? old.url : ''
       };
@@ -685,13 +693,16 @@ function resolveProjectFile(relativePath) {
 }
 
 function copyDirRecursive(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name);
-    const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyDirRecursive(s, d);
-    else if (entry.isFile()) fs.copyFileSync(s, d);
-    else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): ' + s);
+  const pending=[{src,dest}];
+  while(pending.length) {
+    const {src,dest}=pending.pop();
+    fs.mkdirSync(dest,{recursive:true});
+    for(const entry of fs.readdirSync(src,{withFileTypes:true})) {
+      const from=path.join(src,entry.name),to=path.join(dest,entry.name);
+      if(entry.isDirectory())pending.push({src:from,dest:to});
+      else if(entry.isFile())fs.copyFileSync(from,to);
+      else throw new Error('Recurso não suportado (ligação simbólica ou ficheiro especial): '+from);
+    }
   }
 }
 
@@ -765,14 +776,25 @@ function secureEmbeddedContent(win) {
   });
 }
 
+async function loadBuilderPage(window) {
+  try { await window.loadFile(path.join(PROJECT_ROOT, 'src', 'builder', 'index.html')); }
+  catch (error) {
+    console.error('[builder] interface load failed:', error.message);
+    if (window.isDestroyed()) return;
+    dialog.showErrorBox('Não foi possível abrir o editor',
+      'A interface do construtor não pôde ser carregada. Reinstale a versão mais recente. Os projetos guardados não foram alterados.\n\n' + error.message);
+    app.quit();
+  }
+}
+
 function createBuilderWindow() {
   builderWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 1024, minHeight: 680,
     title: 'Windows & Mac Software Builder',
-    icon: path.join(__dirname, 'src', 'builder', 'app-icon.png'),
+    icon: path.join(PROJECT_ROOT, 'src', 'builder', 'app-icon.png'),
     backgroundColor: '#0f172a',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(PROJECT_ROOT, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
@@ -796,13 +818,13 @@ function createBuilderWindow() {
       buttons: ['Reabrir editor', 'Fechar'], defaultId: 0, cancelId: 1
     });
     if (window.isDestroyed()) return;
-    if (result.response === 0) await window.loadFile(path.join(__dirname, 'src/builder/index.html'));
+    if (result.response === 0) await loadBuilderPage(window);
     else window.close();
     } catch (error) { console.error('[builder] recovery failed:', error.message); }
   });
   builderWindow.setMenuBarVisibility(false);
   attachContextMenu(builderWindow.webContents);
-  builderWindow.loadFile(path.join(__dirname, 'src', 'builder', 'index.html'));
+  loadBuilderPage(builderWindow);
   builderWindow.on('closed', () => { builderWindow = null; });
 }
 
@@ -871,11 +893,23 @@ async function stampSfxIcon(stubPath, iconSourceAbs, tmpDir, send) {
   }
 }
 
+function applyViewerAppearance(standalone, config) {
+  const title = config.brand?.title || 'LaunchBox Viewer';
+  viewerWindow.setTitle(standalone ? title : title + ' — Pré-visualização');
+  viewerWindow.setBackgroundColor(config.brand?.colors?.background || '#f8fafc');
+  try {
+    projectIcons.applyWindowIcon({ window: viewerWindow, app, nativeImage, config,
+      assetsDir: standalone ? path.join(WRITE_BASE, 'dist-assets') : ASSETS_DIR, platform: process.platform, standalone,
+      defaultIconPath: standalone ? undefined : path.join(PROJECT_ROOT, 'src/builder/app-icon.png') });
+  } catch (error) { console.warn('Ícone da aplicação:', error.message); }
+}
+
 function createViewerWindow({ standalone = false } = {}) {
   if (viewerWindow && !viewerWindow.isDestroyed()) {
     // Recarrega para reler o project-config.json atualizado (módulos novos,
     // logo, banner). Sem isto, reabrir a pré-visualização mostrava o estado
     // antigo (ecrã "Bem-vindo" vazio) em vez do conteúdo já gravado.
+    applyViewerAppearance(standalone, readConfig());
     stopWebModules();
     viewerWindow.webContents.reload();
     viewerWindow.focus();
@@ -891,7 +925,7 @@ function createViewerWindow({ standalone = false } = {}) {
     backgroundColor: bgColor,
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload-viewer.js'),
+      preload: path.join(PROJECT_ROOT, 'preload-viewer.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
@@ -899,6 +933,8 @@ function createViewerWindow({ standalone = false } = {}) {
       devTools: !app.isPackaged
     }
   });
+
+  applyViewerAppearance(standalone, config);
 
   /* YouTube: ver ensureYoutubeHost() — o leitor é embutido a partir de uma
    * página servida em http://127.0.0.1, uma origem web real que o YouTube
@@ -996,7 +1032,7 @@ function createViewerWindow({ standalone = false } = {}) {
   viewerWindow.webContents.on('render-process-gone', stopWebModules);
 
   viewerWindow.setMenuBarVisibility(false);
-  viewerWindow.loadFile(path.join(__dirname, 'src', 'viewer', 'index.html'));
+  viewerWindow.loadFile(path.join(PROJECT_ROOT, 'src', 'viewer', 'index.html'));
   viewerWindow.once('ready-to-show', () => {
     if (standalone) viewerWindow.maximize();
     viewerWindow.show();
@@ -1386,6 +1422,7 @@ handleTrustedIpc('marketing:saveBanners', (_event, payload) => {
     }
     return {
       enabled: !!p.enabled,
+      dismissible: typeof p.dismissible === 'boolean' ? p.dismissible : cur.dismissible === true,
       image,
       url: (typeof p.url === 'string') ? p.url.trim() : (cur.url || '')
     };
@@ -1504,7 +1541,7 @@ handleTrustedIpc('content:save', (_event, payload) => {
         const prefix = mod.type === 'pdf' ? 'pdf'
           : mod.type === 'local-video' ? 'video'
           : mod.type === 'local-audio' ? 'audio'
-          : mod.type === 'download-vault' ? 'download' : 'file';
+          : (mod.type === 'download-vault' || mod.type === 'archive-download') ? 'download' : 'file';
         file = copyAssetToProject(sourcePath, prefix);
         importedFiles.push(relToAbs(file));
         fileName = path.basename(sourcePath);
@@ -1512,8 +1549,9 @@ handleTrustedIpc('content:save', (_event, payload) => {
         file = (prev && prev.data && prev.data.file) || null;
         fileName = (prev && prev.data && prev.data.fileName) || null;
       }
+      if (mod.type === 'archive-download' && !file) throw new Error('Selecione um arquivo para descarregar.');
       const out = { file, fileName };
-      if (mod.type === 'download-vault') {
+      if (mod.type === 'download-vault' || mod.type === 'archive-download') {
         out.buttonLabel = typeof d.buttonLabel === 'string' ? d.buttonLabel.trim() : '';
       }
       mod.data = out;
@@ -1780,6 +1818,7 @@ const PICK_FILTERS = {
   video: [{ name: 'Vídeo', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
   audio: [{ name: 'Áudio', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] }],
   playlist: [{ name: 'Listas IPTV', extensions: ['m3u', 'm3u8'] }],
+  archives: [{ name: 'ZIP / RAR / 7z / TAR (incluindo arquivos protegidos)', extensions: ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'zst', '001'] }],
   download: [{
     name: 'Ficheiros',
     extensions: ['zip', 'rar', '7z', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
@@ -1952,9 +1991,14 @@ handleTrustedIpc('export:saveIcon', (_event, payload) => {
   }
   const destName = 'icon-source-' + crypto.randomUUID() + ext;
   const destination = path.join(DATA_DIR, destName);
-  try { fs.copyFileSync(payload.sourcePath, destination, fs.constants.COPYFILE_EXCL); }
-  catch (error) { cleanupFiles([destination]); throw error; }
   const updated = { ...current, export: { ...(current.export || {}), iconPath: 'data/' + destName } };
+  try {
+    fs.copyFileSync(payload.sourcePath, destination, fs.constants.COPYFILE_EXCL);
+    // Validate the private copy before retiring the previously selected icon.
+    // A bad image must not leave the project unable to export.
+    const icon = projectIcons.projectIcon(updated, ASSETS_DIR);
+    if (projectIcons.readIconImage(icon.absolute, nativeImage).isEmpty()) throw new Error('Imagem de ícone inválida. Use PNG, JPG ou ICO.');
+  } catch (error) { cleanupFiles([destination]); throw error; }
   commitConfigFiles(updated, [destination], retired);
   return updated;
 });
@@ -1969,6 +2013,8 @@ async function buildWindowsExe(event, payload) {
   // open concurrent dialogs / interleaved exports.
   if (exportBusy) throw new Error('Já existe uma exportação em curso.');
   exportBusy = true;
+  const progress = createExportProgress(event.sender);
+  progress.update(0, 'preparing');
 
   const send = (msg, kind = 'info') => {
     try { event.sender.send('export:log', { msg, kind }); } catch (_) { /* window closed */ }
@@ -2003,7 +2049,7 @@ async function buildWindowsExe(event, payload) {
 
     const sfxBinDir = getSfxBinDir();
     const sevenZipExe = path.join(sfxBinDir, '7za.exe');
-    const sfxStub = path.join(sfxBinDir, '7zsd_All_x64.sfx');
+    const sfxStub = getWindowsLauncherPath();
     const templateZip = getExportTemplatePath('windows');
     const templateDir = getViewerTemplateDir();
     const templateExe = path.join(templateDir, 'LaunchBox Viewer.exe');
@@ -2021,6 +2067,7 @@ async function buildWindowsExe(event, payload) {
       filters: [{ name: 'Curso (.exe)', extensions: ['exe'] }]
     });
     if (result.canceled || !result.filePath) {
+      progress.cancel();
       send('Operação cancelada.', 'info');
       return { ok: false, cancelled: true };
     }
@@ -2029,6 +2076,7 @@ async function buildWindowsExe(event, payload) {
 
     /* 1. Stage = copy Viewer template (LaunchBox Viewer.exe + DLLs + asar). */
     send('A copiar template do Viewer…');
+    progress.update(5, 'template');
     if (fs.existsSync(templateZip)) {
       await projectExport.extractWindowsTemplate(templateZip, stagingRoot, { config: courseConfig, assetsDir: ASSETS_DIR,
         sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources') });
@@ -2059,10 +2107,14 @@ async function buildWindowsExe(event, payload) {
     } else if (!fs.existsSync(stagedAsar)) {
       throw new Error('Template do Viewer sem app.asar após a cópia. Reconstrua: npm run build:viewer-template');
     }
+    windowsLauncher.writeEngineManifest(stagingRoot);
 
     /* 2. Inject the current project under <stage>/resources/ so the Viewer
      *    finds it at process.resourcesPath/data/* exactly like in dev. */
     send('A injectar configuração do curso…');
+    progress.update(25, 'resources');
+    const extractorLicense=path.join(sfxBinDir,'LICENSE-7zip.txt');
+    if(fs.existsSync(extractorLicense))fs.copyFileSync(extractorLicense,path.join(stagingRoot,'LICENSE-7zip.txt'));
     const stageResources = path.join(stagingRoot, 'resources');
     if (!fs.existsSync(stageResources)) fs.mkdirSync(stageResources, { recursive: true });
     const stageData = path.join(stageResources, 'data');
@@ -2074,6 +2126,8 @@ async function buildWindowsExe(event, payload) {
     // credencial fique em texto simples dentro do curso. O Viewer decifra os
     // canais em memória no config:load. Módulos não-IPTV ficam inalterados.
     fs.writeFileSync(path.join(stageData, 'project-config.json'), JSON.stringify(courseConfig, null, 2), 'utf-8');
+    const projectIcon = projectIcons.projectIcon(courseConfig, ASSETS_DIR);
+    if (projectIcon) fs.copyFileSync(projectIcon.absolute, path.join(stageResources, projectIcon.relative));
     for (const mod of courseConfig.content || []) {
       if (mod.type !== 'local-web') continue;
       const web = localWeb.validateWebProject({ data: mod.data, assetsDir: ASSETS_DIR });
@@ -2081,19 +2135,22 @@ async function buildWindowsExe(event, payload) {
         throw new Error('O curso contém PHP, mas o template não inclui php.exe. Prepare vendor/php e reconstrua o Viewer e o Construtor.');
       }
     }
-    if (fs.existsSync(ASSETS_DIR)) copyProjectAssets(ASSETS_DIR, stageAssets, courseConfig);
+    send('A preparar os recursos para abertura automática…');
+    await sfxAssets.packAssets({assetsDir:ASSETS_DIR,resourcesDir:stageResources,config:courseConfig});
 
-    /* 3. Compress the staging tree into a .7z payload. Compressão ultra
-     *    LZMA2 (-mx=9 -md=64m -mfb=64) para minimizar o tamanho do .exe
-     *    final do curso (~60-70 MB típico) e reduzir o tempo de extracção
-     *    em %TEMP% no PC do aluno. -mmt=on usa múltiplos núcleos. */
-    send('A comprimir conteúdos com compressão máxima (pode demorar)…');
-    await execFileP(sevenZipExe, [
+    /* 3. Prefer fast LZMA2 and independent blocks over ultra solid packing.
+     * Project resources are reused after their first validated restoration;
+     * the portable ZIP option avoids SFX extraction altogether. */
+    send('A comprimir conteúdos para abertura mais rápida…');
+    progress.update(40, 'compressing');
+    const compression = execFileP(sevenZipExe, [
       'a', '-t7z',
-      '-m0=lzma2', '-mx=9', '-md=64m', '-mfb=64',
-      '-mmt=on', '-bsp0', '-bso0',
+      '-m0=lzma2', '-mx=1', '-md=16m', '-mfb=32', '-ms=off',
+      '-mmt=on', '-bsp1', '-bso0',
       archivePath, stagingRoot + path.sep + '*'
     ], { maxBuffer: 1024 * 1024 * 64, windowsHide: true });
+    compression.child.stdout.on('data', sevenZipProgress(value => progress.range(40, 90, value, 100, 'compressing')));
+    await compression;
 
     /* 4. Build the SFX config. These directives target the chrislake/
      *    7zsfxmm fork (7zsd_All_x64.sfx). %%T = the per-run temp folder
@@ -2101,11 +2158,12 @@ async function buildWindowsExe(event, payload) {
      *    suppresses the extraction UI. The quoted RunProgram path lets
      *    the Viewer exe name contain a space ("LaunchBox Viewer.exe"). */
     send('A construir o executável SFX…');
+    progress.update(90, 'finalizing');
     const sfxConfig =
       ';!@Install@!UTF-8!\r\n' +
       'GUIMode="2"\r\n' +
       'OverwriteMode="2"\r\n' +
-      'RunProgram="\\"%%T\\\\LaunchBox Viewer.exe\\""\r\n' +
+      'RunProgram="\\"%%T\\\\LaunchBox Viewer.exe\\" --wsmb-sfx"\r\n' +
       ';!@InstallEnd@!\r\n';
     fs.writeFileSync(sfxCfgPath, sfxConfig, { encoding: 'utf-8' });
 
@@ -2129,14 +2187,17 @@ async function buildWindowsExe(event, payload) {
     /* 6. The single-file magic: SFX stub + config + 7z payload, concatenated
      *    in that order, IS a valid Windows .exe that auto-extracts + runs. */
     const pendingTarget = target + '.' + stamp + '.tmp';
+    progress.update(95, 'saving');
     try {
-      await concatFilesToTarget([stubToUse, sfxCfgPath, archivePath], pendingTarget);
+      await windowsLauncher.packBundle({stubPath:stubToUse,extractorPath:sevenZipExe,archivePath,outputPath:pendingTarget});
       fs.renameSync(pendingTarget, target);
     } finally { try { fs.unlinkSync(pendingTarget); } catch (_) {} }
 
     send('Curso guardado: ' + target, 'success');
+    progress.complete();
     return { ok: true, path: target };
   } catch (err) {
+    progress.fail();
     send('Erro: ' + (err && err.message ? err.message : err), 'error');
     throw err;
   } finally {
@@ -2158,8 +2219,14 @@ async function exportProject(event, payload = {}) {
   if (!['windows', 'mac'].includes(target)) throw new Error('Escolha Windows ou Mac.');
   const selected = exportTargets().targets.find((entry) => entry.id === target);
   if (!selected.available) throw new Error(selected.reason);
-  if (target === 'windows' && selected.format === 'exe') return buildWindowsExe(event, payload);
+  if (payload.format && !['exe', 'zip'].includes(payload.format)) throw new Error('Formato de exportação inválido.');
+  const format = payload.format || selected.format;
+  if (payload.format && selected.formats && !selected.formats.includes(format)) throw new Error('Este formato não está disponível para a plataforma escolhida.');
+  if (target === 'mac' && format !== 'zip') throw new Error('A exportação Mac utiliza ZIP.');
+  if (target === 'windows' && format === 'exe') return buildWindowsExe(event, payload);
   exportBusy = true;
+  const progress = createExportProgress(event.sender);
+  progress.update(0, 'preparing');
   const send = (msg, kind = 'info') => {
     try { event.sender.send('export:log', { msg, kind }); } catch (_) {}
   };
@@ -2178,18 +2245,20 @@ async function exportProject(event, payload = {}) {
       title: target === 'mac' ? 'Guardar aplicação Mac (.zip)' : 'Guardar aplicação Windows portátil (.zip)',
       defaultPath: name + '-' + target + '.zip', filters: [{ name: 'Aplicação portátil ZIP', extensions: ['zip'] }]
     });
-    if (choice.canceled || !choice.filePath) return { ok: false, cancelled: true };
+    if (choice.canceled || !choice.filePath) { progress.cancel(); return { ok: false, cancelled: true }; }
     const outputPath = /\.zip$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.zip';
-    let lastProgress = -1;
+    send('A empacotar a aplicação…');
+    progress.update(5, 'packing');
     const result = await projectExport.exportProject({ target, templatePath: getExportTemplatePath(target),
-      outputPath, projectName: name, config, assetsDir: ASSETS_DIR,
+      outputPath, projectName: name, config, assetsDir: ASSETS_DIR, opaqueWindowsAssets: target === 'windows',
       sharedRuntimeSourcesDir: path.join(runtimeDirectory('ffmpeg'), 'sources'), onProgress: ({ completed, total }) => {
-        const progress = Math.floor(10 * completed / Math.max(total, 1));
-        if (progress !== lastProgress) { lastProgress = progress; send('A empacotar a aplicação: ' + progress * 10 + '%'); }
+        progress.range(5, 95, completed, total, 'packing');
       } });
     send('Aplicação exportada: ' + result.path, 'success');
+    progress.complete();
     return { ...result, ok: true };
   } catch (err) {
+    progress.fail();
     send('Erro: ' + err.message, 'error');
     throw err;
   } finally { exportBusy = false; }
@@ -2259,8 +2328,28 @@ async function locateMacProject() {
 }
 
 app.whenReady().then(async () => {
+  if (!ownsViewerInstance) return;
   if (isViewer) {
     if (!await locateMacProject()) { app.quit(); return; }
+    if (app.isPackaged && process.platform === 'win32') {
+      if (process.argv.includes('--wsmb-sfx')) {
+        // Keep validated resources per export hash. Reopening no longer writes
+        // thousands of portable files again. The original project is untouched.
+        try {
+          const restored = await sfxAssets.restoreCachedAssets(WRITE_BASE,
+            path.join(app.getPath('appData'), 'LaunchBox Viewer', 'asset-cache'));
+          ASSETS_DIR = restored.assetsDir;
+        } catch (error) {
+          if (!['EACCES', 'EPERM', 'ENOSPC', 'EROFS'].includes(error.code)) throw error;
+          console.warn('Cache indisponível; a abrir com recursos temporários:', error.message);
+          await sfxAssets.restoreAssets(WRITE_BASE);
+        }
+      } else await sfxAssets.restoreAssets(WRITE_BASE);
+      if(process.argv.includes('--wsmb-sfx'))app.on('will-quit',()=>{
+        try{sfxAssets.cleanupTemporaryAssets(WRITE_BASE,os.tmpdir());}
+        catch(error){console.warn('Não foi possível limpar os recursos temporários:',error.message);}
+      });
+    }
     createViewerWindow({ standalone: true });
   } else {
     initProjects();

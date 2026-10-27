@@ -39,6 +39,8 @@ body {
 /* Sidebar */
 .sidebar {
   width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
   background: var(--sidebar);
   color: var(--text);
   display: flex;
@@ -67,7 +69,7 @@ body {
 .brand-sub { font-size: 12px; color: var(--text-muted); }
 
 .tabs {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   padding: 14px 10px;
@@ -117,6 +119,13 @@ body {
   padding: 14px;
   border-top: 1px solid var(--border);
 }
+
+.export-progress { padding: 14px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; }
+.export-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.export-progress progress { display: block; width: 100%; height: 18px; accent-color: #2563eb; }
+.export-progress[data-status="error"] progress { accent-color: #dc2626; }
+.export-progress[data-status="success"] progress { accent-color: #16a34a; }
+.export-progress small { display: block; margin-top: 8px; color: #64748b; }
 
 .version {
   margin-top: 10px;
@@ -429,6 +438,7 @@ select.select:focus {
 
 /* Toggle switch */
 .toggle-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -439,8 +449,20 @@ select.select:focus {
 }
 .toggle-row input[type="checkbox"] {
   position: absolute;
+  /* Keep the label's focus target inside the visible switch. An unanchored
+     transparent checkbox can focus outside the scroll panel and scroll the
+     whole .app off screen, leaving only the fixed marquees visible. */
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 1px;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
+}
+.toggle-row input[type="checkbox"]:focus-visible + .toggle-track {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 .toggle-track {
   position: relative;

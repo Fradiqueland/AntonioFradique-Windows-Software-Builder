@@ -107,7 +107,7 @@
     "toggle_sub": "The banner will be fixed in the Viewer across all pages.",
     "image_label": "Banner Image",
     "image_empty": "No banner loaded",
-    "image_help": "Recommended: horizontal image (e.g. 728×90 or 970×90). Copied to dist-assets/.",
+    "image_help": "Recommended: 728 × 90 px. Supports PNG, JPG and GIF, including animations.",
     "url_label": "Destination Link",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "URL opened in the external browser when the end user clicks the banner.",
@@ -115,11 +115,15 @@
     "position_top": "Top of Page",
     "position_bottom": "Bottom of Page",
     "save_btn": "Save Banner Settings",
-    "dims_hint": "Accepted formats: PNG, JPG or animated GIF. Recommended size: 728×90px (horizontal format).",
+    "dims_hint": "Top and bottom: recommended 728 × 90 px. PNG, JPG and animated GIF. Larger images fit the available space.",
     "top_legend": "Top Banner",
     "bottom_legend": "Bottom Banner",
     "top_toggle_title": "Enable Top Banner",
-    "bottom_toggle_title": "Enable Bottom Banner"
+    "bottom_toggle_title": "Enable Bottom Banner",
+    "dismissible_title": "Allow closing with X",
+    "dismissible_hint": "Users can close this banner to gain space. It appears again when the application is reopened.",
+    "close_top": "Close top banner",
+    "close_bottom": "Close bottom banner"
   },
   "content": {
     "list_title": "Menu Modules",
@@ -147,7 +151,8 @@
       "embed": "Form or quiz",
       "iptv": "IPTV channels",
       "local_web": "HTML / PHP file",
-      "portable": "Portable program (Windows / Mac)"
+      "portable": "Portable program (Windows / Mac)",
+      "archives": "ZIP / RAR archives"
     },
     "youtube_url_label": "Video URL or ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... or just the ID",
@@ -247,7 +252,8 @@
       "embed": "Google Forms, Typeform, quizzes…",
       "iptv": "List of online TV channels.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Include a program folder with its files and dependencies."
+      "portable": "Include a program folder with its files and dependencies.",
+      "archives": "Share archives, including password-protected files."
     },
     "type_group": {
       "video": "Video",
@@ -266,13 +272,14 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR and other archives are included unchanged, including password-protected files. The app does not open them or ask for a password. Recipients save the archive and extract it with a compatible app and the original password."
   },
   "export": {
     "icon_label": "Software Icon",
     "icon_none": "No icon defined.",
     "icon_current_prefix": "Current icon: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Accepts PNG, JPG or ICO. On Windows, the chosen icon identifies the EXE file, window and taskbar. On Mac it appears in the running Dock; the Finder icon stays the template icon. Prefer PNG or JPG across both platforms.",
     "icon_must_be_ico": "Please choose a .ico file",
     "summary_label": "Project Summary",
     "build_btn": "Export application",
@@ -313,12 +320,28 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "Self-contained EXE. The first launch prepares the engine and content. Later launches open the prepared application directly without repeating extraction.",
+      "windows_zip": "Fast portable ZIP: extract the whole folder once, then open its executable. Keep all files together. No extraction on every launch.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "Progress follows the build stages. 100% confirms the file has been saved.",
+    "progress": {
+      "preparing": "Preparing…",
+      "template": "Preparing the application…",
+      "resources": "Preparing resources…",
+      "compressing": "Compressing…",
+      "packing": "Packaging the application…",
+      "finalizing": "Finalizing…",
+      "saving": "Saving the file…",
+      "complete": "Completed",
+      "cancelled": "Operation cancelled",
+      "failed": "Build failed"
+    },
+    "format_label": "Delivery format",
+    "format_fast": "Portable ZIP folder",
+    "format_single": "Single EXE — direct startup (recommended)"
   },
   "viewer": {
     "menu_empty": "No modules configured.",
@@ -375,7 +398,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "The archive is saved unchanged. If protected, you need the original password and a compatible app to extract it."
   },
   "corners": {
     "music_label": "My music",
@@ -423,7 +447,7 @@
     "brand": "Brand and colours",
     "brand_hint": "Title, logo and colours of the final product.",
     "icon": "Software icon",
-    "icon_hint": "The icon students see on the file.",
+    "icon_hint": "The application, window and taskbar icon.",
     "banners": "Banners",
     "banners_hint": "Optional — ads or affiliate links at the top/bottom.",
     "social": "Social networks",
@@ -486,5 +510,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "Created by:",
+    "more_products": "More Products at:"
   }
 }

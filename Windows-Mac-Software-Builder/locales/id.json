@@ -107,7 +107,7 @@
     "toggle_sub": "Spanduk akan tetap di Penampil di semua halaman.",
     "image_label": "Gambar Spanduk",
     "image_empty": "Tidak ada spanduk dimuat",
-    "image_help": "Disarankan: gambar horizontal (mis: 728×90 atau 970×90). Disalin ke dist-assets/.",
+    "image_help": "Disarankan: 728 × 90 px. Mendukung PNG, JPG dan GIF, termasuk animasi.",
     "url_label": "Tautan Tujuan",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "URL dibuka di browser eksternal saat pelanggan akhir mengklik spanduk.",
@@ -115,11 +115,15 @@
     "position_top": "Atas Halaman",
     "position_bottom": "Bawah Halaman",
     "save_btn": "Simpan Pengaturan Spanduk",
-    "dims_hint": "Format yang diterima: PNG, JPG, atau GIF animasi. Ukuran yang disarankan: 728×90px (format horizontal).",
+    "dims_hint": "Atas dan bawah: disarankan 728 × 90 px. PNG, JPG dan GIF animasi. Gambar besar menyesuaikan ruang yang tersedia.",
     "top_legend": "Spanduk Atas",
     "bottom_legend": "Spanduk Bawah",
     "top_toggle_title": "Aktifkan Spanduk Atas",
-    "bottom_toggle_title": "Aktifkan Spanduk Bawah"
+    "bottom_toggle_title": "Aktifkan Spanduk Bawah",
+    "dismissible_title": "Izinkan menutup dengan X",
+    "dismissible_hint": "Pengguna dapat menutup banner ini untuk memperluas tampilan. Banner muncul kembali saat aplikasi dibuka lagi.",
+    "close_top": "Tutup banner atas",
+    "close_bottom": "Tutup banner bawah"
   },
   "content": {
     "list_title": "Modul Menu",
@@ -147,7 +151,8 @@
       "embed": "Formulir atau kuis",
       "iptv": "Saluran IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "Program portabel (Windows / Mac)"
+      "portable": "Program portabel (Windows / Mac)",
+      "archives": "Arsip ZIP / RAR"
     },
     "youtube_url_label": "URL atau ID video",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... atau hanya ID",
@@ -247,7 +252,8 @@
       "embed": "Google Forms, Typeform, kuis…",
       "iptv": "Daftar saluran TV online.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Sertakan folder program beserta berkas dan dependensinya."
+      "portable": "Sertakan folder program beserta berkas dan dependensinya.",
+      "archives": "Bagikan arsip, termasuk berkas yang dilindungi kata sandi."
     },
     "type_group": {
       "video": "Video",
@@ -266,13 +272,14 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "Arsip ZIP, RAR, 7z, TAR dan lainnya disertakan tanpa perubahan, termasuk yang dilindungi kata sandi. Aplikasi tidak membukanya atau meminta kata sandi. Penerima menyimpan arsip lalu mengekstraknya dengan aplikasi yang kompatibel dan kata sandi asli."
   },
   "export": {
     "icon_label": "Ikon Perangkat Lunak",
     "icon_none": "Tidak ada ikon ditentukan.",
     "icon_current_prefix": "Ikon saat ini: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Mendukung PNG, JPG, atau ICO. Di Windows, ikon pilihan mengidentifikasi berkas EXE, jendela, dan bilah tugas. Di Mac, ikon tampil di Dock saat berjalan; ikon Finder tetap mengikuti templat. Gunakan PNG atau JPG untuk kedua platform.",
     "icon_must_be_ico": "Silakan pilih file .ico",
     "summary_label": "Ringkasan Proyek",
     "build_btn": "Export application",
@@ -313,12 +320,28 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "EXE mandiri. Peluncuran pertama menyiapkan mesin dan konten. Peluncuran berikutnya langsung membuka aplikasi yang sudah disiapkan tanpa mengulang ekstraksi.",
+      "windows_zip": "ZIP portabel cepat: ekstrak seluruh folder sekali, lalu buka berkas program di dalamnya. Simpan semua berkas bersama. Sumber daya disiapkan saat pertama dibuka.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "Kemajuan mengikuti tahap pembuatan. 100% berarti berkas telah disimpan.",
+    "progress": {
+      "preparing": "Mempersiapkan…",
+      "template": "Mempersiapkan aplikasi…",
+      "resources": "Mempersiapkan sumber daya…",
+      "compressing": "Mengompresi…",
+      "packing": "Mengemas aplikasi…",
+      "finalizing": "Menyelesaikan…",
+      "saving": "Menyimpan berkas…",
+      "complete": "Selesai",
+      "cancelled": "Operasi dibatalkan",
+      "failed": "Pembuatan gagal"
+    },
+    "format_label": "Format distribusi",
+    "format_fast": "Folder ZIP portabel",
+    "format_single": "Satu EXE — mulai langsung (disarankan)"
   },
   "viewer": {
     "menu_empty": "Tidak ada modul dikonfigurasi.",
@@ -375,7 +398,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "Arsip disimpan tanpa perubahan. Jika dilindungi, gunakan kata sandi asli dan aplikasi yang kompatibel untuk mengekstraknya."
   },
   "corners": {
     "music_label": "Musik saya",
@@ -423,7 +447,7 @@
     "brand": "Merek dan warna",
     "brand_hint": "Judul, logo, dan warna produk akhir.",
     "icon": "Software icon",
-    "icon_hint": "Ikon yang dilihat siswa pada berkas.",
+    "icon_hint": "Ikon aplikasi, jendela, dan bilah tugas.",
     "banners": "Banner",
     "banners_hint": "Opsional — iklan atau tautan afiliasi di atas/bawah.",
     "social": "Media sosial",
@@ -486,5 +510,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "Dibuat oleh:",
+    "more_products": "Produk lainnya di:"
   }
 }

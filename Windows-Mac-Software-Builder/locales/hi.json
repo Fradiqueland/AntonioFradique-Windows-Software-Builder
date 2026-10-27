@@ -107,7 +107,7 @@
     "toggle_sub": "बैनर व्यूअर में सभी पृष्ठों पर स्थिर रहेगा।",
     "image_label": "बैनर छवि",
     "image_empty": "कोई बैनर लोड नहीं हुआ",
-    "image_help": "अनुशंसित: क्षैतिज छवि (उदा: 728×90 या 970×90)। dist-assets/ में कॉपी की जाती है।",
+    "image_help": "अनुशंसित: 728 × 90 px। PNG, JPG और GIF, एनिमेशन सहित।",
     "url_label": "गंतव्य लिंक",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "जब अंतिम ग्राहक बैनर पर क्लिक करेगा तो URL बाहरी ब्राउज़र में खुलेगा।",
@@ -115,11 +115,15 @@
     "position_top": "पृष्ठ का शीर्ष",
     "position_bottom": "पृष्ठ का निचला भाग",
     "save_btn": "बैनर सेटिंग्स सहेजें",
-    "dims_hint": "स्वीकृत प्रारूप: PNG, JPG या एनिमेटेड GIF। अनुशंसित आकार: 728×90px (क्षैतिज प्रारूप)।",
+    "dims_hint": "ऊपर और नीचे: अनुशंसित आकार 728 × 90 px। PNG, JPG और एनिमेटेड GIF। बड़ी छवियाँ उपलब्ध जगह में समायोजित होती हैं।",
     "top_legend": "शीर्ष बैनर",
     "bottom_legend": "निचला बैनर",
     "top_toggle_title": "शीर्ष बैनर सक्षम करें",
-    "bottom_toggle_title": "निचला बैनर सक्षम करें"
+    "bottom_toggle_title": "निचला बैनर सक्षम करें",
+    "dismissible_title": "X से बंद करने की अनुमति दें",
+    "dismissible_hint": "उपयोगकर्ता जगह बढ़ाने के लिए यह बैनर बंद कर सकते हैं। ऐप दोबारा खोलने पर यह फिर दिखाई देगा।",
+    "close_top": "ऊपरी बैनर बंद करें",
+    "close_bottom": "निचला बैनर बंद करें"
   },
   "content": {
     "list_title": "मेन्यू मॉड्यूल",
@@ -147,7 +151,8 @@
       "embed": "फ़ॉर्म या क्विज़",
       "iptv": "IPTV चैनल",
       "local_web": "HTML / PHP file",
-      "portable": "पोर्टेबल प्रोग्राम (Windows / Mac)"
+      "portable": "पोर्टेबल प्रोग्राम (Windows / Mac)",
+      "archives": "ZIP / RAR आर्काइव"
     },
     "youtube_url_label": "वीडियो का URL या ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... या केवल ID",
@@ -247,7 +252,8 @@
       "embed": "Google Forms, Typeform, क्विज़…",
       "iptv": "ऑनलाइन टीवी चैनलों की सूची।",
       "local_web": "Import a page or website from your PC.",
-      "portable": "प्रोग्राम का फ़ोल्डर उसकी फ़ाइलों और निर्भरताओं सहित जोड़ें।"
+      "portable": "प्रोग्राम का फ़ोल्डर उसकी फ़ाइलों और निर्भरताओं सहित जोड़ें।",
+      "archives": "पासवर्ड से सुरक्षित फ़ाइलों सहित आर्काइव साझा करें।"
     },
     "type_group": {
       "video": "वीडियो",
@@ -266,13 +272,14 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR और अन्य आर्काइव बिना बदलाव शामिल किए जाते हैं, भले ही वे पासवर्ड से सुरक्षित हों। ऐप उन्हें खोलता नहीं है और पासवर्ड नहीं माँगता। प्राप्तकर्ता फ़ाइल सहेजकर किसी संगत ऐप और मूल पासवर्ड से उसे निकालता है।"
   },
   "export": {
     "icon_label": "सॉफ़्टवेयर आइकन",
     "icon_none": "कोई आइकन परिभाषित नहीं।",
     "icon_current_prefix": "वर्तमान आइकन: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "PNG, JPG या ICO स्वीकार करता है। Windows में चुना आइकन EXE फ़ाइल, विंडो और टास्कबार पर दिखता है। Mac में चलते समय Dock में दिखता है; Finder टेम्पलेट आइकन रखता है। दोनों प्लेटफ़ॉर्म के लिए PNG या JPG चुनें।",
     "icon_must_be_ico": "कृपया एक .ico फ़ाइल चुनें",
     "summary_label": "परियोजना सारांश",
     "build_btn": "Export application",
@@ -313,12 +320,28 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "स्वतंत्र EXE। पहली शुरुआत इंजन और सामग्री तैयार करती है। बाद की शुरुआत तैयार ऐप को सीधे खोलती है, फिर से फ़ाइलें नहीं निकालती।",
+      "windows_zip": "तेज़ पोर्टेबल ZIP: पूरा फ़ोल्डर एक बार निकालें, फिर उसके प्रोग्राम को खोलें। सभी फ़ाइलें साथ रखें। संसाधन पहली शुरुआत में तैयार होते हैं।",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "प्रगति निर्माण के चरणों पर आधारित है। 100% का अर्थ है कि फ़ाइल सहेज दी गई है।",
+    "progress": {
+      "preparing": "तैयारी जारी…",
+      "template": "ऐप तैयार किया जा रहा है…",
+      "resources": "संसाधन तैयार किए जा रहे हैं…",
+      "compressing": "संपीड़न जारी…",
+      "packing": "ऐप का पैकेज बनाया जा रहा है…",
+      "finalizing": "अंतिम प्रक्रिया जारी…",
+      "saving": "फ़ाइल सहेजी जा रही है…",
+      "complete": "पूर्ण",
+      "cancelled": "प्रक्रिया रद्द की गई",
+      "failed": "निर्माण विफल"
+    },
+    "format_label": "वितरण प्रारूप",
+    "format_fast": "पोर्टेबल ZIP फ़ोल्डर",
+    "format_single": "एक EXE — सीधी शुरुआत (अनुशंसित)"
   },
   "viewer": {
     "menu_empty": "कोई मॉड्यूल कॉन्फ़िगर नहीं किया गया।",
@@ -375,7 +398,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "आर्काइव बिना बदलाव सहेजा जाता है। सुरक्षित होने पर उसे निकालने के लिए मूल पासवर्ड और संगत ऐप चाहिए।"
   },
   "corners": {
     "music_label": "मेरा संगीत",
@@ -423,7 +447,7 @@
     "brand": "ब्रांड और रंग",
     "brand_hint": "अंतिम उत्पाद का शीर्षक, लोगो और रंग।",
     "icon": "Software icon",
-    "icon_hint": "फ़ाइल पर छात्र को दिखने वाला आइकन।",
+    "icon_hint": "ऐप, विंडो और टास्कबार का आइकन।",
     "banners": "बैनर",
     "banners_hint": "वैकल्पिक — ऊपर/नीचे विज्ञापन या एफ़िलिएट लिंक।",
     "social": "सोशल नेटवर्क",
@@ -486,5 +510,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "निर्माता:",
+    "more_products": "अन्य उत्पाद:"
   }
 }

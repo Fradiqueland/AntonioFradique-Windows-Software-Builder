@@ -107,7 +107,7 @@
     "toggle_sub": "ستبقى اللافتة ثابتة في العارض على جميع الصفحات.",
     "image_label": "صورة اللافتة",
     "image_empty": "لم يتم تحميل لافتة",
-    "image_help": "موصى به: صورة أفقية (مثال: 728×90 أو 970×90). تُنسخ إلى dist-assets/.",
+    "image_help": "الموصى به: 728 × 90 بكسل. يدعم PNG وJPG وGIF، بما فيها الرسوم المتحركة.",
     "url_label": "رابط الوجهة",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "يُفتح الرابط في المتصفح الخارجي عند نقر العميل النهائي على اللافتة.",
@@ -115,11 +115,15 @@
     "position_top": "أعلى الصفحة",
     "position_bottom": "أسفل الصفحة",
     "save_btn": "حفظ إعدادات اللافتات",
-    "dims_hint": "الصيغ المقبولة: PNG أو JPG أو GIF متحرك. الحجم الموصى به: 728×90px (تنسيق أفقي).",
+    "dims_hint": "الأعلى والأسفل: الحجم الموصى به 728 × 90 بكسل. PNG وJPG وGIF متحرك. تُضبط الصور الكبيرة حسب المساحة المتاحة.",
     "top_legend": "اللافتة العلوية",
     "bottom_legend": "اللافتة السفلية",
     "top_toggle_title": "تفعيل اللافتة العلوية",
-    "bottom_toggle_title": "تفعيل اللافتة السفلية"
+    "bottom_toggle_title": "تفعيل اللافتة السفلية",
+    "dismissible_title": "السماح بالإغلاق بواسطة X",
+    "dismissible_hint": "يمكن للمستخدم إغلاق هذا البانر لزيادة مساحة العرض. يظهر مجددًا عند إعادة فتح التطبيق.",
+    "close_top": "إغلاق البانر العلوي",
+    "close_bottom": "إغلاق البانر السفلي"
   },
   "content": {
     "list_title": "وحدات القائمة",
@@ -147,7 +151,8 @@
       "embed": "نموذج أو اختبار",
       "iptv": "قنوات IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "برنامج محمول (Windows / Mac)"
+      "portable": "برنامج محمول (Windows / Mac)",
+      "archives": "أرشيفات ZIP / RAR"
     },
     "youtube_url_label": "رابط أو معرّف الفيديو",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... أو المعرّف فقط",
@@ -247,7 +252,8 @@
       "embed": "Google Forms وTypeform واختبارات…",
       "iptv": "قائمة قنوات تلفزيونية عبر الإنترنت.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "أضف مجلد البرنامج مع ملفاته واعتمادياته."
+      "portable": "أضف مجلد البرنامج مع ملفاته واعتمادياته.",
+      "archives": "شارك الأرشيفات، بما فيها الملفات المحمية بكلمة مرور."
     },
     "type_group": {
       "video": "فيديو",
@@ -266,13 +272,14 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "تُضمَّن أرشيفات ZIP وRAR و7z وTAR وغيرها دون تغيير، حتى لو كانت محمية بكلمة مرور. لا يفتحها التطبيق ولا يطلب كلمة المرور. يحفظ المستلم الأرشيف ويستخرجه بتطبيق متوافق وكلمة المرور الأصلية."
   },
   "export": {
     "icon_label": "أيقونة البرنامج",
     "icon_none": "لم يتم تحديد أيقونة.",
     "icon_current_prefix": "الأيقونة الحالية: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "يدعم PNG وJPG وICO. في Windows تستخدم الأيقونة المختارة لملف EXE والنافذة وشريط المهام. على Mac تظهر في Dock أثناء التشغيل، ويحتفظ Finder بأيقونة القالب. يفضل PNG أو JPG للمنصتين.",
     "icon_must_be_ico": "يرجى اختيار ملف .ico",
     "summary_label": "ملخص المشروع",
     "build_btn": "Export application",
@@ -313,12 +320,28 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "EXE مستقل. يجهز التشغيل الأول المحرك والمحتوى. يفتح التشغيل التالي التطبيق المجهز مباشرة دون تكرار فك الضغط.",
+      "windows_zip": "ZIP محمول سريع: فك المجلد بالكامل مرة واحدة ثم افتح الملف التنفيذي داخله. احتفظ بالملفات معاً. تُجهّز الموارد عند التشغيل الأول.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "يتبع التقدم مراحل الإنشاء. تعني نسبة 100% أنه تم حفظ الملف.",
+    "progress": {
+      "preparing": "جارٍ التحضير…",
+      "template": "جارٍ تحضير التطبيق…",
+      "resources": "جارٍ تحضير الموارد…",
+      "compressing": "جارٍ الضغط…",
+      "packing": "جارٍ تجميع التطبيق…",
+      "finalizing": "جارٍ الإنهاء…",
+      "saving": "جارٍ حفظ الملف…",
+      "complete": "اكتمل",
+      "cancelled": "تم إلغاء العملية",
+      "failed": "فشل الإنشاء"
+    },
+    "format_label": "صيغة التسليم",
+    "format_fast": "مجلد ZIP محمول",
+    "format_single": "ملف EXE واحد — تشغيل مباشر (موصى به)"
   },
   "viewer": {
     "menu_empty": "لم يتم تكوين أي وحدة.",
@@ -375,7 +398,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "يُحفظ الأرشيف دون تغيير. إذا كان محمياً، تحتاج إلى كلمة المرور الأصلية وتطبيق متوافق لاستخراجه."
   },
   "corners": {
     "music_label": "موسيقاي",
@@ -423,7 +447,7 @@
     "brand": "العلامة والألوان",
     "brand_hint": "العنوان والشعار وألوان المنتج النهائي.",
     "icon": "Software icon",
-    "icon_hint": "الأيقونة التي يراها الطالب على الملف.",
+    "icon_hint": "أيقونة التطبيق والنافذة وشريط المهام.",
     "banners": "اللافتات",
     "banners_hint": "اختياري — إعلانات أو روابط تسويق بالعمولة أعلى/أسفل.",
     "social": "الشبكات الاجتماعية",
@@ -486,5 +510,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "إنشاء:",
+    "more_products": "المزيد من المنتجات على:"
   }
 }

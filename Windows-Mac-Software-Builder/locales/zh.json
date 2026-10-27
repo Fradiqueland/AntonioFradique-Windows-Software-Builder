@@ -107,7 +107,7 @@
     "toggle_sub": "横幅将固定显示在查看器的所有页面上。",
     "image_label": "横幅图片",
     "image_empty": "未加载横幅",
-    "image_help": "推荐：横向图片（例如 728×90 或 970×90）。复制到 dist-assets/。",
+    "image_help": "推荐：728 × 90 像素。支持 PNG、JPG 和 GIF，包括动画。",
     "url_label": "目标链接",
     "url_placeholder": "https://example.com/my-affiliate-link",
     "url_help": "当最终客户点击横幅时，URL 将在外部浏览器中打开。",
@@ -115,11 +115,15 @@
     "position_top": "页面顶部",
     "position_bottom": "页面底部",
     "save_btn": "保存横幅设置",
-    "dims_hint": "支持格式：PNG、JPG 或动态 GIF。推荐尺寸：728×90px（横向格式）。",
+    "dims_hint": "顶部和底部：推荐尺寸 728 × 90 像素。支持 PNG、JPG 和动态 GIF。较大的图片会适应可用空间。",
     "top_legend": "顶部横幅",
     "bottom_legend": "底部横幅",
     "top_toggle_title": "启用顶部横幅",
-    "bottom_toggle_title": "启用底部横幅"
+    "bottom_toggle_title": "启用底部横幅",
+    "dismissible_title": "允许通过 X 关闭",
+    "dismissible_hint": "用户可以关闭此横幅以扩大显示区域。重新打开应用时，横幅会再次显示。",
+    "close_top": "关闭顶部横幅",
+    "close_bottom": "关闭底部横幅"
   },
   "content": {
     "list_title": "菜单模块",
@@ -147,7 +151,8 @@
       "embed": "表单或测验",
       "iptv": "IPTV 频道",
       "local_web": "HTML / PHP file",
-      "portable": "便携程序（Windows / Mac）"
+      "portable": "便携程序（Windows / Mac）",
+      "archives": "ZIP / RAR 压缩包"
     },
     "youtube_url_label": "视频 URL 或 ID",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... 或仅 ID",
@@ -247,7 +252,8 @@
       "embed": "Google Forms、Typeform、测验……",
       "iptv": "在线电视频道列表。",
       "local_web": "Import a page or website from your PC.",
-      "portable": "添加程序文件夹及其文件和依赖项。"
+      "portable": "添加程序文件夹及其文件和依赖项。",
+      "archives": "分享压缩包，包括受密码保护的文件。"
     },
     "type_group": {
       "video": "视频",
@@ -266,13 +272,14 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP、RAR、7z、TAR 等压缩包会原样打包，包括受密码保护的文件。本应用不会打开压缩包或索要密码。接收者保存文件后，使用兼容的应用和原始密码解压。"
   },
   "export": {
     "icon_label": "软件图标",
     "icon_none": "未定义图标。",
     "icon_current_prefix": "当前图标：",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "支持 PNG、JPG 或 ICO。在 Windows 中，所选图标用于 EXE 文件、窗口和任务栏。在 Mac 中，运行时会显示在 Dock；Finder 保留模板图标。跨平台建议使用 PNG 或 JPG。",
     "icon_must_be_ico": "请选择一个 .ico 文件",
     "summary_label": "项目摘要",
     "build_btn": "Export application",
@@ -313,12 +320,28 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "独立 EXE。首次启动准备引擎和内容。之后直接打开已准备的应用，无需重复解压。",
+      "windows_zip": "快速便携 ZIP：将整个文件夹解压一次，然后打开其中的可执行文件。请将所有文件保存在一起。首次启动时会准备资源。",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "进度按构建阶段显示。100% 表示文件已保存。",
+    "progress": {
+      "preparing": "正在准备…",
+      "template": "正在准备应用…",
+      "resources": "正在准备资源…",
+      "compressing": "正在压缩…",
+      "packing": "正在打包应用…",
+      "finalizing": "正在完成…",
+      "saving": "正在保存文件…",
+      "complete": "已完成",
+      "cancelled": "操作已取消",
+      "failed": "构建失败"
+    },
+    "format_label": "交付格式",
+    "format_fast": "便携 ZIP 文件夹",
+    "format_single": "单个 EXE — 直接启动（推荐）"
   },
   "viewer": {
     "menu_empty": "未配置任何模块。",
@@ -375,7 +398,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "压缩包会原样保存。如果设有密码，需使用原始密码和兼容的应用解压。"
   },
   "corners": {
     "music_label": "我的音乐",
@@ -423,7 +447,7 @@
     "brand": "品牌与颜色",
     "brand_hint": "最终产品的标题、徽标和颜色。",
     "icon": "Software icon",
-    "icon_hint": "学员在文件上看到的图标。",
+    "icon_hint": "应用程序、窗口和任务栏的图标。",
     "banners": "横幅",
     "banners_hint": "可选 — 顶部/底部的广告或推广链接。",
     "social": "社交网络",
@@ -486,5 +510,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "创建者：",
+    "more_products": "更多产品："
   }
 }

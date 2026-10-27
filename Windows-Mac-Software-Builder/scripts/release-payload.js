@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const platforms = Object.freeze({ Windows: { nodePlatform: 'win32', suffix: 'windows-x64-setup.exe' }, macOS: { nodePlatform: 'darwin', suffix: 'mac-universal.dmg' } });
-const reportNames = ['build-electron-smoke-source.json', 'build-electron-smoke-packaged.json', 'build-iptv-smoke-source.json', 'build-iptv-smoke-packaged.json'];
+const reportNames = ['build-electron-smoke-source.json', 'build-electron-smoke-packaged.json', 'build-iptv-smoke-source.json', 'build-iptv-smoke-packaged.json', 'build-builder-startup.json'];
 
 function checkedContext(env = process.env) {
   const { GITHUB_REPOSITORY: repository, TESTED_SOURCE_SHA: testedSourceSha, RELEASE_SOURCE_SHA: sourceSha, GITHUB_RUN_ID: runId, GITHUB_RUN_ATTEMPT: runAttempt } = env;
@@ -54,6 +54,7 @@ async function preparePayload(platform, { applicationRoot = root, context = chec
   const reports = reportNames.map(name => {
     const report = readJson(path.join(applicationRoot, name));
     if (report.status !== 'passed' || report.platform !== hostPlatform || (report.appVersion || report.version) !== pkg.version || !Array.isArray(report.checks) || !report.checks.length) throw new Error('Native release report is missing, stale or failed: ' + name);
+    if (name === 'build-builder-startup.json' && (report.installer?.name !== installerName || report.installer.sha256 !== digest)) throw new Error('Builder startup did not test this exact installer.');
     return { name, report };
   });
   const sizeReport = readJson(path.join(applicationRoot, 'dist/package-size-report.json'));
@@ -93,6 +94,7 @@ async function verifyPayload(directory, platform, context, version) {
   for (const name of reportNames) {
     const report = readJson(path.join(directory, name));
     if (report.status !== 'passed' || report.platform !== platforms[platform].nodePlatform || (report.appVersion || report.version) !== version || !Array.isArray(report.checks) || !report.checks.length) throw new Error('Cached release contains an invalid native execution report.');
+    if (name === 'build-builder-startup.json' && (report.installer?.name !== installerName || report.installer.sha256 !== installerProof.sha256)) throw new Error('Cached Builder startup proof differs from the installer.');
   }
   const sizeReport = readJson(path.join(directory, 'package-size-report.json'));
   if (sizeReport.version !== version || !sizeReport.items?.some(item => item.path === 'dist/builder/' + installerName && item.bytes === installerProof.size)) throw new Error('Cached release contains an invalid native size report.');

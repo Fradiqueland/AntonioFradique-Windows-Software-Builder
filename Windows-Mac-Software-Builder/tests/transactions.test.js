@@ -82,6 +82,8 @@ function fixture(t) {
     fs: observedFs, path, crypto, structuredClone,
     projectArchive: require('../src/shared/project-archive'),
     projectExport: require('../src/shared/project-export'), app: { getVersion: () => '2.6.0' },
+    projectIcons: require('../src/shared/project-icon'),
+    nativeImage: { createFromPath: filename => ({ isEmpty: () => fs.readFileSync(filename, 'utf8') === 'INVALID IMAGE' }) },
     console: { warn() {}, error() {} }, isViewer: false, exportBusy: false,
     WRITE_BASE: root, PROJECTS_ROOT: projects, PROJECTS_INDEX: index,
     DATA_DIR: data, ASSETS_DIR: assets, CONFIG_PATH: config, ICON_DEST_PATH: path.join(data, 'icon.ico'),
@@ -143,6 +145,38 @@ test('older partial configurations still merge defaults and migrate the single b
   assert.equal(saved.marketing.banners.top.image, 'dist-assets/old-top.png');
   assert.equal(typeof saved.brand.colors.sidebar, 'string');
   assert.equal(saved.marketing.banner, undefined);
+  assert.equal(saved.marketing.banners.top.dismissible, false);
+});
+
+test('independent close permissions and animated GIF bytes survive save and project transfer', async t => {
+  const f = fixture(t);
+  const gif = path.join(__dirname, 'fixtures/banner-animated.gif');
+  const before = fs.readFileSync(gif);
+  const saved = f.run('marketing:saveBanners', {
+    top: { enabled: true, dismissible: true, imageSourcePath: gif, url: 'https://example.org' },
+    bottom: { enabled: true, dismissible: false, imageSourcePath: gif }
+  });
+  for (const slot of ['top', 'bottom']) {
+    const banner = saved.marketing.banners[slot];
+    assert.equal(banner.dismissible, slot === 'top');
+    assert.match(banner.image, /\.gif$/);
+    assert.deepEqual(fs.readFileSync(path.join(f.project, banner.image)), before);
+  }
+  // Older callers that omit the option must not reset a saved permission.
+  const retained = f.run('marketing:saveBanners', { top: { enabled: true }, bottom: { enabled: true } });
+  assert.equal(retained.marketing.banners.top.dismissible, true);
+  assert.equal(retained.marketing.banners.bottom.dismissible, false);
+  const archive = path.join(f.root, 'banners.wsmb'), destination = path.join(f.root, 'restored');
+  const archiveAPI = require('../src/shared/project-archive');
+  const readConfig = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+  await archiveAPI.exportArchive({ projectRoot: f.project, outputPath: archive, name: 'Banners', appVersion: '2.6.2', readConfig });
+  const restored = await archiveAPI.importArchive({ archivePath: archive, destination, readConfig });
+  assert.deepEqual(restored.config.marketing.banners, JSON.parse(JSON.stringify(retained.marketing.banners)));
+  for (const banner of Object.values(restored.config.marketing.banners)) {
+    assert.deepEqual(fs.readFileSync(path.join(destination, banner.image)), before);
+  }
+  const off = f.run('marketing:saveBanners', { top: { enabled: true, dismissible: false } });
+  assert.equal(off.marketing.banners.top.dismissible, false);
 });
 
 test('invalid project indexes block initialization and CRUD without replacing or hiding data', t => {
@@ -231,6 +265,17 @@ test('successful resource saves retire old files only after commit and allow sel
   const icon = f.run('export:saveIcon', { sourcePath: oldIcon });
   assert.equal(fs.existsSync(oldIcon), false);
   assert.equal(fs.readFileSync(f.ctx.relToAbs(icon.export.iconPath), 'utf8'), 'ORIGINAL ICON');
+});
+
+test('invalid and oversized icons preserve the selected icon, configuration and project index', t => {
+  const f = fixture(t), before = snapshot(f.project), index = fs.readFileSync(f.index);
+  fs.writeFileSync(f.image, 'INVALID IMAGE');
+  assert.throws(() => f.run('export:saveIcon', { sourcePath: f.image }), /ícone inválid/i);
+  assert.deepEqual(snapshot(f.project), before);
+  fs.writeFileSync(f.image, Buffer.alloc(16 * 1024 ** 2 + 1));
+  assert.throws(() => f.run('export:saveIcon', { sourcePath: f.image }), /ícone inválid/i);
+  assert.deepEqual(snapshot(f.project), before);
+  assert.deepEqual(fs.readFileSync(f.index), index);
 });
 
 test('index write failures leave create, duplicate, rename and delete atomic with no active-project switch', t => {
@@ -359,4 +404,45 @@ test('missing gallery sources and duplicate module IDs reject the whole save', t
   assert.deepEqual(snapshot(f.project), original);
   assert.throws(() => f.run('content:save', { modules:[{id:'same',type:'html'},{id:'same',type:'html'}] }), /repetido/);
   assert.deepEqual(snapshot(f.project), original);
+});
+
+
+test('protected archive module survives save, editable transfer, download and failed replacement byte-for-byte', async t => {
+  const f = fixture(t);
+  // A real ZipCrypto-encrypted ZIP, generated with a test-only password.
+  // Production only copies the bytes; it never requests or uses that password.
+  const original = Buffer.from('UEsDBAoACQAAACwSVF3znKRmJAAAABgAAAAKABwAcmVhZG1lLnR4dFVUCQADA6XWagOl1mp1eAsAAQQAAAAABAAAAACWurCOwKQ3tkzfU8cAxHGblFHehLud84pZwrl86SehC6TwuPlQSwcI85ykZiQAAAAYAAAAUEsBAh4DCgAJAAAALBJUXfOcpGYkAAAAGAAAAAoAGAAAAAAAAQAAAKSBAAAAAHJlYWRtZS50eHRVVAUAAwOl1mp1eAsAAQQAAAAABAAAAABQSwUGAAAAAAEAAQBQAAAAeAAAAAAA', 'base64');
+  assert.equal(original.readUInt16LE(6) & 1, 1, 'Fixture must be encrypted');
+  const sourcePath = path.join(f.root, 'protegido.zip');
+  fs.writeFileSync(sourcePath, original);
+  let updated = await f.run('content:save', { modules: [{id:'protected',type:'archive-download',title:'Arquivo',data:{sourcePath,buttonLabel:'Obter arquivo'}}] });
+  const mod = updated.content[0];
+  assert.equal(mod.type, 'archive-download');
+  assert.equal(mod.data.fileName, 'protegido.zip');
+  assert.equal(mod.data.buttonLabel, 'Obter arquivo');
+  assert.deepEqual(fs.readFileSync(path.join(f.project, mod.data.file)), original);
+  updated = await f.run('content:save', {modules:updated.content});
+  assert.deepEqual(updated.content[0].data, mod.data, 'Reordering/re-saving must preserve the source');
+  const archivePath = path.join(f.root, 'editable.wsmb');
+  const readConfig = filename => JSON.parse(fs.readFileSync(filename, 'utf8'));
+  const engine = require('../src/shared/project-archive');
+  await engine.exportArchive({projectRoot:f.project,outputPath:archivePath,name:'Archive test',appVersion:'2.6.1',readConfig});
+  const destination = path.join(f.root, 'restored');
+  const restored = await engine.importArchive({archivePath,destination,readConfig});
+  assert.equal(restored.config.content[0].type, 'archive-download');
+  assert.deepEqual(fs.readFileSync(path.join(destination, restored.config.content[0].data.file)), original);
+  const downloaded = await f.run('dialog:saveFileAs', mod.data);
+  assert.equal(downloaded.ok, true);
+  assert.deepEqual(fs.readFileSync(downloaded.path), original);
+  const before = snapshot(f.project);
+  f.failure.configWrite = true;
+  fs.writeFileSync(sourcePath, 'replacement bytes');
+  assert.throws(() => f.run('content:save', {modules:[{...mod,data:{sourcePath}}]}), /Injected disk full/);
+  assert.deepEqual(snapshot(f.project), before, 'A failed replacement must preserve the original encrypted file');
+});
+
+test('an archive download cannot be saved without choosing its file', t => {
+  const f = fixture(t), before = snapshot(f.project);
+  assert.throws(() => f.run('content:save', {modules:[{id:'empty',type:'archive-download',data:{}}]}), /Selecione um arquivo/);
+  assert.deepEqual(snapshot(f.project), before);
 });

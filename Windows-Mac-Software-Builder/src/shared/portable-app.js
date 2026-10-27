@@ -6,7 +6,7 @@ const fs = process.versions.electron ? require('original-fs') : require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, depth: 64, plistBytes: 1024 ** 2 });
+const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, plistBytes: 1024 ** 2 });
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const ROOT_PATTERN = new RegExp(`^dist-assets/portable-${UUID}$`);
 const REVISION_PATTERN = new RegExp(`^${UUID}$`);
@@ -45,8 +45,10 @@ function scanTree(sourcePath) {
   const names = new Set();
   let files = 0;
   let bytes = 0;
-  function walk(directory, prefix, depth) {
-    if (depth > LIMITS.depth) throw new Error('A aplicação excede 64 níveis de pastas.');
+  function walk(directory, prefix) {
+    const pending=[{directory,prefix}];
+    while(pending.length) {
+      const {directory,prefix}=pending.pop();
     for (const name of fs.readdirSync(directory).sort()) {
       if (!safeName(name)) throw new Error(`Nome incompatível com a importação: ${name}`);
       const relative = prefix ? `${prefix}/${name}` : name;
@@ -60,7 +62,7 @@ function scanTree(sourcePath) {
       if (!kind) throw new Error(`Tipo de ficheiro não permitido: ${relative}`);
       const node = { relative, absolute, stat, kind };
       nodes.set(relative, node);
-      if (kind === 'directory') walk(absolute, relative, depth + 1);
+      if (kind === 'directory') pending.push({directory:absolute,prefix:relative});
       else if (kind === 'file') {
         files++;
         bytes += stat.size;
@@ -70,8 +72,9 @@ function scanTree(sourcePath) {
         node.link = normalizePortableLink(node.rawLink);
       }
     }
+    }
   }
-  walk(rootPath, '', 0);
+  walk(rootPath, '');
   function resolve(relative) {
     const current = [];
     let pending = relative.split('/');
@@ -110,12 +113,15 @@ function scanTree(sourcePath) {
   const visited = new Set();
   const active = new Set();
   function directoryCycles(relative) {
-    if (active.has(relative)) throw new Error('Ciclo de ligações simbólicas entre pastas.');
-    if (visited.has(relative)) return;
-    active.add(relative);
-    for (const child of children.get(relative) || []) directoryCycles(child);
-    active.delete(relative);
-    visited.add(relative);
+    const pending=[{relative,exit:false}];
+    while(pending.length) {
+      const item=pending.pop();
+      if(item.exit){active.delete(item.relative);visited.add(item.relative);continue;}
+      if(active.has(item.relative))throw new Error('Ciclo de ligações simbólicas entre pastas.');
+      if(visited.has(item.relative))continue;
+      active.add(item.relative);pending.push({relative:item.relative,exit:true});
+      for(const child of children.get(item.relative)||[])pending.push({relative:child,exit:false});
+    }
   }
   directoryCycles('');
   return { rootPath, nodes, resolve, files, bytes, hasSymlinks: [...nodes.values()].some(node => node.kind === 'symlink') };
@@ -261,6 +267,14 @@ function plistExecutable(buffer) {
   return executable;
 }
 
+// Windows has no POSIX execute bits. A validated Mach-O executable needs a
+// portable ZIP mode instead of the host's synthetic 0666 mode. Never infer
+// execution from a filename, apply it to ordinary resources, or alter files.
+function portableFileMode(filename, stat) {
+  if (process.platform === 'win32' && nativeHeader(filename, stat)?.platform === 'mac') return 0o755;
+  return stat.mode & 0o777;
+}
+
 function inspectFolder(sourcePath) {
   const tree = scanTree(sourcePath);
   const sourceName = path.basename(tree.rootPath);
@@ -286,13 +300,13 @@ function inspectFolder(sourcePath) {
     try { binary = tree.resolve(`${prefix}Contents/MacOS/${executable}`); } catch (_) { throw new Error(`Executável do bundle em falta: ${executable}`); }
     const native = binary.kind === 'file' ? nativeHeader(binary.absolute, binary.stat) : null;
     if (!native || native.platform !== 'mac') throw new Error(`O executável ${executable} não é um programa Mach-O válido.`);
-    candidates.push({ path: bundle.relative || '.', ...native, kind: 'app', label: path.posix.basename(bundle.relative || sourceName), executable: !!(binary.stat.mode & 0o111) });
+    candidates.push({ path: bundle.relative || '.', ...native, kind: 'app', label: path.posix.basename(bundle.relative || sourceName), executable: process.platform === 'win32' || !!(binary.stat.mode & 0o111) });
   }
   for (const node of tree.nodes.values()) {
     if (node.kind !== 'file' || outerBundles.some(bundle => !bundle.relative || node.relative.startsWith(`${bundle.relative}/`))) continue;
     const native = nativeHeader(node.absolute, node.stat);
     if (!native || (native.platform === 'windows' && !/\.exe$/i.test(node.relative))) continue;
-    candidates.push({ path: node.relative, ...native, label: path.posix.basename(node.relative), executable: !!(node.stat.mode & 0o111) });
+    candidates.push({ path: node.relative, ...native, label: path.posix.basename(node.relative), executable: (process.platform === 'win32' && native.platform === 'mac') || !!(node.stat.mode & 0o111) });
   }
   function rank(candidate) {
     return candidate.path.split('/').length * 10 + (/unins|uninstall|helper|crashpad|updater|crashreport/i.test(candidate.label) ? 100 : 0);
@@ -333,17 +347,21 @@ function copyTree(scan, destination, dereferenceLinks = false) {
   let count = 0;
   let bytes = 0;
   function copyNode(source, relative) {
+    const pending=[{source,relative}];
+    while(pending.length) {
+      const {source,relative,finish}=pending.pop();
+      if(finish){fs.chmodSync(relative?path.join(destination,...relative.split('/')):destination,source.stat.mode&0o777);continue;}
     if (++count > LIMITS.entries) throw new Error('A cópia excede o limite de ficheiros e pastas.');
     const filename = relative ? path.join(destination, ...relative.split('/')) : destination;
     const node = dereferenceLinks && source.kind === 'symlink' ? source.resolved : source;
     if (source.kind === 'symlink' && fs.readlinkSync(source.absolute) !== source.rawLink) throw new Error('Uma ligação simbólica mudou durante a cópia.');
     if (node.kind === 'directory') {
       if (relative) fs.mkdirSync(filename, { mode: 0o700 });
-      for (const child of children.get(node.relative) || []) {
+      pending.push({source:node,relative,finish:true});
+      for (const child of [...(children.get(node.relative) || [])].reverse()) {
         const childName = path.posix.basename(child.relative);
-        copyNode(child, relative ? `${relative}/${childName}` : childName);
+        pending.push({source:child,relative:relative ? `${relative}/${childName}` : childName});
       }
-      fs.chmodSync(filename, node.stat.mode & 0o777);
     } else if (node.kind === 'symlink') {
       try { fs.symlinkSync(node.link, filename, node.resolved.kind === 'directory' ? 'dir' : 'file'); }
       catch (error) {
@@ -372,6 +390,7 @@ function copyTree(scan, destination, dereferenceLinks = false) {
         } finally { fs.closeSync(output); }
         fs.chmodSync(filename, node.stat.mode & 0o777);
       } finally { fs.closeSync(input); }
+    }
     }
   }
   copyNode(scan.nodes.get(''), '');
@@ -450,4 +469,4 @@ function assertPortableTarget({ data, assetsDir, target }) {
     warnings: requiresWine ? ['Esta aplicação requer Wine instalado no Mac. A compatibilidade não é garantida; não é convertida numa aplicação Mac nativa.'] : [] };
 }
 
-module.exports = { LIMITS, normalizePortableLink, copyPortableTree, scanPortableFolder, importPortableProject, validatePortableProject, updatePortableProject, removePortableProject, assertPortableTarget };
+module.exports = { LIMITS, normalizePortableLink, portableFileMode, copyPortableTree, scanPortableFolder, importPortableProject, validatePortableProject, updatePortableProject, removePortableProject, assertPortableTarget };

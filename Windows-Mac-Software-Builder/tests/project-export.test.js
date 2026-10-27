@@ -13,10 +13,28 @@ const { Transform } = require('node:stream');
 const yazl = require('yazl');
 const yauzl = require('yauzl');
 const { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName } = require('../src/shared/project-export');
-const { importPortableProject } = require('../src/shared/portable-app');
+const { importPortableProject, copyPortableTree } = require('../src/shared/portable-app');
 const { FFMPEG_SOURCE_LOCK } = require('../src/shared/ffmpeg-source-lock');
 
 const APP = 'LaunchBox Viewer.app';
+
+test('deep portable trees copy and export with identical bytes for both targets',async t=>{
+  const f=portableFixture(t);
+  const relative=Array(72).fill('d').join('/')+'/profile.cache';
+  const original=path.join(f.portableRoot,...relative.split('/'));
+  fs.mkdirSync(path.toNamespacedPath(path.dirname(original)),{recursive:true});
+  fs.writeFileSync(path.toNamespacedPath(original),'DEEP PORTABLE PROFILE');
+  const copied=path.join(f.root,'deep-copy');copyPortableTree(f.portableRoot,copied);
+  assert.equal(fs.readFileSync(path.toNamespacedPath(path.join(copied,...relative.split('/'))),'utf8'),'DEEP PORTABLE PROFILE');
+  for(const target of ['windows','mac']) {
+    await writeTemplate(f.templatePath,target==='windows'?WINDOWS:MAC);
+    await exportProject({...f,target});
+    const entries=await readZip(f.outputPath);
+    const base=target==='windows'?'resources':f.projectName+'.data';
+    const resource=f.data.root.slice('dist-assets/'.length)+'/'+relative;
+    assert.equal(entries.get(base+'/dist-assets/'+resource).data.toString(),'DEEP PORTABLE PROFILE');
+  }
+});
 const WINDOWS = [
   { name: 'LaunchBox Viewer.exe', data: 'WINDOWS EXE', mode: 0o100755 },
   { name: 'resources/app.asar', data: 'VIEWER SOURCE' },
@@ -201,10 +219,25 @@ test('Windows ZIP keeps the Viewer, configuration and nested Unicode assets', as
   assert.equal(result.format, 'zip');
   assert.equal(result.path, f.outputPath);
   const entries = await readZip(f.outputPath);
-  assert.equal(entries.get('LaunchBox Viewer.exe').data.toString(), 'WINDOWS EXE');
+  assert.equal(entries.get(f.projectName+'.exe').data.toString(), 'WINDOWS EXE');
   assert.deepEqual(JSON.parse(entries.get('resources/data/project-config.json').data), f.config);
   assert.equal(entries.get('resources/dist-assets/páginas/olá.html').data.toString(), '<h1>Olá</h1>');
   assert.equal(progress.at(-1).completed, progress.at(-1).total);
+});
+
+test('Windows and Mac exports preserve animated banner bytes and independent close permissions', async t => {
+  const f = fixture(t), gif = fs.readFileSync(path.join(__dirname, 'fixtures/banner-animated.gif'));
+  fs.writeFileSync(path.join(f.assetsDir, 'banner.gif'), gif);
+  f.config.marketing = { banners: { top: { enabled: true, dismissible: true, image: 'dist-assets/banner.gif', url: '' },
+    bottom: { enabled: true, dismissible: false, image: 'dist-assets/banner.gif', url: '' } } };
+  for (const target of ['windows', 'mac']) {
+    await writeTemplate(f.templatePath, target === 'windows' ? WINDOWS : MAC);
+    await exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : f.projectName + '.data';
+    assert.deepEqual(entries.get(base + '/dist-assets/banner.gif').data, gif);
+    assert.deepEqual(JSON.parse(entries.get(base + '/data/project-config.json').data).marketing.banners, f.config.marketing.banners);
+  }
 });
 
 test('ordinary exports omit optional native runtimes without changing local media or signed Mac bundle bytes', async t => {
@@ -224,7 +257,7 @@ test('ordinary exports omit optional native runtimes without changing local medi
     assert.deepEqual(entries.get(`${base}/dist-assets/video.mp4`).data, media);
     assert.equal(result.omittedRuntimeBytes, runtimes.reduce((sum, item) => sum + Buffer.byteLength(item.data || ''), 0));
     for (const original of appEntries) {
-      const name = target === 'windows' ? original.name : original.name.replace(APP, 'Curso António.app');
+      const name = target === 'windows' ? (original.name==='LaunchBox Viewer.exe'?f.projectName+'.exe':original.name) : original.name.replace(APP, 'Curso António.app');
       assert.deepEqual(entries.get(name).data, Buffer.from(original.data || ''));
       assert.equal(entries.get(name).mode, original.mode || 0o100644);
     }
@@ -516,7 +549,6 @@ test('Mac ZIP preserves all bundle bytes, executable modes and framework symlink
 });
 
 test('portable ZIP exports preserve safe app symlink bytes, executable modes and empty directories', async t => {
-  if (process.platform === 'win32') return t.skip('Windows cannot preserve Unix executable bits for native Mac asset exports.');
   const f = portableFixture(t, { symlinks: true });
   if (!f) return;
   const executable = path.join(f.portableRoot, f.bundle, 'Contents', 'MacOS', 'Portable Tool');
@@ -531,7 +563,8 @@ test('portable ZIP exports preserve safe app symlink bytes, executable modes and
     const inspected = await inspectProjectAssets({ ...f, target });
     assert.equal(inspected.links.length, 2);
     assert.ok(inspected.files.every(item => item.kind === 'file'));
-    assert.ok(inspected.entries.some(item => item.kind === 'directory' && item.absolute === empty));
+    assert.ok(inspected.entries.some(item => item.kind === 'directory' &&
+      fs.realpathSync.native(item.absolute) === fs.realpathSync.native(empty)));
     await exportProject({ ...f, target });
     const entries = await readZip(f.outputPath);
     const base = (target === 'mac' ? 'Curso António.data/' : 'resources/') + f.data.root;
@@ -540,7 +573,7 @@ test('portable ZIP exports preserve safe app symlink bytes, executable modes and
     assert.equal(entries.get(framework + '/Demo').data.toString(), 'Versions/Current/Demo');
     assert.equal(entries.get(framework + '/Demo').mode & 0o170000, 0o120000);
     assert.deepEqual(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').data, executableHeader('mac'));
-    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').mode, 0o100000 | (fs.statSync(executable).mode & 0o777));
+    assert.equal(entries.get(base + '/' + f.bundle + '/Contents/MacOS/Portable Tool').mode, 0o100000 | (process.platform === 'win32' ? 0o755 : fs.statSync(executable).mode & 0o777));
     assert.equal(entries.get(base + '/' + f.bundle + '/Contents/Resources/settings.json').mode, 0o100000 | (fs.statSync(settings).mode & 0o777));
     assert.equal(entries.get(base + '/' + f.bundle + '/Contents/Resources/empty-state/').mode, 0o040000 | (fs.statSync(empty).mode & 0o777));
     assert.equal(entries.get(base + '/').mode, 0o040000 | (fs.statSync(f.portableRoot).mode & 0o777));
@@ -548,12 +581,35 @@ test('portable ZIP exports preserve safe app symlink bytes, executable modes and
   }
 });
 
-test('Mac portable export rejects executable permissions lost on import or later edits', async t => {
+test('Mac portable export rejects lost Unix permissions and recovers Windows ZIP permissions', async t => {
   const f = portableFixture(t, { windows: false });
   fs.chmodSync(path.join(f.portableRoot, f.bundle, 'Contents', 'MacOS', 'Portable Tool'), 0o644);
   await writeTemplate(f.templatePath, MAC);
-  await assert.rejects(exportProject({ ...f, target: 'mac' }), /permiss|execut.*Mac|Mac.*execut/i);
-  assert.equal(fs.existsSync(f.outputPath), false);
+  if (process.platform === 'win32') {
+    await exportProject({ ...f, target: 'mac' });
+    const entries = await readZip(f.outputPath);
+    assert.equal(entries.get(f.projectName+'.data/'+f.data.root+'/'+f.bundle+'/Contents/MacOS/Portable Tool').mode,0o100755);
+  } else {
+    await assert.rejects(exportProject({ ...f, target: 'mac' }), /permiss|execut.*Mac|Mac.*execut/i);
+    assert.equal(fs.existsSync(f.outputPath), false);
+  }
+});
+
+test('Mac builder exports a Windows portable EXE without Unix execute permission', async t => {
+  const f = portableFixture(t, { mac: false });
+  const executable = path.join(f.portableRoot, 'tool.exe');
+  fs.chmodSync(executable, 0o644);
+  assert.equal(fs.statSync(executable).mode & 0o111, 0);
+  const selected = require('../src/shared/portable-app').assertPortableTarget({data:f.data,assetsDir:f.assetsDir,target:'windows'});
+  assert.equal(selected.requiresWine, false);
+  assert.equal(selected.launchKind, 'exe');
+  await writeTemplate(f.templatePath, WINDOWS);
+  await exportProject({ ...f, target: 'windows' });
+  const entries = await readZip(f.outputPath);
+  const binary = entries.get('resources/' + f.data.root + '/tool.exe');
+  assert.deepEqual(binary.data, executableHeader('windows'));
+  assert.equal(binary.mode & 0o111, 0, 'Windows execution must not require a POSIX execute flag');
+  assert.deepEqual(JSON.parse(entries.get('resources/data/project-config.json').data), f.config);
 });
 
 test('portable export rejects missing native targets and permits an explicit Mac Wine option', async t => {
@@ -825,4 +881,62 @@ test('project names retain Unicode but cannot escape or create reserved Windows 
   assert.equal(safeProjectName('../../escape'), '..-..-escape');
   assert.equal(safeProjectName('CON'), '_CON');
   assert.equal(safeProjectName('  '), 'My Software');
+});
+
+
+test('opaque archive downloads keep every byte in Windows and Mac exports without native runtimes', async t => {
+  const f = fixture(t);
+  // Opaque data may be encrypted or use an unsupported archive format. Export
+  // must never try to unpack, decode or recompress the inner file itself.
+  const originals = ['protected.zip', 'protected.rar', 'protected.7z'].map(fileName => ({
+    fileName, bytes: Buffer.concat([Buffer.from(fileName), crypto.randomBytes(2048)])
+  }));
+  f.config.content = originals.map((item, index) => {
+    fs.writeFileSync(path.join(f.assetsDir, item.fileName), item.bytes);
+    return {id:'archive-'+index,type:'archive-download',data:{file:'dist-assets/'+item.fileName,fileName:item.fileName}};
+  });
+  assert.deepEqual(projectRuntimeRequirements(f), {ffmpeg:false,php:false});
+  for (const target of ['windows','mac']) {
+    await writeTemplate(f.templatePath, [...(target === 'windows' ? WINDOWS : MAC), ...runtimeEntries(target)]);
+    await exportProject({...f,target});
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : 'Curso António.data';
+    const config = JSON.parse(entries.get(base+'/data/project-config.json').data);
+    assert.equal(config.content.length, originals.length);
+    assert.ok(config.content.every(mod=>mod.type==='archive-download'));
+    for (const item of originals) assert.deepEqual(entries.get(base+'/dist-assets/'+item.fileName).data, item.bytes);
+    assert.equal([...entries.keys()].some(name=>name.startsWith(base+'/ffmpeg/') || name.startsWith(base+'/php/')),false);
+  }
+});
+
+test('custom icons ship outside the signed bundle in both ZIP formats without altering template bytes', async t=>{
+  const f=fixture(t);fs.mkdirSync(path.join(f.root,'data'));
+  const icon=fs.readFileSync(path.join(__dirname,'../src/builder/app-icon.png'));fs.writeFileSync(path.join(f.root,'data/icon-source.png'),icon);
+  f.config.export={iconPath:'data/icon-source.png'};
+  for(const target of ['windows','mac']) {
+    const app=target==='windows'?WINDOWS.map(item=>item.name==='LaunchBox Viewer.exe'?{...item,data:Buffer.from(require('resedit').NtExecutable.createEmpty(false,false).generate())}:item):MAC;
+    await writeTemplate(f.templatePath,app);
+    await exportProject({...f,target});const zip=await readZip(f.outputPath);
+    const base=target==='windows'?'resources':f.projectName+'.data';
+    assert.deepEqual(zip.get(base+'/data/icon-source.png').data,icon);
+    if(target==='mac')for(const item of MAC.filter(e=>e.data))assert.deepEqual(zip.get(f.projectName+'.app'+item.name.slice(APP.length)).data,Buffer.from(item.data));
+  }
+  f.config.export.iconPath='data/../../outside.png';
+  await assert.rejects(exportProject({...f,target:'mac'}),/ícone/);
+});
+
+test('fast Windows ZIP transports long paths under short names and restores them once',async t=>{
+  const f=fixture(t);await writeTemplate(f.templatePath,WINDOWS);
+  const relative=Array(72).fill('d').join('/')+'/file.txt';
+  const filename=path.join(f.assetsDir,...relative.split('/'));fs.mkdirSync(path.toNamespacedPath(path.dirname(filename)),{recursive:true});fs.writeFileSync(path.toNamespacedPath(filename),'LONG DATA');
+  await exportProject({...f,target:'windows',opaqueWindowsAssets:true});
+  const entries=await readZip(f.outputPath);
+  assert.ok(entries.has('resources/project-assets.zip'));assert.ok(entries.has('resources/project-assets.json'));
+  assert.ok([...entries.keys()].every(name=>name.length<200));
+  const resources=path.join(f.root,'expanded','resources');fs.mkdirSync(resources,{recursive:true});
+  const transport=require('../src/shared/sfx-assets');
+  for(const name of [transport.PACKAGE_FILE,transport.DESCRIPTOR_FILE])fs.writeFileSync(path.join(resources,name),entries.get('resources/'+name).data);
+  assert.equal((await transport.restoreAssets(resources)).restored,true);
+  assert.equal(fs.readFileSync(path.toNamespacedPath(path.join(resources,'dist-assets',...relative.split('/'))),'utf8'),'LONG DATA');
+  assert.equal((await transport.restoreAssets(resources)).reused,true);
 });

@@ -6,6 +6,7 @@
       content="default-src 'self'; form-action 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob: file:; font-src 'self' https://cdn.jsdelivr.net;" />
     <title>Windows &amp; Mac Software Builder</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="../shared/author.css" />
   </head>
   <body>
     <!-- ===== Faixas de texto rolante (marquee) de branding / promoção ===== -->
@@ -76,10 +77,17 @@
         </nav>
 
         <div class="sidebar-footer">
+          <section class="author-card" aria-label="Antonio Fradique">
+            <span data-i18n="author.created_by">Criado por:</span>
+            <strong>Antonio Fradique</strong>
+            <img class="author-photo" src="../shared/antonio-fradique.webp" alt="Antonio Fradique" />
+            <span data-i18n="author.more_products">Mais Produtos em:</span>
+            <a href="https://AntonioFradique.net" class="corner-link" data-ext="https://AntonioFradique.net">https://AntonioFradique.net</a>
+          </section>
           <button class="btn btn-primary btn-block" id="preview-btn" disabled data-i18n="sidebar.preview_btn">
             Pré-visualizar Produto
           </button>
-          <div class="version">v2.6.0</div>
+          <div class="version"></div>
         </div>
       </aside>
 
@@ -179,7 +187,7 @@
                     <option value=""></option>
                     <option value="youtube"></option><option value="html"></option><option value="pdf"></option>
                     <option value="webview"></option><option value="external"></option><option value="launch"></option>
-                    <option value="local-video"></option><option value="local-audio"></option><option value="download-vault"></option>
+                    <option value="local-video"></option><option value="local-audio"></option><option value="download-vault"></option><option value="archive-download"></option>
                     <option value="image-gallery"></option><option value="article-reader"></option><option value="smart-embed"></option>
                     <option value="iptv"></option><option value="local-web"></option><option value="portable"></option>
                   </select>
@@ -324,6 +332,7 @@
                          data-i18n-placeholder="content.download_btn_placeholder"
                          placeholder="Ex: Descarregar Template" />
                   <small data-i18n="content.download_help">Qualquer formato (.zip, .docx…). O aluno guarda o ficheiro no PC.</small>
+                  <small data-i18n="content.archive_help">ZIP, RAR, 7z e outros arquivos, incluindo os protegidos por palavra-passe, são incluídos sem alterações. A aplicação não os abre nem pede a palavra-passe. O destinatário escolhe onde guardar e usa a palavra-passe original para os extrair.</small>
                 </div>
 
                 <div class="form-group hidden" id="dyn-image-gallery" data-dyn="image-gallery">
@@ -491,7 +500,7 @@
           <div class="section-head">
             <div>
               <h2 data-i18n="section.icon">Ícone do software</h2>
-              <p data-i18n="section.icon_hint">O ícone que o aluno vê no ficheiro.</p>
+              <p data-i18n="section.icon_hint">O ícone da aplicação, da janela e da barra de tarefas.</p>
             </div>
           </div>
           <div class="form-card">
@@ -507,7 +516,7 @@
                 <span id="icon-preview-empty" class="logo-empty" data-i18n="icon.preview_empty">Sem ícone carregado</span>
               </div>
               <div class="file-current" id="icon-current" data-i18n="export.icon_none">Nenhum ícone definido.</div>
-              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. O ícone personalizado aplica-se à exportação Windows EXE; os pacotes ZIP usam o ícone do visualizador.</small>
+              <small data-i18n="export.icon_help">Aceita .png, .jpg ou .ico. O ícone escolhido também identifica a janela e a barra de tarefas do Windows; no Mac aparece no Dock enquanto a aplicação está aberta.</small>
             </div>
 
             <div class="form-actions">
@@ -526,7 +535,7 @@
             <button type="button" class="btn btn-ghost btn-sm section-toggle" data-i18n="section.show">Mostrar</button>
           </div>
           <form id="banner-form" class="form-card autosave" autocomplete="off">
-            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Dimensões recomendadas: 728×90px (ou formato horizontal equivalente).</p>
+            <p class="banner-dims-hint" data-i18n="banner.dims_hint">Topo e rodapé: recomendado 728 × 90 px. PNG, JPG e GIF animado. Imagens maiores ajustam-se ao espaço disponível.</p>
 
             <!-- BANNER DE TOPO -->
             <fieldset class="banner-slot">
@@ -541,13 +550,24 @@
                 </label>
               </div>
               <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-top-dismissible" aria-describedby="banner-top-dismissible-hint" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.dismissible_title">Permitir fechar com X</span>
+                    <span class="toggle-sub" id="banner-top-dismissible-hint" data-i18n="banner.dismissible_hint">O utilizador pode fechar este banner para ganhar espaço. Volta a aparecer ao reabrir a aplicação.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
                 <label data-i18n="banner.image_label">Imagem do Banner</label>
                 <div class="file-row">
                   <label class="file-btn" for="banner-top-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                  <input type="file" id="banner-top-image" accept="image/*" class="file-input-hidden" />
+                  <input type="file" id="banner-top-image" accept="image/*,.gif" aria-describedby="banner-top-image-help" class="file-input-hidden" />
                   <span class="file-name" id="banner-top-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                   <button type="button" class="btn btn-ghost" id="banner-top-image-remove" data-i18n="common.remove">Remover</button>
                 </div>
+                <small id="banner-top-image-help" data-i18n="banner.image_help">Recomendado: 728 × 90 px. Aceita PNG, JPG e GIF, incluindo animações.</small>
                 <div class="logo-preview-wrap banner-preview-wrap">
                   <img id="banner-top-image-preview" alt="Pré-visualização do banner de topo" />
                   <span id="banner-top-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
@@ -574,13 +594,24 @@
                 </label>
               </div>
               <div class="form-group">
+                <label class="toggle-row">
+                  <input type="checkbox" id="banner-bottom-dismissible" aria-describedby="banner-bottom-dismissible-hint" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    <span class="toggle-title" data-i18n="banner.dismissible_title">Permitir fechar com X</span>
+                    <span class="toggle-sub" id="banner-bottom-dismissible-hint" data-i18n="banner.dismissible_hint">O utilizador pode fechar este banner para ganhar espaço. Volta a aparecer ao reabrir a aplicação.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="form-group">
                 <label data-i18n="banner.image_label">Imagem do Banner</label>
                 <div class="file-row">
                   <label class="file-btn" for="banner-bottom-image"><span data-i18n="common.choose_file">Escolher ficheiro</span></label>
-                  <input type="file" id="banner-bottom-image" accept="image/*" class="file-input-hidden" />
+                  <input type="file" id="banner-bottom-image" accept="image/*,.gif" aria-describedby="banner-bottom-image-help" class="file-input-hidden" />
                   <span class="file-name" id="banner-bottom-image-name" data-i18n="common.no_file_chosen">Nenhum ficheiro selecionado</span>
                   <button type="button" class="btn btn-ghost" id="banner-bottom-image-remove" data-i18n="common.remove">Remover</button>
                 </div>
+                <small id="banner-bottom-image-help" data-i18n="banner.image_help">Recomendado: 728 × 90 px. Aceita PNG, JPG e GIF, incluindo animações.</small>
                 <div class="logo-preview-wrap banner-preview-wrap">
                   <img id="banner-bottom-image-preview" alt="Pré-visualização do banner de rodapé" />
                   <span id="banner-bottom-image-empty" class="logo-empty" data-i18n="banner.image_empty">Sem banner carregado</span>
@@ -726,6 +757,11 @@
                 <option value="windows">Windows</option>
                 <option value="mac">Mac (macOS)</option>
               </select>
+              <label for="export-format" data-i18n="export.format_label">Formato de entrega</label>
+              <select id="export-format" aria-describedby="export-target-description">
+                <option value="zip" data-i18n="export.format_fast">Pasta portable ZIP</option>
+                <option value="exe" data-i18n="export.format_single">EXE único — arranque direto após a primeira preparação (recomendado)</option>
+              </select>
               <small id="export-target-description"></small>
               <div class="export-target-status" id="export-target-status" role="status" aria-live="polite"></div>
               <small data-i18n="export.compatibility_help">Os ficheiros e programas incluídos nos módulos têm de ser compatíveis com a plataforma escolhida. PHP requer o runtime dessa plataforma.</small>
@@ -742,6 +778,14 @@
 
             <div class="form-group">
               <label data-i18n="export.status_label">Status</label>
+              <div class="export-progress hidden" id="export-progress" aria-busy="false">
+                <div class="export-progress-heading">
+                  <span id="export-progress-stage" role="status" aria-live="polite"></span>
+                  <strong id="export-progress-percent">0%</strong>
+                </div>
+                <progress id="export-progress-bar" max="100" value="0" aria-labelledby="export-progress-stage"></progress>
+                <small data-i18n="export.progress_help">O progresso acompanha as etapas de construção. Os 100% confirmam que o ficheiro foi guardado.</small>
+              </div>
               <div class="export-log" id="export-log">
                 <div class="export-log-empty" data-i18n="export.log_empty">Sem atividade. Clique em "Exportar" para começar.</div>
               </div>

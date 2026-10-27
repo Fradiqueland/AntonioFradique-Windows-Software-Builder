@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const androidRuntime = require('../src/shared/android-runtime');
 const iptvCipher = require('../src/shared/iptv-cipher');
+const { createExportProgress, sevenZipProgress } = require('../src/shared/export-progress');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
 function section(start, end) { return source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))); }
@@ -13,7 +14,7 @@ function targets(platform, present, { modules = [], hasSymlinks = false, validat
   const root = path.resolve('/builder-resources');
   const ctx = { path, fs: { existsSync: (value) => present.some((suffix) => value.endsWith(suffix)) },
     app: { isPackaged: true }, process: { platform, resourcesPath: root }, PROJECT_ROOT: root,
-    getSfxBinDir: () => path.join(root, 'sfx'), ASSETS_DIR: '/project/dist-assets',
+    getSfxBinDir: () => path.join(root, 'sfx'), getWindowsLauncherPath: () => path.join(root,'sfx/windows-launcher.exe'), ASSETS_DIR: '/project/dist-assets',
     readConfig: () => ({ content: modules }),
     portableApps: { validatePortableProject(options) {
       validations.push(options); return { hasSymlinks };
@@ -24,7 +25,7 @@ function targets(platform, present, { modules = [], hasSymlinks = false, validat
 }
 
 test('Windows builder offers native EXE and Mac ZIP when both templates are installed', () => {
-  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', '7zsd_All_x64.sfx']);
+  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', 'windows-launcher.exe']);
   assert.equal(result.hostPlatform, 'win32');
   assert.deepEqual(result.targets.map((item) => [item.id, item.available, item.format]),
     [['windows', true, 'exe'], ['mac', true, 'zip']]);
@@ -39,7 +40,7 @@ test('Mac builder offers Windows and Mac portable ZIP exports', () => {
 test('Windows builder offers ZIP for portable symlinks even with SFX installed', () => {
   const data = { root: 'dist-assets/portable-fixture' };
   const validations = [];
-  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', '7zsd_All_x64.sfx'], {
+  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', 'windows-launcher.exe'], {
     modules: [{ type: 'portable', data }], hasSymlinks: true, validations
   });
   assert.deepEqual(result.targets.map(item => [item.id, item.available, item.format]),
@@ -70,7 +71,9 @@ function routeHarness({ target = 'mac', format = 'zip', cancelled = false, failu
   const validations = [];
   const dialogs = [];
   const logs = [];
+  const progressEvents = [];
   const ctx = {
+    createExportProgress,
     path, exportBusy: false, ASSETS_DIR: '/project/dist-assets', builderWindow: {},
     assertBuilder() { if (ctx.exportBusy) throw new Error('busy'); }, hasProject: () => true,
     exportTargets: () => ({ targets: [{ id: target, available: true, format }] }),
@@ -90,14 +93,20 @@ function routeHarness({ target = 'mac', format = 'zip', cancelled = false, failu
       dialogs.push(options); return { canceled: cancelled, filePath: '/output/project' };
     } },
     projectExport: { safeProjectName: (name) => name, exportProject: async (options) => {
-      calls.push(options); if (failure) throw new Error('template damaged');
+      calls.push(options);
+      options.onProgress({completed:0,total:10});
+      options.onProgress({completed:5,total:10});
+      options.onProgress({completed:10,total:10});
+      if (failure) throw new Error('template damaged');
       return { path: options.outputPath, format: 'zip', target: options.target };
     } }
   };
   vm.createContext(ctx);
   vm.runInContext(section('async function exportProject(event, payload', "handleTrustedIpc('export:project'"), ctx);
-  return { ctx, calls, validations, dialogs, logs,
-    run: (payload = { target }) => ctx.exportProject({ sender: { send(_channel, message) { logs.push(message); } } }, payload) };
+  return { ctx, calls, validations, dialogs, logs, progressEvents,
+    run: (payload = { target }) => ctx.exportProject({ sender: { send(channel, message) {
+      if(channel==='export:progress')progressEvents.push(message);else logs.push(message);
+    } } }, payload) };
 }
 
 test('Windows EXE route retains SFX export; Mac goes through the portable engine', async () => {
@@ -119,6 +128,23 @@ test('portable export cancels cleanly and releases its lock on errors', async ()
   const failed = routeHarness({ failure: true });
   await assert.rejects(failed.run(), /template damaged/);
   assert.equal(failed.ctx.exportBusy, false);
+});
+
+test('both ZIP targets report progress but reach 100 only after successful output; failed and cancelled builds never do', async () => {
+  for (const target of ['windows','mac']) {
+    const successful=routeHarness({target});
+    await successful.run();
+    assert.deepEqual(successful.progressEvents.map(item=>item.percent),[0,5,50,95,100]);
+    assert.equal(successful.progressEvents.at(-1).status,'success');
+    const failed=routeHarness({target,failure:true});
+    await assert.rejects(failed.run(),/template damaged/);
+    assert.ok(failed.progressEvents.every(item=>item.percent<100));
+    assert.equal(failed.progressEvents.at(-1).status,'error');
+    const cancelled=routeHarness({target,cancelled:true});
+    await cancelled.run();
+    assert.equal(cancelled.progressEvents.at(-1).status,'cancelled');
+    assert.ok(cancelled.progressEvents.every(item=>item.percent<100));
+  }
 });
 
 test('export rejects unsupported platforms instead of silently producing the wrong package', async () => {
@@ -169,6 +195,7 @@ test('SFX preflight rejects missing Windows entries and symlinks before staging 
   for (const hasSymlinks of [false, true]) {
     const validations = [];
     const ctx = {
+      createExportProgress, sevenZipProgress,
       path, os: { tmpdir: () => '/unwritten-qa-staging' }, crypto: require('node:crypto'),
       process: { platform: 'win32' }, exportBusy: false, ASSETS_DIR: '/project/dist-assets',
       assertBuilder() {}, hasProject: () => true,
@@ -227,4 +254,12 @@ test('Mac optional runtimes follow the relocated data folder and retain sealed-r
   ctx.isViewer = true;
   ctx.fs.existsSync = () => false;
   assert.equal(ctx.runtimeDirectory('ffmpeg'), path.join(resources, 'ffmpeg'), 'Older sealed Viewer runtimes remain usable');
+});
+
+test('explicit fast ZIP bypasses SFX on Windows and invalid formats cannot silently fall back',async()=>{
+  const h=routeHarness({target:'windows',format:'exe'});
+  assert.equal((await h.run({target:'windows',format:'zip'})).format,'zip');
+  assert.equal(h.calls[0].target,'windows');assert.notEqual(h.calls[0],'sfx');
+  await assert.rejects(h.run({target:'windows',format:'dmg'}),/Formato/);
+  const mac=routeHarness();await assert.rejects(mac.run({target:'mac',format:'exe'}),/Mac/);
 });

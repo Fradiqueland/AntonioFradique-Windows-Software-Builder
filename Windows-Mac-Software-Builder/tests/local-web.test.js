@@ -38,6 +38,14 @@ function request(url, { requestPath, headers = {}, method = 'GET', body } = {}) 
   });
 }
 
+test('web folder imports preserve 72 directory levels without a depth cap',t=>{
+  const f=fixture(t),sourcePath=f.write('index.html','<h1>Deep tree</h1>');
+  const relative=Array(72).fill('d').join('/')+'/style.css';f.write(relative,'body{color:red}');
+  const data=importWebProject({sourcePath,includeDirectory:true,assetsDir:f.assetsDir});
+  const verified=validateWebProject({data,assetsDir:f.assetsDir});
+  assert.equal(fs.readFileSync(path.toNamespacedPath(path.join(verified.rootPath,...relative.split('/'))),'utf8'),'body{color:red}');
+});
+
 test('imports a single HTML/HTM file into a unique managed directory', t => {
   const f = fixture(t);
   const sourcePath = f.write('Olá mundo.HTM', '<h1>Olá</h1>');

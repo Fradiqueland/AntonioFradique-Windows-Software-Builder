@@ -8,19 +8,21 @@
 const fs = process.versions.electron ? require('original-fs') : require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 const { Transform } = require('stream');
 const { pipeline } = require('stream/promises');
 const yauzl = require('yauzl');
 const yazl = require('yazl');
 const { validateWebProject } = require('./local-web');
-const { assertPortableTarget, normalizePortableLink, validatePortableProject } = require('./portable-app');
+const { assertPortableTarget, normalizePortableLink, portableFileMode, validatePortableProject } = require('./portable-app');
 const { assertAPKExport } = require('./android-runtime');
+const { projectIcon } = require('./project-icon');
 const { FFMPEG_SOURCE_LOCK } = require('./ffmpeg-source-lock');
 
 const MAC_BUNDLE = 'LaunchBox Viewer.app';
 const MAC_RUNTIME_DATA = 'LaunchBox Viewer.data';
 const OPTIONAL_RUNTIMES = Object.freeze(['ffmpeg', 'php']);
-const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3, depth: 64 });
+const LIMITS = Object.freeze({ entries: 30000, fileBytes: 2 * 1024 ** 3, totalBytes: 8 * 1024 ** 3 });
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   for (let i = 0; i < 8; i++) n = (n & 1) ? (0xedb88320 ^ (n >>> 1)) : (n >>> 1);
   return n >>> 0;
@@ -40,11 +42,11 @@ function safeProjectName(value) {
 }
 
 function validPath(name) {
-  if (typeof name !== 'string' || !name || name.length > 2048 || /[\\:<>"|?*\x00-\x1f\x7f]/.test(name) || name.startsWith('/')) {
+  if (typeof name !== 'string' || !name || /[\\:<>"|?*\x00-\x1f\x7f]/.test(name) || name.startsWith('/')) {
     throw new Error(`Caminho ZIP inválido: ${name}`);
   }
   const parts = name.replace(/\/$/, '').split('/');
-  if (parts.length > LIMITS.depth || parts.some(p => !p || p === '.' || p === '..' || /[. ]$/.test(p) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))) {
+  if (parts.some(p => !p || p === '.' || p === '..' || /[. ]$/.test(p) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))) {
     throw new Error(`Caminho ZIP inválido: ${name}`);
   }
   return parts;
@@ -140,7 +142,7 @@ async function inspectTemplate(templatePath, target) {
             if (!bundle && !companionRoot && !companionRuntime) throw new Error('O template Mac contém um ficheiro fora da aplicação ou dos runtimes permitidos.');
           } else {
             if (kind === 'symlink') throw new Error('O template Windows não pode conter ligações simbólicas.');
-            if (/^resources\/(?:data|dist-assets)(?:\/|$)/i.test(name)) throw new Error('O template Windows contém dados de um projeto.');
+            if (/^resources\/(?:(?:data|dist-assets)(?:\/|$)|project-assets\.(?:zip|json)$)/i.test(name)) throw new Error('O template Windows contém dados de um projeto.');
           }
           entries.push({ entry, name, kind, mode: storedMode || (kind === 'directory' ? 0o040755 : 0o100644) });
           zip.readEntry();
@@ -238,8 +240,10 @@ async function inspectAssets(assetsDir, portableRoots = []) {
   const entries = [];
   const paths = new Map();
   let bytes = 0;
-  async function walk(directory, prefix = '', depth = 0) {
-    if (depth > LIMITS.depth) throw new Error('Demasiados níveis de recursos.');
+  async function walk(directory, prefix = '') {
+    const pending=[{directory,prefix}];
+    while(pending.length) {
+      const {directory,prefix}=pending.pop();
     for (const name of (await fs.promises.readdir(directory)).sort()) {
       const relative = prefix ? `${prefix}/${name}` : name;
       const absolute = path.join(directory, name);
@@ -250,12 +254,14 @@ async function inspectAssets(assetsDir, portableRoots = []) {
       registerPath(paths, relative, kind);
       if (paths.size > LIMITS.entries) throw new Error('Demasiados recursos.');
       const type = kind === 'directory' ? 0o040000 : kind === 'symlink' ? 0o120000 : 0o100000;
-      // Preserve imported executable/read permissions, never setuid/setgid or
-      // blanket executable bits. Ordinary content keeps the previous defaults.
-      const mode = type | (portable ? stat.mode & 0o777 : kind === 'directory' ? 0o755 : 0o644);
+      // Preserve Unix modes. On Windows only validated native Mac executables
+      // in managed portable modules receive 0755 in the ZIP, never on disk.
+      const permissions = portable ? (kind === 'file' ? portableFileMode(absolute, stat) : stat.mode & 0o777)
+        : kind === 'directory' ? 0o755 : 0o644;
+      const mode = type | permissions;
       const item = { absolute, relative, stat, kind, mode, portable };
       entries.push(item);
-      if (kind === 'directory') await walk(absolute, relative, depth + 1);
+      if (kind === 'directory') pending.push({directory:absolute,prefix:relative});
       else if (kind === 'symlink') {
         item.rawLink = await fs.promises.readlink(absolute, { encoding: 'buffer' });
         const rawTarget = item.rawLink.toString('utf8');
@@ -266,6 +272,7 @@ async function inspectAssets(assetsDir, portableRoots = []) {
       } else {
         if (stat.size > LIMITS.fileBytes || (bytes += stat.size) > LIMITS.totalBytes) throw new Error('Os recursos excedem os limites de tamanho.');
       }
+    }
     }
   }
   await walk(root);
@@ -313,12 +320,15 @@ async function inspectAssets(assetsDir, portableRoots = []) {
   const visiting = new Set();
   const visited = new Set();
   function checkDirectory(name) {
-    if (visiting.has(name)) throw new Error('Ciclo de diretórios e ligações no programa portátil.');
-    if (visited.has(name)) return;
-    visiting.add(name);
-    for (const child of directoryEdges.get(name) || []) checkDirectory(child);
-    visiting.delete(name);
-    visited.add(name);
+    const pending=[{name,exit:false}];
+    while(pending.length) {
+      const item=pending.pop();
+      if(item.exit){visiting.delete(item.name);visited.add(item.name);continue;}
+      if(visiting.has(item.name))throw new Error('Ciclo de diretórios e ligações no programa portátil.');
+      if(visited.has(item.name))continue;
+      visiting.add(item.name);pending.push({name:item.name,exit:true});
+      for(const child of directoryEdges.get(item.name)||[])pending.push({name:child,exit:false});
+    }
   }
   for (const name of directoryEdges.keys()) checkDirectory(name);
   return { root, entries, files: entries.filter(item => item.kind === 'file'), links, paths, portableRoots };
@@ -435,11 +445,12 @@ function assertTemplateRuntimes(template, target, requirements) {
   }
 }
 
-async function exportProject({ target, templatePath, outputPath, projectName, config, assetsDir, requiresPhp = false, sharedRuntimeSourcesDir, onProgress }) {
+async function exportProject({ target, templatePath, outputPath, projectName, config, assetsDir, requiresPhp = false, sharedRuntimeSourcesDir, onProgress, opaqueWindowsAssets = false }) {
   if (!['windows', 'mac'].includes(target)) throw new Error('Selecione Windows ou Mac.');
   assertAPKExport(config, { audience: 'creator', locale: config && config.language });
   if (!path.isAbsolute(templatePath) || !path.isAbsolute(outputPath) || path.resolve(templatePath) === path.resolve(outputPath)) throw new Error('Caminhos de exportação inválidos.');
   const name = safeProjectName(projectName);
+  const icon = projectIcon(config, assetsDir);
   const configBytes = Buffer.from(JSON.stringify(config, null, 2));
   if (configBytes.length > 16 * 1024 ** 2) throw new Error('A configuração do projeto é demasiado grande.');
   const assets = await inspectProjectAssets({ config, assetsDir, target });
@@ -460,11 +471,25 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
   }
   const requirements = projectRuntimeRequirements({ config, assetsDir, requiresPhp });
   const template = await inspectTemplate(templatePath, target);
-  let temporary;
+  let temporary, opaqueDirectory, opaque;
+  let windowsIconIco;
   try {
+    if (target === 'windows' && icon) windowsIconIco = await require('./windows-pe').iconFileBytes(icon);
+    if (target === 'windows' && opaqueWindowsAssets && !assets.links.length) {
+      // A short transport also protects Windows ZIP extraction from legacy
+      // path limits. The Viewer expands it once with native long-path APIs.
+      opaqueDirectory = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'wsmb-zip-assets-')));
+      const transport = require('./sfx-assets');
+      await transport.packAssets({ assetsDir, resourcesDir: opaqueDirectory, config });
+      opaque = [transport.PACKAGE_FILE, transport.DESCRIPTOR_FILE].map(name => {
+        const absolute = path.join(opaqueDirectory, name);
+        return { relative: name, absolute, root: opaqueDirectory, stat: fs.statSync(absolute) };
+      });
+    }
     assertTemplateRuntimes(template, target, requirements);
     const restoredSources = await inspectSharedRuntimeSources(template, requirements, sharedRuntimeSourcesDir);
     const selectedEntries = selectedTemplateEntries(template, target, requirements);
+    if(target==='windows' && selectedEntries.some(item=>item.name!=='LaunchBox Viewer.exe' && key(item.name)===key(name+'.exe')))throw new Error('O nome escolhido coincide com um componente da aplicação. Escolha outro nome.');
     const omittedRuntimeBytes = template.entries.reduce((sum, item) => {
       const runtime = runtimeForEntry(item.name, target);
       return sum + (runtime && !requirements[runtime] ? item.entry.uncompressedSize : 0);
@@ -482,7 +507,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     completion.catch(() => {});
     archive.on('error', error => archive.outputStream.destroy(error));
     let completed = 0;
-    const total = selectedEntries.length + assets.entries.length + restoredSources.length + 1;
+    const total = selectedEntries.length + (opaque ? opaque.length : assets.entries.length) + restoredSources.length + 1 + (icon ? 1 : 0);
     function progress() { if (onProgress) { try { onProgress({ completed, total }); } catch (_) { /* UI observers do not invalidate an export. */ } } }
     function addLazy(destination, options, getter) {
       archive.addReadStreamLazy(destination, options, callback => {
@@ -497,7 +522,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     }
     try {
       for (const item of selectedEntries) {
-        let destination = item.name;
+        let destination = target === 'windows' && item.name === 'LaunchBox Viewer.exe' ? name + '.exe' : item.name;
         if (target === 'mac') {
           destination = item.name.startsWith(`${MAC_RUNTIME_DATA}/`)
             ? `${name}.data${item.name.slice(MAC_RUNTIME_DATA.length)}`
@@ -508,7 +533,11 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
         const options = { mode: item.mode, mtime: item.entry.getLastModDate() };
         if (item.kind === 'directory') { archive.addEmptyDirectory(destination, options); completed++; }
         else if (item.kind === 'symlink') { archive.addBuffer(item.link, destination, options); completed++; }
-        else addLazy(destination, { ...options, size: item.entry.uncompressedSize, compressionLevel: 9 }, () => entryStream(template.zip, item.entry));
+        else if (target === 'windows' && item.name === 'LaunchBox Viewer.exe' && windowsIconIco) {
+          const buffers=[]; for await (const chunk of await entryStream(template.zip,item.entry)) buffers.push(chunk);
+          const branded=require('./windows-pe').brandExecutable(Buffer.concat(buffers),{name,icoBytes:windowsIconIco});
+          archive.addBuffer(branded,destination,{...options,compressionLevel:9});completed++;
+        } else addLazy(destination, { ...options, size: item.entry.uncompressedSize, compressionLevel: 9 }, () => entryStream(template.zip, item.entry));
       }
       for (const source of restoredSources) {
         const destination = target === 'mac' ? `${name}.data${source.destination.slice(MAC_RUNTIME_DATA.length)}` : source.destination;
@@ -518,7 +547,9 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
       archive.addEmptyDirectory(`${base}/dist-assets/`, { mode: 0o040755 });
       archive.addBuffer(configBytes, `${base}/data/project-config.json`, { mode: 0o100644, compressionLevel: 9 });
       completed++;
-      for (const asset of assets.entries) {
+      if (icon) addLazy(`${base}/${icon.relative}`, { mode: 0o100644, size: icon.stat.size, compressionLevel: 1 }, () => assetStream(icon, icon.root));
+      for (const file of opaque || []) addLazy(`${base}/${file.relative}`, {mode: 0o100644, size: file.stat.size, compressionLevel: 1}, () => assetStream(file, file.root));
+      for (const asset of opaque ? [] : assets.entries) {
         const destination = `${base}/dist-assets/${asset.relative}`;
         const options = { mode: asset.mode, mtime: asset.stat.mtime };
         if (asset.kind === 'directory') { archive.addEmptyDirectory(destination + '/', options); completed++; }
@@ -543,6 +574,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     return { path: outputPath, format: 'zip', target, projectName: name, omittedRuntimeBytes };
   } finally {
     template.zip.close();
+    if (opaqueDirectory) await fs.promises.rm(opaqueDirectory, {recursive:true, force:true});
     if (temporary) await fs.promises.rm(temporary, { force: true });
   }
 }

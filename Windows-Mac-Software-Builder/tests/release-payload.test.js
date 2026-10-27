@@ -23,7 +23,7 @@ function fixture(t, platform) {
   const hash = crypto.createHash('sha256').update(installer).digest('hex');
   fs.writeFileSync(path.join(applicationRoot, 'dist/builder/SHA256SUMS.txt'), hash + '  ' + installerName + '\n');
   const hostPlatform = platform === 'Windows' ? 'win32' : 'darwin';
-  for (const name of reportNames) fs.writeFileSync(path.join(applicationRoot, name), JSON.stringify({ status: 'passed', platform: hostPlatform, ...(name.includes('iptv') ? { version: '2.5.0' } : { appVersion: '2.5.0' }), checks: ['native execution and playback verified'] }));
+  for (const name of reportNames) fs.writeFileSync(path.join(applicationRoot, name), JSON.stringify({ status: 'passed', platform: hostPlatform, ...(name.includes('iptv') ? { version: '2.5.0' } : { appVersion: '2.5.0' }), ...(name === 'build-builder-startup.json' ? {installer:{name:installerName,sha256:hash}} : {}), checks: ['native execution and playback verified'] }));
   fs.writeFileSync(path.join(applicationRoot, 'dist/package-size-report.json'), JSON.stringify({ version: '2.5.0', items: [{ path: 'dist/builder/' + installerName, bytes: installer.length }] }));
   return { applicationRoot, installerName, hostPlatform, context, checkoutSha: context.testedSourceSha };
 }
@@ -39,12 +39,16 @@ for (const platform of ['Windows', 'macOS']) test('Native release payload surviv
 });
 
 test('Release payload preparation refuses stale or failed checks, wrong checkout and changed installer', async t => {
-  for (const failure of ['failed-report', 'stale-report', 'wrong-checkout', 'changed-installer', 'wrong-size']) {
+  for (const failure of ['failed-report', 'stale-report', 'wrong-checkout', 'changed-installer', 'wrong-size', 'wrong-startup-installer']) {
     const f = fixture(t, 'Windows');
     if (failure === 'failed-report' || failure === 'stale-report') fs.writeFileSync(path.join(f.applicationRoot, reportNames[0]), JSON.stringify({ status: failure === 'failed-report' ? 'failed' : 'passed', platform: 'win32', appVersion: '2.1.1', checks: ['old'] }));
     if (failure === 'wrong-checkout') f.checkoutSha = 'c'.repeat(40);
     if (failure === 'changed-installer') fs.appendFileSync(path.join(f.applicationRoot, 'dist/builder', f.installerName), 'changed');
     if (failure === 'wrong-size') fs.writeFileSync(path.join(f.applicationRoot, 'dist/package-size-report.json'), JSON.stringify({ version: '2.5.0', items: [] }));
+    if (failure === 'wrong-startup-installer') {
+      const filename=path.join(f.applicationRoot,'build-builder-startup.json');
+      const report=JSON.parse(fs.readFileSync(filename));report.installer.sha256='c'.repeat(64);fs.writeFileSync(filename,JSON.stringify(report));
+    }
     await assert.rejects(preparePayload('Windows', f));
     assert.ok(!fs.existsSync(path.join(f.applicationRoot, 'dist/release/Windows')));
   }

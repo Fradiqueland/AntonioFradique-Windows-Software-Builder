@@ -125,7 +125,7 @@ test('XML and binary plist root .app imports preserve bundle name, modes and opa
       assert.deepEqual(valid.architectures, ['x64', 'arm64']);
       assert.equal(fs.statSync(path.join(launchPath, 'Contents/MacOS/Aplicação')).mode & 0o777, 0o755);
     } else {
-      assert.throws(() => portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }), /permissão de execução/);
+      assert.equal(portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }).launchKind, 'app');
     }
     assert.deepEqual(fs.readFileSync(path.join(launchPath, 'Contents/Resources/app.asar')), originalAsar);
     assert.deepEqual(fs.readFileSync(path.join(f.sourcePath, 'Contents/Resources/app.asar')), originalAsar);
@@ -176,8 +176,7 @@ test('Wine is explicitly opt-in and never overrides a selected native Mac entry'
   assert.equal(wine.launchKind, 'exe');
   assert.match(wine.warnings.join(' '), /não é garantida/);
   data = portable.updatePortableProject({ data, assetsDir: f.assetsDir, entries: { windows: 'App.exe', mac: 'mac-tool' }, allowWine: true });
-  if (process.platform !== 'win32') assert.equal(portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }).requiresWine, false);
-  else assert.throws(() => portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }), /permissão de execução/);
+  assert.equal(portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }).requiresWine, false);
 });
 
 test('changes preserve the import revision and revalidate real files instead of trusting candidates', t => {
@@ -227,14 +226,15 @@ test('oversized files are rejected before import without allocating their conten
   assert.deepEqual(fs.readdirSync(f.assetsDir), []);
 });
 
-test('Mac export rejects valid native code when executable permissions have been lost', t => {
+test('Mac export rejects lost Unix permissions but restores verified Mach-O ZIP permissions on Windows', t => {
   const f = fixture(t);
   f.write('mac-tool', macho(), 0o644);
   f.app();
   fs.chmodSync(path.join(f.sourcePath, 'Mac App.app/Contents/MacOS/Aplicação'), 0o644);
   for (const mac of ['mac-tool', 'Mac App.app']) {
     const data = portable.importPortableProject({ ...f, entries: { mac } });
-    assert.throws(() => portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }), /sem permissão de execução.*num Mac/);
+    if (process.platform === 'win32') assert.equal(portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }).requiresWine, false);
+    else assert.throws(() => portable.assertPortableTarget({ data, assetsDir: f.assetsDir, target: 'mac' }), /sem permissão de execução.*num Mac/);
   }
 });
 

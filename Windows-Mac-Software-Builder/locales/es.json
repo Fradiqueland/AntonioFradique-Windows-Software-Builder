@@ -107,7 +107,7 @@
     "toggle_sub": "El banner quedará fijo en el Visualizador, en todas las páginas.",
     "image_label": "Imagen del Banner",
     "image_empty": "Sin banner cargado",
-    "image_help": "Recomendado: imagen horizontal (ej: 728×90 o 970×90). Copiada a dist-assets/.",
+    "image_help": "Recomendado: 728 × 90 px. Admite PNG, JPG y GIF, incluidas animaciones.",
     "url_label": "Enlace de Destino",
     "url_placeholder": "https://ejemplo.com/mi-enlace-afiliado",
     "url_help": "URL abierta en el navegador externo cuando el cliente final haga clic en el banner.",
@@ -115,11 +115,15 @@
     "position_top": "Arriba de la Página",
     "position_bottom": "Abajo de la Página",
     "save_btn": "Guardar Configuración del Banner",
-    "dims_hint": "Formatos aceptados: PNG, JPG o GIF animado. Tamaño recomendado: 728×90px (formato horizontal).",
+    "dims_hint": "Arriba y abajo: recomendado 728 × 90 px. PNG, JPG y GIF animado. Las imágenes mayores se ajustan al espacio disponible.",
     "top_legend": "Banner Superior",
     "bottom_legend": "Banner Inferior",
     "top_toggle_title": "Activar Banner Superior",
-    "bottom_toggle_title": "Activar Banner Inferior"
+    "bottom_toggle_title": "Activar Banner Inferior",
+    "dismissible_title": "Permitir cerrar con X",
+    "dismissible_hint": "El usuario puede cerrar este banner para ganar espacio. Vuelve a aparecer al abrir de nuevo la aplicación.",
+    "close_top": "Cerrar banner superior",
+    "close_bottom": "Cerrar banner inferior"
   },
   "content": {
     "list_title": "Módulos del Menú",
@@ -147,7 +151,8 @@
       "embed": "Formulario o quiz",
       "iptv": "Canales IPTV",
       "local_web": "HTML / PHP file",
-      "portable": "Programa portátil (Windows / Mac)"
+      "portable": "Programa portátil (Windows / Mac)",
+      "archives": "Archivos ZIP / RAR"
     },
     "youtube_url_label": "URL o ID del vídeo",
     "youtube_url_placeholder": "https://www.youtube.com/watch?v=... o solo el ID",
@@ -247,7 +252,8 @@
       "embed": "Google Forms, Typeform, quizzes…",
       "iptv": "Lista de canales de TV online.",
       "local_web": "Import a page or website from your PC.",
-      "portable": "Incluya una carpeta de programa con sus archivos y dependencias."
+      "portable": "Incluya una carpeta de programa con sus archivos y dependencias.",
+      "archives": "Comparte archivos, incluidos los protegidos con contraseña."
     },
     "type_group": {
       "video": "Vídeo",
@@ -266,13 +272,14 @@
       "php_help": "PHP requires the PHP runtime bundled with the product. PHP scripts execute code with the user’s permissions: import trusted code only. HTML, CSS and JavaScript work without PHP.",
       "invalid_file": "Choose an .html, .htm or .php file.",
       "pick_first": "Choose the main HTML or PHP file first."
-    }
+    },
+    "archive_help": "ZIP, RAR, 7z, TAR y otros archivos se incluyen sin cambios, aunque tengan contraseña. La aplicación no los abre ni pide la contraseña. El destinatario guarda el archivo y lo extrae con una aplicación compatible y la contraseña original."
   },
   "export": {
     "icon_label": "Icono del Software",
     "icon_none": "Ningún icono definido.",
     "icon_current_prefix": "Icono actual: ",
-    "icon_help": "Accepts .png, .jpg or .ico. The custom icon applies to Windows EXE exports; ZIP packages keep the viewer’s icon.",
+    "icon_help": "Admite PNG, JPG o ICO. En Windows, el icono elegido identifica el archivo EXE, la ventana y la barra de tareas. En Mac aparece en el Dock durante la ejecución; Finder conserva el icono del modelo. Utiliza PNG o JPG para ambas plataformas.",
     "icon_must_be_ico": "Por favor, elija un archivo .ico",
     "summary_label": "Resumen del Proyecto",
     "build_btn": "Export application",
@@ -313,12 +320,28 @@
     "target_check_failed": "Could not check the available export platforms.",
     "compatibility_help": "Files and programs included in modules must be compatible with the selected platform. PHP requires a runtime for that platform.",
     "formats": {
-      "windows_exe": "Windows — single EXE application",
-      "windows_zip": "Windows — ZIP with the application and required files",
+      "windows_exe": "EXE autónomo. El primer inicio prepara el motor y el contenido. Los siguientes abren la aplicación preparada directamente, sin repetir la extracción.",
+      "windows_zip": "ZIP portable de inicio rápido: extrae toda la carpeta una vez y abre su ejecutable. Mantén los archivos juntos. Los recursos se preparan en el primer inicio.",
       "mac_zip": "Mac — ZIP with a .app application and data folder"
     },
     "mac_delivery_help": "On the Mac, extract the full ZIP and keep the .app and its data folder together. Open the .app to run the product.",
-    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product."
+    "windows_zip_delivery_help": "On Windows, extract the full ZIP and keep all files together. Open the included .exe to run the product.",
+    "progress_help": "El progreso sigue las etapas de construcción. El 100% confirma que el archivo se ha guardado.",
+    "progress": {
+      "preparing": "Preparando…",
+      "template": "Preparando la aplicación…",
+      "resources": "Preparando recursos…",
+      "compressing": "Comprimiendo…",
+      "packing": "Empaquetando la aplicación…",
+      "finalizing": "Finalizando…",
+      "saving": "Guardando el archivo…",
+      "complete": "Completado",
+      "cancelled": "Operación cancelada",
+      "failed": "La construcción ha fallado"
+    },
+    "format_label": "Formato de entrega",
+    "format_fast": "Carpeta portable ZIP",
+    "format_single": "EXE único — inicio directo (recomendado)"
   },
   "viewer": {
     "menu_empty": "Ningún módulo configurado.",
@@ -375,7 +398,8 @@
     "local_web_error": "This file could not be opened.",
     "local_web_php_hint": "This module requires the PHP runtime bundled with the product. Contact the author if it is missing.",
     "local_web_invalid": "The local service is unavailable.",
-    "local_web_load_failed": "Check that the main file and its resources were included."
+    "local_web_load_failed": "Check that the main file and its resources were included.",
+    "archive_help": "El archivo se guarda sin cambios. Si está protegido, necesitas la contraseña original y una aplicación compatible para extraerlo."
   },
   "corners": {
     "music_label": "Mi música",
@@ -423,7 +447,7 @@
     "brand": "Marca y colores",
     "brand_hint": "Título, logo y colores del producto final.",
     "icon": "Software icon",
-    "icon_hint": "El icono que el alumno ve en el archivo.",
+    "icon_hint": "El icono de la aplicación, la ventana y la barra de tareas.",
     "banners": "Banners",
     "banners_hint": "Opcional — publicidad o enlaces de afiliado arriba/abajo.",
     "social": "Redes sociales",
@@ -486,5 +510,9 @@
     "close_information": "Close information",
     "viewer_title": "Android application unavailable",
     "viewer_unavailable": "This product does not include a validated Android engine. APK execution is unavailable in this version. Contact the creator for a compatible version."
+  },
+  "author": {
+    "created_by": "Creado por:",
+    "more_products": "Más productos en:"
   }
 }
