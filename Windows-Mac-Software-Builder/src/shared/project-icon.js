@@ -46,7 +46,12 @@ function applyWindowIcon({ window, app, nativeImage, config, assetsDir, platform
       const iconPath = path.join(directory, identity + '.ico');
       // Retain a real ICO outside the disposable SFX directory for the taskbar.
       if (!fs.existsSync(iconPath)) fs.writeFileSync(iconPath, imageToIco(image));
-      window.setAppDetails({ appId: 'net.antoniofradique.wsmb.' + identity, appIconPath: iconPath });
+      const details={ appId: 'net.antoniofradique.wsmb.' + identity, appIconPath: iconPath };
+      const launcher=process.argv.find(value=>value.startsWith('--wsmb-launcher='))?.slice('--wsmb-launcher='.length);
+      if(standalone&&launcher&&path.isAbsolute(launcher)&&/\.exe$/i.test(launcher)&&!/["\r\n]/.test(launcher)){
+        details.relaunchCommand='"'+launcher+'"';details.relaunchDisplayName=config.brand?.title||'My Software';
+      }
+      window.setAppDetails(details);
     }
   }
   return true;

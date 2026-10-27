@@ -219,7 +219,7 @@ test('Windows ZIP keeps the Viewer, configuration and nested Unicode assets', as
   assert.equal(result.format, 'zip');
   assert.equal(result.path, f.outputPath);
   const entries = await readZip(f.outputPath);
-  assert.equal(entries.get('LaunchBox Viewer.exe').data.toString(), 'WINDOWS EXE');
+  assert.equal(entries.get(f.projectName+'.exe').data.toString(), 'WINDOWS EXE');
   assert.deepEqual(JSON.parse(entries.get('resources/data/project-config.json').data), f.config);
   assert.equal(entries.get('resources/dist-assets/páginas/olá.html').data.toString(), '<h1>Olá</h1>');
   assert.equal(progress.at(-1).completed, progress.at(-1).total);
@@ -257,7 +257,7 @@ test('ordinary exports omit optional native runtimes without changing local medi
     assert.deepEqual(entries.get(`${base}/dist-assets/video.mp4`).data, media);
     assert.equal(result.omittedRuntimeBytes, runtimes.reduce((sum, item) => sum + Buffer.byteLength(item.data || ''), 0));
     for (const original of appEntries) {
-      const name = target === 'windows' ? original.name : original.name.replace(APP, 'Curso António.app');
+      const name = target === 'windows' ? (original.name==='LaunchBox Viewer.exe'?f.projectName+'.exe':original.name) : original.name.replace(APP, 'Curso António.app');
       assert.deepEqual(entries.get(name).data, Buffer.from(original.data || ''));
       assert.equal(entries.get(name).mode, original.mode || 0o100644);
     }
@@ -911,10 +911,11 @@ test('opaque archive downloads keep every byte in Windows and Mac exports withou
 
 test('custom icons ship outside the signed bundle in both ZIP formats without altering template bytes', async t=>{
   const f=fixture(t);fs.mkdirSync(path.join(f.root,'data'));
-  const icon=crypto.randomBytes(512);fs.writeFileSync(path.join(f.root,'data/icon-source.png'),icon);
+  const icon=fs.readFileSync(path.join(__dirname,'../src/builder/app-icon.png'));fs.writeFileSync(path.join(f.root,'data/icon-source.png'),icon);
   f.config.export={iconPath:'data/icon-source.png'};
   for(const target of ['windows','mac']) {
-    await writeTemplate(f.templatePath,target==='windows'?WINDOWS:MAC);
+    const app=target==='windows'?WINDOWS.map(item=>item.name==='LaunchBox Viewer.exe'?{...item,data:Buffer.from(require('resedit').NtExecutable.createEmpty(false,false).generate())}:item):MAC;
+    await writeTemplate(f.templatePath,app);
     await exportProject({...f,target});const zip=await readZip(f.outputPath);
     const base=target==='windows'?'resources':f.projectName+'.data';
     assert.deepEqual(zip.get(base+'/data/icon-source.png').data,icon);

@@ -2285,6 +2285,7 @@ async function loadExportTargets() {
     updatePortableActions();
     exportTargetsError = '';
     exportTargetSelect.value = result.hostPlatform === 'darwin' ? 'mac' : 'windows';
+    exportFormatSelect.value = selectedExportTarget()?.format || 'zip';
   } catch (err) {
     exportTargets = [];
     exportTargetsError = err && err.message ? err.message : String(err);
@@ -2292,7 +2293,7 @@ async function loadExportTargets() {
   renderExportTarget();
 }
 
-exportTargetSelect.addEventListener('change', renderExportTarget);
+exportTargetSelect.addEventListener('change', () => { exportFormatSelect.value=selectedExportTarget()?.format||'zip';renderExportTarget(); });
 exportFormatSelect.addEventListener('change', renderExportTarget);
 
 function updateExportSummary(config) {

@@ -115,6 +115,11 @@ jobs:
           key: wsmb-native-inputs-v1-${{ matrix.target }}-${{ steps.native_inputs.outputs.hash }}
           path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
           enableCrossOsArchive: true
+      - name: Compile and exercise direct-start Windows bootstrap
+        if: matrix.target == 'windows-x64'
+        run: |
+          node scripts/build-windows-launcher.cjs
+          node --test tests/native-launcher-native.cjs
       - name: Transfer verified native runtime through cache
         uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
@@ -276,6 +281,9 @@ jobs:
       - name: Require both exact template cache matches
         if: steps.template_windows.outputs.cache-hit != 'true' || steps.template_mac.outputs.cache-hit != 'true'
         run: exit 1
+      - name: Compile native direct-start Windows launcher
+        if: runner.os == 'Windows'
+        run: npm run build:launcher:win 2>&1 | tee build-native-launcher.log
       - name: Share identical FFmpeg source archives across Builder templates
         run: node scripts/deduplicate-template-sources.js 2>&1 | tee build-template-sources.log
       - name: Exercise real Electron exports and link navigation

@@ -11,6 +11,7 @@ const iptvCipher = require('./src/shared/iptv-cipher');
 const localWeb = require('./src/shared/local-web');
 const projectExport = require('./src/shared/project-export');
 const projectArchive = require('./src/shared/project-archive');
+const windowsLauncher = require('./src/shared/windows-launcher');
 const sfxAssets = require('./src/shared/sfx-assets');
 const projectIcons = require('./src/shared/project-icon');
 const { createExportProgress, sevenZipProgress } = require('./src/shared/export-progress');
@@ -104,6 +105,9 @@ if (isViewer) {
 } else {
   app.setName('LaunchBox Builder');
 }
+
+const ownsViewerInstance = !(isViewer && app.isPackaged && process.argv.includes('--wsmb-cached')) || app.requestSingleInstanceLock();
+if (!ownsViewerInstance) app.quit();
 
 /* O User-Agent predefinido do Electron inclui "LaunchBox Viewer/1.x" e
  * "Electron/32". O YouTube (e outros serviços Google) servem um leitor
@@ -288,6 +292,9 @@ function getSfxBinDir() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'sfx');
   return path.join(PROJECT_ROOT, 'src', 'builder', 'bin');
 }
+function getWindowsLauncherPath() {
+  return app.isPackaged ? path.join(getSfxBinDir(), 'windows-launcher.exe') : path.join(PROJECT_ROOT, 'dist/native-launcher/windows-launcher.exe');
+}
 function getViewerTemplateDir() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'viewer-template');
   return path.join(PROJECT_ROOT, 'src', 'builder', 'templates', 'viewer-core', 'win-unpacked');
@@ -300,7 +307,7 @@ function exportTargets() {
   const windowsTemplate = fs.existsSync(getExportTemplatePath('windows'));
   const legacy = fs.existsSync(path.join(getViewerTemplateDir(), 'LaunchBox Viewer.exe'));
   const sfx = process.platform === 'win32' && fs.existsSync(path.join(getSfxBinDir(), '7za.exe'))
-    && fs.existsSync(path.join(getSfxBinDir(), '7zsd_All_x64.sfx'));
+    && fs.existsSync(getWindowsLauncherPath());
   // A mixed portable folder may contain Mac framework symlinks. ZIP preserves
   // them; the Windows SFX extractor cannot reliably recreate those links.
   let portableLinks = false;
@@ -341,6 +348,9 @@ const DEFAULT_CONFIG = {
 
 let builderWindow = null;
 let viewerWindow = null;
+if (isViewer && ownsViewerInstance && process.argv.includes('--wsmb-cached')) app.on('second-instance', () => {
+  if (viewerWindow && !viewerWindow.isDestroyed()) { if (viewerWindow.isMinimized()) viewerWindow.restore(); viewerWindow.show(); viewerWindow.focus(); }
+});
 
 /* -------- FS helpers -------- */
 
@@ -2037,7 +2047,7 @@ async function buildWindowsExe(event, payload) {
 
     const sfxBinDir = getSfxBinDir();
     const sevenZipExe = path.join(sfxBinDir, '7za.exe');
-    const sfxStub = path.join(sfxBinDir, '7zsd_All_x64.sfx');
+    const sfxStub = getWindowsLauncherPath();
     const templateZip = getExportTemplatePath('windows');
     const templateDir = getViewerTemplateDir();
     const templateExe = path.join(templateDir, 'LaunchBox Viewer.exe');
@@ -2174,7 +2184,7 @@ async function buildWindowsExe(event, payload) {
     const pendingTarget = target + '.' + stamp + '.tmp';
     progress.update(95, 'saving');
     try {
-      await concatFilesToTarget([stubToUse, sfxCfgPath, archivePath], pendingTarget);
+      await windowsLauncher.packBundle({stubPath:stubToUse,extractorPath:sevenZipExe,archivePath,outputPath:pendingTarget});
       fs.renameSync(pendingTarget, target);
     } finally { try { fs.unlinkSync(pendingTarget); } catch (_) {} }
 
@@ -2313,6 +2323,7 @@ async function locateMacProject() {
 }
 
 app.whenReady().then(async () => {
+  if (!ownsViewerInstance) return;
   if (isViewer) {
     if (!await locateMacProject()) { app.quit(); return; }
     if (app.isPackaged && process.platform === 'win32') {

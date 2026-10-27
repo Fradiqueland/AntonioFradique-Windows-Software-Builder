@@ -14,7 +14,7 @@ function targets(platform, present, { modules = [], hasSymlinks = false, validat
   const root = path.resolve('/builder-resources');
   const ctx = { path, fs: { existsSync: (value) => present.some((suffix) => value.endsWith(suffix)) },
     app: { isPackaged: true }, process: { platform, resourcesPath: root }, PROJECT_ROOT: root,
-    getSfxBinDir: () => path.join(root, 'sfx'), ASSETS_DIR: '/project/dist-assets',
+    getSfxBinDir: () => path.join(root, 'sfx'), getWindowsLauncherPath: () => path.join(root,'sfx/windows-launcher.exe'), ASSETS_DIR: '/project/dist-assets',
     readConfig: () => ({ content: modules }),
     portableApps: { validatePortableProject(options) {
       validations.push(options); return { hasSymlinks };
@@ -25,7 +25,7 @@ function targets(platform, present, { modules = [], hasSymlinks = false, validat
 }
 
 test('Windows builder offers native EXE and Mac ZIP when both templates are installed', () => {
-  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', '7zsd_All_x64.sfx']);
+  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', 'windows-launcher.exe']);
   assert.equal(result.hostPlatform, 'win32');
   assert.deepEqual(result.targets.map((item) => [item.id, item.available, item.format]),
     [['windows', true, 'exe'], ['mac', true, 'zip']]);
@@ -40,7 +40,7 @@ test('Mac builder offers Windows and Mac portable ZIP exports', () => {
 test('Windows builder offers ZIP for portable symlinks even with SFX installed', () => {
   const data = { root: 'dist-assets/portable-fixture' };
   const validations = [];
-  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', '7zsd_All_x64.sfx'], {
+  const result = targets('win32', ['windows-x64.zip', 'mac-universal.zip', '7za.exe', 'windows-launcher.exe'], {
     modules: [{ type: 'portable', data }], hasSymlinks: true, validations
   });
   assert.deepEqual(result.targets.map(item => [item.id, item.available, item.format]),

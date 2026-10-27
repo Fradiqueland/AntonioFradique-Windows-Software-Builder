@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "2.6.7",
+  "version": "2.6.8",
   "description": "Windows & Mac Software Builder — construtor e exportação de aplicações Windows e macOS",
   "main": "main.js",
   "author": "AntonioFradique.net",
@@ -13,7 +13,7 @@
     "build:viewer:mac": "node scripts/check-runtimes.js mac-universal && electron-builder --config build-configs/viewer-mac.cjs --mac --universal --publish never && node scripts/package-viewer-template.js mac-universal",
     "check:templates": "node scripts/check-viewer-template.js",
     "build:builder": "node scripts/build-native.js builder",
-    "build:builder:win": "node scripts/check-runtimes.js windows-x64 && node scripts/check-viewer-template.js && node scripts/check-sfx.js && electron-builder --config build-configs/builder-win.cjs --win --x64 --publish never",
+    "build:builder:win": "node scripts/build-windows-launcher.cjs && node scripts/check-runtimes.js windows-x64 && node scripts/check-viewer-template.js && node scripts/check-sfx.js && electron-builder --config build-configs/builder-win.cjs --win --x64 --publish never",
     "build:builder:mac": "node scripts/check-runtimes.js mac-universal && node scripts/check-viewer-template.js && electron-builder --config build-configs/builder-mac.cjs --mac --universal --publish never",
     "build:all": "node scripts/build-native.js all",
     "check:ffmpeg": "node scripts/check-ffmpeg.js",
@@ -25,7 +25,8 @@
     "test:electron:packaged": "electron scripts/smoke-real-exports.cjs --packaged",
     "test:electron:iptv": "electron scripts/smoke-iptv.cjs",
     "test:electron:iptv:packaged": "electron scripts/smoke-iptv.cjs --packaged",
-    "test:builder:installed": "node scripts/smoke-builder-startup.cjs"
+    "test:builder:installed": "node scripts/smoke-builder-startup.cjs",
+    "build:launcher:win": "node scripts/build-windows-launcher.cjs"
   },
   "build": {
     "appId": "com.launchbox.builder",
@@ -101,7 +102,8 @@
     "png-to-ico": "^2.1.8",
     "rcedit": "^4.0.1",
     "yauzl": "^3.2.0",
-    "yazl": "^3.3.1"
+    "yazl": "^3.3.1",
+    "resedit": "1.7.2"
   },
   "devDependencies": {
     "@electron/asar": "^3.2.10",

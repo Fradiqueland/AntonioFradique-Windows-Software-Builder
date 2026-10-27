@@ -86,7 +86,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     await until("document.querySelector('.author-photo').complete && document.querySelector('.author-photo').naturalWidth>0");
     await evaluate("document.querySelector('.author-card a').click(); void 0;");
     assert.deepEqual(await evaluate('qa.opened'),['https://AntonioFradique.net']);
-    assert.equal(await evaluate("document.getElementById('export-format').value"),'zip');
+    assert.equal(await evaluate("document.getElementById('export-format').value"),'exe');
     await evaluate("goToTab('publicar');exportFormatSelect.value='exe';exportFormatSelect.dispatchEvent(new Event('change'));void 0;");
     assert.match(await evaluate("document.getElementById('export-target-description').textContent"),/EXE/);
     await evaluate("exportTargetSelect.value='mac';exportTargetSelect.dispatchEvent(new Event('change'));void 0;");
@@ -191,7 +191,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     for(const mode of ['failure','cancelled','success']) {
       await evaluate(`qa.buildMode=${JSON.stringify(mode)};qa.finishBuild=null;document.getElementById('export-build').click();void 0;`);
       await until("!!qa.finishBuild && exportInProgress");
-      assert.equal(await evaluate('qa.exportPayload.format'),'zip');
+      assert.equal(await evaluate('qa.exportPayload.format'),'exe');
       assert.equal(await evaluate("document.getElementById('export-format').disabled"),true);
       assert.equal(await evaluate("document.getElementById('export-progress-percent').textContent"),'60%');
       assert.equal(await evaluate("document.getElementById('export-progress-bar').value"),60);

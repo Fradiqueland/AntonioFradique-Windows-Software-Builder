@@ -74,7 +74,9 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
     '',
-    'Choose a fast portable ZIP folder (recommended) or a self-contained Windows EXE. ZIP is extracted once, then starts directly from its folder. Windows EXE resources use a per-export SHA-256 cache: verified resources are restored once and reused on subsequent starts. The SFX engine still extracts at startup. Old cache directories may be deleted while their applications are closed; they are recreated on demand.',
+    'Single Windows EXEs now use a small native launcher. The first start validates and prepares the complete Viewer; later starts read a fixed-size footer and use the prepared application without reading or decompressing the embedded engine or project payload again. The launcher is built from the included C source with a static CRT and requires no separate runtime or administrator permission. A first-start preparation window supports cancellation. Cache identity follows the exact payload SHA-256; missing critical runtime files trigger preparation again. Native tests measure visible-window startup against the previous SFX on identical content and require zero payload bytes and zero archive extractions on a warm start.',
+    '',
+    'Windows portable ZIPs now name the main executable after the chosen project and embed its selected icon and product metadata in the EXE itself, including ZIPs exported from a Mac. Only the generated Viewer is branded; included portable programs and source templates are preserved. The native tests inspect both PE resources and the Windows shell file icon.',
     '',
     'The icon selected in Appearance is now included in Windows EXE and Windows/Mac ZIP exports and applied to the running Windows window/taskbar or Mac Dock. Mac bundle signatures stay intact; the Finder file icon is unchanged. Prefer PNG/JPG for cross-platform icons.',
     '',

@@ -472,6 +472,8 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
   const requirements = projectRuntimeRequirements({ config, assetsDir, requiresPhp });
   const template = await inspectTemplate(templatePath, target);
   let temporary, opaqueDirectory, opaque;
+  let windowsIconIco;
+  if (target === 'windows' && icon) windowsIconIco = await require('./windows-pe').iconFileBytes(icon);
   try {
     if (target === 'windows' && opaqueWindowsAssets && !assets.links.length) {
       // A short transport also protects Windows ZIP extraction from legacy
@@ -487,6 +489,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     assertTemplateRuntimes(template, target, requirements);
     const restoredSources = await inspectSharedRuntimeSources(template, requirements, sharedRuntimeSourcesDir);
     const selectedEntries = selectedTemplateEntries(template, target, requirements);
+    if(target==='windows' && selectedEntries.some(item=>item.name!=='LaunchBox Viewer.exe' && key(item.name)===key(name+'.exe')))throw new Error('O nome escolhido coincide com um componente da aplicação. Escolha outro nome.');
     const omittedRuntimeBytes = template.entries.reduce((sum, item) => {
       const runtime = runtimeForEntry(item.name, target);
       return sum + (runtime && !requirements[runtime] ? item.entry.uncompressedSize : 0);
@@ -519,7 +522,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     }
     try {
       for (const item of selectedEntries) {
-        let destination = item.name;
+        let destination = target === 'windows' && item.name === 'LaunchBox Viewer.exe' ? name + '.exe' : item.name;
         if (target === 'mac') {
           destination = item.name.startsWith(`${MAC_RUNTIME_DATA}/`)
             ? `${name}.data${item.name.slice(MAC_RUNTIME_DATA.length)}`
@@ -530,7 +533,11 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
         const options = { mode: item.mode, mtime: item.entry.getLastModDate() };
         if (item.kind === 'directory') { archive.addEmptyDirectory(destination, options); completed++; }
         else if (item.kind === 'symlink') { archive.addBuffer(item.link, destination, options); completed++; }
-        else addLazy(destination, { ...options, size: item.entry.uncompressedSize, compressionLevel: 9 }, () => entryStream(template.zip, item.entry));
+        else if (target === 'windows' && item.name === 'LaunchBox Viewer.exe' && windowsIconIco) {
+          const buffers=[]; for await (const chunk of await entryStream(template.zip,item.entry)) buffers.push(chunk);
+          const branded=require('./windows-pe').brandExecutable(Buffer.concat(buffers),{name,icoBytes:windowsIconIco});
+          archive.addBuffer(branded,destination,{...options,compressionLevel:9});completed++;
+        } else addLazy(destination, { ...options, size: item.entry.uncompressedSize, compressionLevel: 9 }, () => entryStream(template.zip, item.entry));
       }
       for (const source of restoredSources) {
         const destination = target === 'mac' ? `${name}.data${source.destination.slice(MAC_RUNTIME_DATA.length)}` : source.destination;
