@@ -67,8 +67,10 @@ function managedPaths({ data, assetsDir }) {
 function walkFiles(root, visitor) {
   const totals = { fileCount: 0, totalBytes: 0, requiresPhp: false };
   let entries = 0;
-  function walk(directory, prefix = '', depth = 0) {
-    if (depth > 32) throw new Error('O projeto excede o limite de 32 níveis de pastas.');
+  function walk(directory, prefix = '') {
+    const pending=[{directory,prefix}];
+    while(pending.length) {
+      const {directory,prefix}=pending.pop();
     for (const name of fs.readdirSync(directory)) {
       if (isIgnored(name)) continue;
       if (++entries > LIMITS.files * 2) throw new Error('O projeto contém demasiados ficheiros ou pastas.');
@@ -79,7 +81,7 @@ function walkFiles(root, visitor) {
       if (stat.isSymbolicLink()) throw new Error(`Ligações simbólicas não são permitidas: ${relative}`);
       if (stat.isDirectory()) {
         if (visitor) visitor(absolute, relative, stat);
-        walk(absolute, relative, depth + 1);
+        pending.push({directory:absolute,prefix:relative});
       } else if (stat.isFile()) {
         totals.fileCount++;
         totals.totalBytes += stat.size;
@@ -91,6 +93,7 @@ function walkFiles(root, visitor) {
       } else {
         throw new Error(`Tipo de ficheiro não permitido: ${relative}`);
       }
+    }
     }
   }
   walk(root);

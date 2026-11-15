@@ -81,7 +81,8 @@ function preparedWine(f) {
 
 test('Windows launches a persistent physical copy without a shell and with launcher cwd', async t => {
   const f = fixture(t);
-  f.write('program dir/run.exe', pe());
+  const input = f.write('program dir/run.exe', pe());
+  assert.equal(fs.statSync(input).mode & 0o111, 0, 'Windows portable code must not require Unix execute bits');
   f.write('program dir/settings.ini', 'original');
   const data = f.imported({ windows: 'program dir/run.exe', mac: null });
   const calls = [];

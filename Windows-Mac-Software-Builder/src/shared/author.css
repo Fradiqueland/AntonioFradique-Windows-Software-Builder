@@ -1,0 +1,41 @@
+.author-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #e5e7eb;
+}
+.author-card strong { color: #fff; font-size: 14px; }
+.author-photo {
+  display: block;
+  width: 160px;
+  height: auto;
+  max-width: 100%;
+  max-height: 104px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 3px 0;
+}
+.author-card a { color: #93c5fd; overflow-wrap: anywhere; }
+.author-card a:hover { color: #fff; }
+.author-card a:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }
+@media (max-height: 650px) {
+  .author-photo { width: 112px; max-height: 64px; }
+  .author-card { padding: 8px; gap: 3px; }
+}
+
+
+/* Fixed application resources are separate from project-specific social links. */
+.author-resources { padding: 8px 0 12px; display: grid; gap: 10px; }
+.tutorial-link { display: flex; align-items: center; gap: 9px; padding: 10px; border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; text-decoration: none; font-size: 13px; line-height: 1.5; }
+.tutorial-link svg { flex-shrink: 0; }
+.tutorial-link:hover { background: #1e293b; color: #fff; }
+.author-follow { color: #cbd5e1; text-align: center; font-size: 12px; line-height: 1.5; }
+.author-social-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.author-social-link { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 7px; color: #cbd5e1; background: #1e293b; }
+.author-social-link:hover { background: #334155; color: #fff; }
+.author-resources a:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }

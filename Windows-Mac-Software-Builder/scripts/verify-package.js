@@ -19,7 +19,7 @@ async function main() {
   if (bundledPackage.version !== pkg.version) throw new Error('Wrong packaged version: ' + bundledPackage.version);
   const appEntries = mac ? new Set(asar.listPackage(path.join(resources, 'app.asar')).map(name => name.replace(/^\//, ''))) : null;
   const hasAppFile = relative => mac ? appEntries.has(relative) : fs.existsSync(path.join(resources, 'app', relative));
-  for (const dependency of ['png-to-ico', 'pngjs']) if (!hasAppFile('node_modules/' + dependency + '/package.json')) throw new Error('Builder lost its icon conversion dependency: ' + dependency);
+  for (const dependency of ['png-to-ico', 'pngjs', 'resedit', 'pe-library']) if (!hasAppFile('node_modules/' + dependency + '/package.json')) throw new Error('Builder lost its icon conversion dependency: ' + dependency);
   if (hasAppFile('node_modules/rcedit/package.json') === mac) throw new Error('Windows executable editing must be included only in the Windows Builder.');
   const lock = require('../package-lock.json');
   for (const dependency of ['yauzl', 'yazl']) {
@@ -40,7 +40,7 @@ async function main() {
       if (result.error || result.status !== 0) throw new Error('Packaged Mac verification failed: ' + command);
     }
   } else {
-    for (const name of ['7za.exe', '7zsd_All_x64.sfx']) fs.accessSync(path.join(resources, 'sfx', name));
+    for (const name of ['7za.exe', '7zsd_All_x64.sfx', 'windows-launcher.exe', 'windows-launcher.json']) fs.accessSync(path.join(resources, 'sfx', name));
   }
   console.log('Packaged Builder v2 includes both verified export templates.');
 }

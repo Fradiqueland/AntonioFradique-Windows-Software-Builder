@@ -82,3 +82,29 @@ test('an old project response cannot replace the current project list', async ()
   assert.equal(state.summaries, 0);
   assert.equal(state.contentMutation, null);
 });
+
+test('a previous status expiry cannot erase a newer save result', () => {
+  let now = 0, sequence = 0;
+  const timers = new Map();
+  const context = vm.createContext({
+    setTimeout(callback, delay) { const id=++sequence; timers.set(id,{callback,deadline:now+delay}); return id; },
+    clearTimeout(id) { timers.delete(id); }
+  });
+  const code = renderer.slice(renderer.indexOf('function makeStatus('), renderer.indexOf('function setImagePreview('));
+  vm.runInContext(code,context);
+  const el={textContent:'',className:''};
+  const show=context.makeStatus(el);
+  function advance(ms) {
+    now+=ms;
+    for(const [id,timer] of [...timers]) if(timer.deadline<=now){timers.delete(id);timer.callback();}
+  }
+  show('Saved first change','success');
+  advance(2000);
+  show('Failed to save newest change','error');
+  advance(1000);
+  assert.equal(el.textContent,'Failed to save newest change');
+  assert.equal(el.className,'save-status error');
+  advance(2000);
+  assert.equal(el.textContent,'');
+  assert.equal(timers.size,0);
+});

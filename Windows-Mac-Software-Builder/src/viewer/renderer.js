@@ -536,7 +536,7 @@ function renderArticle(data) {
   stageEl.appendChild(host);
 }
 
-function renderDownloadVault(data) {
+function renderDownloadVault(data, archive = false) {
   clearStage();
   const host = document.createElement('div');
   host.className = 'viewer-empty';
@@ -567,7 +567,14 @@ function renderDownloadVault(data) {
       }
     });
   }
-  card.append(icon, name, btn);
+  card.append(icon, name);
+  if (archive) {
+    const notice = document.createElement('p');
+    notice.className = 'dl-name';
+    notice.textContent = tr('viewer.archive_help', 'O arquivo é guardado sem alterações. Se estiver protegido, precisa da palavra-passe original e de uma aplicação compatível para o extrair.');
+    card.appendChild(notice);
+  }
+  card.appendChild(btn);
   host.appendChild(card);
   stageEl.appendChild(host);
 }
@@ -753,7 +760,7 @@ function miniMarkdown(src) {
 
 const MODULE_ICON = {
   youtube: '▶️', 'local-video': '🎬', pdf: '📄', 'article-reader': '📝', html: '🧩', 'local-web': '📁',
-  'download-vault': '⬇️', launch: '🚀', portable: '🧳', webview: '🌐', external: '🔗', 'smart-embed': '📋',
+  'download-vault': '⬇️', 'archive-download': '📦', launch: '🚀', portable: '🧳', webview: '🌐', external: '🔗', 'smart-embed': '📋',
   'image-gallery': '🖼️', 'local-audio': '🎵', iptv: '📺'
 };
 
@@ -1853,6 +1860,7 @@ async function dispatchModule(mod, btn) {
     case 'local-audio':    setActiveMenuBtn(btn); await renderLocalAudio(mod.data); break;
     case 'image-gallery':  setActiveMenuBtn(btn); await renderGallery(mod.data); break;
     case 'article-reader': setActiveMenuBtn(btn); renderArticle(mod.data); break;
+    case 'archive-download': setActiveMenuBtn(btn); renderDownloadVault(mod.data, true); break;
     case 'download-vault': setActiveMenuBtn(btn); renderDownloadVault(mod.data); break;
     case 'portable': setActiveMenuBtn(btn); renderPortable(mod); break;
     case 'apk':
@@ -1950,6 +1958,8 @@ async function renderBanner(banners) {
   bannerBottomEl.classList.add('hidden');
   bannerTopEl.innerHTML = '';
   bannerBottomEl.innerHTML = '';
+  bannerTopEl.classList.remove('banner-dismissible');
+  bannerBottomEl.classList.remove('banner-dismissible');
   document.body.classList.remove('banner-top', 'banner-bottom');
 
   const b = banners || {};
@@ -1983,6 +1993,27 @@ async function renderBannerSlot(position, banner, host) {
   img.alt = 'Banner';
   link.appendChild(img);
   host.appendChild(link);
+  if (banner.dismissible === true) {
+    host.classList.add('banner-dismissible');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'banner-close';
+    close.textContent = '×';
+    const key = 'banner.close_' + position;
+    const label = tr(key, position === 'top' ? 'Fechar banner de topo' : 'Fechar banner de rodapé');
+    close.setAttribute('data-i18n-title', key);
+    close.setAttribute('aria-label', label);
+    close.title = label;
+    close.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      host.classList.add('hidden');
+      host.replaceChildren();
+      document.body.classList.remove('banner-' + position);
+      stageEl.focus({ preventScroll: true });
+    });
+    host.appendChild(close);
+  }
   host.classList.remove('hidden');
   document.body.classList.add(position === 'top' ? 'banner-top' : 'banner-bottom');
 }
@@ -2061,6 +2092,7 @@ async function boot() {
   try {
     config = await window.viewer.loadConfig();
   } catch (err) {
+    console.error('Erro ao carregar configuração:', err);
     showToast('Erro ao carregar configuração: ' + (err && err.message ? err.message : err));
     return;
   }

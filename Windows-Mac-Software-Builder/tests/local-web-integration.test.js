@@ -307,7 +307,7 @@ test('the IPC registration wrapper denies viewer edits and untrusted frames', ()
   const viewer = fakeWindow(path.join(projectRoot, 'src/viewer/index.html'));
   const handlers = new Map();
   const context = vm.createContext({
-    path, __dirname: projectRoot, isTrustedFrame, builderWindow: builder, viewerWindow: viewer,
+    path, PROJECT_ROOT: projectRoot, isTrustedFrame, builderWindow: builder, viewerWindow: viewer,
     ipcMain: { handle(channel, handler) { handlers.set(channel, handler); } }
   });
   vm.runInContext(sourceSection('const VIEWER_CHANNELS =', 'function handleTrustedIpc') + sourceFunction('handleTrustedIpc'), context);
