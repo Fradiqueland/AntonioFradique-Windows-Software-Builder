@@ -77,7 +77,7 @@ async function main() {
   const temporary=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'builder-installed-startup-')));
   // Use the package basename for NSIS: its assisted installer may append its
   // application folder, and its legacy /D token parser truncates spaces.
-  const installDir=path.join(temporary,mac?'Installed Builder António':pkg.name);
+  const installDir=path.join(temporary,mac?'Installed Builder Ant�nio':pkg.name);
   fs.mkdirSync(installDir);
   const name='Windows-Mac-Software-Builder-'+pkg.version+(mac?'-mac-universal.pkg':'-windows-x64-setup.exe');
   const installer=path.join(root,'dist/builder',name);
@@ -105,7 +105,15 @@ async function main() {
       const architectures=(await execFileP('/usr/bin/lipo',['-archs',path.join(installed,'Contents/MacOS',pkg.build.productName)])).stdout;
       assert.match(architectures,/\bx86_64\b/);assert.match(architectures,/\barm64\b/);
       progress('verify installed Mac signature');
-      await execFileP('/usr/bin/codesign',['--verify','--deep','--strict',installed],{timeout:30000});
+      // The PKG installs a cold copy containing both complete export engines.
+      // Keep strict deep verification mandatory; allow the initial disk scan
+      // the same headroom as the installer instead of killing it after 30s.
+      try {
+        await execFileP('/usr/bin/codesign',['--verify','--deep','--strict',installed],{timeout:180000});
+      } catch(error) {
+        console.error('Installed signature verification:',JSON.stringify({killed:error.killed,signal:error.signal,code:error.code,stdout:error.stdout,stderr:error.stderr}));
+        throw error;
+      }
       executable=path.join(installed,'Contents/MacOS',pkg.build.productName);
       report.checks.push('actual universal PKG installed to Applications, Intel/Apple Silicon architectures and installed signature verified');
     } else {
@@ -153,7 +161,7 @@ async function main() {
       const active=document.getElementById('active-project-name').textContent;
       const rendered=document.querySelectorAll('#projects-list .project-item').length;
       const photoLoaded=!!document.querySelector('.author-photo')?.naturalWidth;
-      return {ready:rendered>0&&active!=='—'&&!document.getElementById('project-new-btn').disabled&&photoLoaded,
+      return {ready:rendered>0&&active!=='-'&&!document.getElementById('project-new-btn').disabled&&photoLoaded,
         url:location.href,version:window.icurator.version,active,projectCount:state.projects.length,rendered,
         sidebarWidth:document.querySelector('.sidebar').getBoundingClientRect().width,
         authorPhotoLoaded:photoLoaded,
@@ -215,4 +223,3 @@ async function main() {
   }
 }
 main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
-
