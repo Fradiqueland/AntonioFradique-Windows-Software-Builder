@@ -79,7 +79,7 @@ async function main() {
   // application folder, and its legacy /D token parser truncates spaces.
   const installDir=path.join(temporary,mac?'Installed Builder António':pkg.name);
   fs.mkdirSync(installDir);
-  const name='Windows-Mac-Software-Builder-'+pkg.version+(mac?'-mac-universal.dmg':'-windows-x64-setup.exe');
+  const name='Windows-Mac-Software-Builder-'+pkg.version+(mac?'-mac-universal.pkg':'-windows-x64-setup.exe');
   const installer=path.join(root,'dist/builder',name);
   report.installer={name,sha256:await sha256(installer)};
   let child,exited,exit,spawnError,client,mounted=false,logs='',installedRoot=installDir;
@@ -96,19 +96,18 @@ async function main() {
   try {
     let executable;
     if(mac) {
-      progress('mount actual DMG');
-      fs.mkdirSync(mount);
-      await execFileP('/usr/bin/hdiutil',['attach','-readonly','-nobrowse','-mountpoint',mount,'-quiet',installer],{timeout:90000});mounted=true;
       const application=pkg.build.productName+'.app';
-      const installed=path.join(installDir,application);
-      progress('copy application from DMG');
-      await execFileP('/usr/bin/ditto',[path.join(mount,application),installed],{timeout:120000});
-      progress('detach DMG');
-      await execFileP('/usr/bin/hdiutil',['detach',mount,'-quiet'],{timeout:30000});mounted=false;
+      const installed=path.join('/Applications',application);
+      assert.ok(!fs.existsSync(installed),'The isolated CI runner must not already contain this application');
+      progress('install actual universal PKG');
+      await execFileP('/usr/bin/sudo',['-n','/usr/sbin/installer','-pkg',installer,'-target','/'],{timeout:180000});
+      installedRoot=installed;
+      const architectures=(await execFileP('/usr/bin/lipo',['-archs',path.join(installed,'Contents/MacOS',pkg.build.productName)])).stdout;
+      assert.match(architectures,/\bx86_64\b/);assert.match(architectures,/\barm64\b/);
       progress('verify installed Mac signature');
       await execFileP('/usr/bin/codesign',['--verify','--deep','--strict',installed],{timeout:30000});
       executable=path.join(installed,'Contents/MacOS',pkg.build.productName);
-      report.checks.push('actual DMG mounted, application copied to an installation folder, copied signature verified');
+      report.checks.push('actual universal PKG installed to Applications, Intel/Apple Silicon architectures and installed signature verified');
     } else {
       progress('install actual Windows Setup');
       // NSIS requires /D to be last and unquoted, including spaces in its value.
@@ -216,3 +215,4 @@ async function main() {
   }
 }
 main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
+

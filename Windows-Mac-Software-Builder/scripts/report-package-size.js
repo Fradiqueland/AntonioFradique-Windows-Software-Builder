@@ -34,7 +34,7 @@ function report(directory = path.join(root, 'dist')) {
   }
   for (const name of ['windows-x64.zip', 'mac-universal.zip']) add(path.join(directory, 'export-templates', name), previous[name]);
   const installers = path.join(directory, 'builder');
-  if (fs.existsSync(installers)) for (const name of fs.readdirSync(installers).sort()) if (/\.(?:exe|dmg)$/.test(name)) add(path.join(installers, name));
+  if (fs.existsSync(installers)) for (const name of fs.readdirSync(installers).sort()) if (/\.(?:exe|pkg)$/.test(name)) add(path.join(installers, name));
   const productName = require('../package.json').build.productName;
   for (const [kind, name] of [['builder', productName], ['viewer', 'LaunchBox Viewer']]) {
     const candidates = [path.join(directory, kind, 'win-unpacked'), path.join(directory, kind, 'mac-universal', name + '.app')];
@@ -57,3 +57,4 @@ if (require.main === module) {
 }
 
 module.exports = { report, directoryBytes };
+

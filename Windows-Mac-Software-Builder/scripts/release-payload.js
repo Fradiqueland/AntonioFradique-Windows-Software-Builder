@@ -5,7 +5,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
-const platforms = Object.freeze({ Windows: { nodePlatform: 'win32', suffix: 'windows-x64-setup.exe' }, macOS: { nodePlatform: 'darwin', suffix: 'mac-universal.dmg' } });
+const platforms = Object.freeze({ Windows: { nodePlatform: 'win32', suffix: 'windows-x64-setup.exe' }, macOS: { nodePlatform: 'darwin', suffix: 'mac-universal.pkg' } });
 const reportNames = ['build-electron-smoke-source.json', 'build-electron-smoke-packaged.json', 'build-iptv-smoke-source.json', 'build-iptv-smoke-packaged.json', 'build-builder-startup.json'];
 
 function checkedContext(env = process.env) {
@@ -32,8 +32,8 @@ function assertInstallerFormat(file, platform) {
   const fd = fs.openSync(file, 'r');
   try {
     const header = Buffer.alloc(4);
-    fs.readSync(fd, header, 0, 4, platform === 'Windows' ? 0 : size - 512);
-    if (platform === 'Windows' ? header.toString('ascii', 0, 2) !== 'MZ' : header.toString('ascii') !== 'koly') throw new Error('Installer format does not match its platform.');
+    fs.readSync(fd, header, 0, 4, 0);
+    if (platform === 'Windows' ? header.toString('ascii', 0, 2) !== 'MZ' : header.toString('ascii') !== 'xar!') throw new Error('Installer format does not match its platform.');
   } finally { fs.closeSync(fd); }
   return size;
 }
@@ -103,3 +103,4 @@ async function verifyPayload(directory, platform, context, version) {
 
 if (require.main === module) preparePayload(process.argv[2]).then(proof => console.log(JSON.stringify(proof, null, 2))).catch(error => { console.error(error.message); process.exitCode = 1; });
 module.exports = { checkedContext, preparePayload, verifyPayload, sha256, assertInstallerFormat, reportNames, platforms };
+

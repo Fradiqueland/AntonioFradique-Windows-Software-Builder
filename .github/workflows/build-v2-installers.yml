@@ -186,7 +186,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Test application
-        run: npm test 2>&1 | tee build-tests.log
+        run: node scripts/check-author-links.cjs && npm test 2>&1 | tee build-tests.log
       - name: Build native viewer and archive
         run: npm run build:viewer:${{ matrix.platform }} 2>&1 | tee build-viewer.log
       - name: Verify the packaged Viewer can transcode offline
@@ -355,3 +355,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/publish-tested-release.js
+

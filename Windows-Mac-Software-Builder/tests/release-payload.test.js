@@ -16,9 +16,9 @@ function fixture(t, platform) {
   t.after(() => fs.rmSync(applicationRoot, { recursive: true, force: true }));
   fs.writeFileSync(path.join(applicationRoot, 'package.json'), '{"version":"2.5.0"}');
   fs.mkdirSync(path.join(applicationRoot, 'dist/builder'), { recursive: true });
-  const installerName = 'Windows-Mac-Software-Builder-2.5.0-' + (platform === 'Windows' ? 'windows-x64-setup.exe' : 'mac-universal.dmg');
+  const installerName = 'Windows-Mac-Software-Builder-2.5.0-' + (platform === 'Windows' ? 'windows-x64-setup.exe' : 'mac-universal.pkg');
   const installer = Buffer.alloc(2 * 1048576, 8);
-  installer.write(platform === 'Windows' ? 'MZ' : 'koly', platform === 'Windows' ? 0 : installer.length - 512, 'ascii');
+  installer.write(platform === 'Windows' ? 'MZ' : 'xar!', 0, 'ascii');
   fs.writeFileSync(path.join(applicationRoot, 'dist/builder', installerName), installer);
   const hash = crypto.createHash('sha256').update(installer).digest('hex');
   fs.writeFileSync(path.join(applicationRoot, 'dist/builder/SHA256SUMS.txt'), hash + '  ' + installerName + '\n');
@@ -147,3 +147,4 @@ test('Release publication stays read-only for mismatching trees/existing release
     }
   }
 });
+

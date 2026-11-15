@@ -60,10 +60,10 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
     const directory = path.join(payloadRoot, proof.platform);
     for (const file of proof.files) {
       if (file.name === 'SHA256SUMS.txt') continue;
-      const name = /\.(?:exe|dmg)$/.test(file.name) ? file.name : proof.platform + '-' + file.name;
+      const name = /\.(?:exe|pkg)$/.test(file.name) ? file.name : proof.platform + '-' + file.name;
       fs.copyFileSync(path.join(directory, file.name), path.join(staging, name));
       assets.push({ name, size: file.size, sha256: file.sha256 });
-      if (/\.(?:exe|dmg)$/.test(name)) checksums.push(file.sha256 + '  ' + name);
+      if (/\.(?:exe|pkg)$/.test(name)) checksums.push(file.sha256 + '  ' + name);
     }
     const proofName = proof.platform + '-build-proof.json';
     fs.copyFileSync(path.join(directory, 'build-proof.json'), path.join(staging, proofName));
@@ -73,6 +73,8 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   assets.push({ name: 'SHA256SUMS.txt', size: fs.statSync(path.join(staging, 'SHA256SUMS.txt')).size, sha256: await sha256(path.join(staging, 'SHA256SUMS.txt')) });
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
+    '',
+    'New in 2.6.10: the sidebar includes the PDF tutorial in all ten interface languages and nine Antonio Fradique social links. The Mac download is a universal PKG for Intel and Apple Silicon, installed and launched by the native release gate.',
     '',
     'Single Windows EXEs now use a small native launcher. The first start validates and prepares the complete Viewer; later starts read a fixed-size footer and use the prepared application without reading or decompressing the embedded engine or project payload again. The launcher is built from the included C source with a static CRT and requires no separate runtime or administrator permission. A first-start preparation window supports cancellation. Cache identity follows the exact payload SHA-256; missing critical runtime files trigger preparation again. Native tests measure visible-window startup against the previous SFX on identical content and require zero payload bytes and zero archive extractions on a warm start.',
     '',
@@ -86,7 +88,7 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
     '',
     'Fix the blank Windows Builder window introduced in v2.6.4: the installed Windows Builder uses resources/app, while the Viewer uses resources/app.asar. UI loading now retains the actual path reported by Electron, with canonical Windows aliases and exact IPC validation. Mac startup uses its existing path. A failed page load displays a clear error instead of leaving an empty window.',
     '',
-    'New mandatory installer startup gate: silently install the actual Windows NSIS setup, or mount the actual Mac DMG and copy/verify its application, then launch the real Builder. The gate checks the visible editor, current version, working privileged IPC, projects and navigation through Projects, Appearance, Publish and Content. Its report is tied to the SHA-256 of the exact published installer.',
+    'New mandatory installer startup gate: silently install the actual Windows NSIS setup, or install the actual universal Mac PKG and verify its application, then launch the real Builder. The gate checks the visible editor, current version, working privileged IPC, projects and navigation through Projects, Appearance, Publish and Content. Its report is tied to the SHA-256 of the exact published installer.',
     '',
     'Fix long resource paths when opening the Windows self-extracting EXE: the legacy SFX transports assets in a short-named opaque ZIP, then the normal Viewer validates and atomically restores every original byte using extended Windows paths before opening. No profile or cache is deleted. Native tests execute the actual generated SFX and verify the normal Viewer window and resources longer than 260 characters.',
     '',
@@ -148,3 +150,4 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
 
 if (require.main === module) publish().catch(error => { console.error(error.message); process.exitCode = 1; });
 module.exports = { publish, verifyUploadedAssets, verifyReleaseTag };
+

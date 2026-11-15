@@ -1,6 +1,6 @@
 {
   "name": "launchbox-pro",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Windows & Mac Software Builder — construtor e exportação de aplicações Windows e macOS",
   "main": "main.js",
   "author": "AntonioFradique.net",
@@ -78,7 +78,7 @@
     "mac": {
       "target": [
         {
-          "target": "dmg",
+          "target": "pkg",
           "arch": [
             "universal"
           ]
@@ -96,6 +96,15 @@
     "dmg": {
       "artifactName": "Windows-Mac-Software-Builder-${version}-mac-universal.${ext}",
       "sign": false
+    },
+    "pkg": {
+      "artifactName": "Windows-Mac-Software-Builder-${version}-mac-universal.${ext}",
+      "installLocation": "/Applications",
+      "isRelocatable": false,
+      "isVersionChecked": true,
+      "allowAnywhere": false,
+      "allowCurrentUserHome": false,
+      "allowRootDirectory": true
     }
   },
   "dependencies": {

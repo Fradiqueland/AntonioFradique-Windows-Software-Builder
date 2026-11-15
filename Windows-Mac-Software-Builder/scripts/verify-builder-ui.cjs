@@ -86,6 +86,19 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     await until("document.querySelector('.author-photo').complete && document.querySelector('.author-photo').naturalWidth>0");
     await evaluate("document.querySelector('.author-card a').click(); void 0;");
     assert.deepEqual(await evaluate('qa.opened'),['https://AntonioFradique.net']);
+    for (const language of ['en','pt','es','fr','hi','ar','zh','bn','ru','id']) {
+      const locale = JSON.parse(fs.readFileSync(path.join(applicationRoot,'locales',language+'.json'),'utf8'));
+      await evaluate(`window.icurator.loadLocale=async()=>({lang:${JSON.stringify(language)},dict:${JSON.stringify(locale)}});void 0;`);
+      await evaluate(`setLanguage(${JSON.stringify(language)},{persist:false})`);
+      assert.equal(await evaluate("document.querySelector('.tutorial-link span').textContent"),locale.author.pdf_tutorial);
+      assert.equal(await evaluate('document.documentElement.dir'),language==='ar'?'rtl':'ltr');
+    }
+    await evaluate(`window.icurator.loadLocale=async()=>({lang:'pt',dict:${JSON.stringify(dict)}});setLanguage('pt',{persist:false})`);
+    const destinations=await evaluate("Array.from(document.querySelectorAll('.author-resources a'),a=>a.dataset.ext)");
+    assert.equal(destinations.length,10);
+    await evaluate("qa.opened=[];document.querySelectorAll('.author-resources a').forEach(a=>a.click());void 0;");
+    assert.deepEqual(await evaluate('qa.opened'),destinations,'Each resource click must open its exact destination through external IPC');
+    assert.equal(navigations.length,0,'Tutorial/social clicks must keep the editor open');
     assert.equal(await evaluate("document.getElementById('export-format').value"),'exe');
     await evaluate("goToTab('publicar');exportFormatSelect.value='exe';exportFormatSelect.dispatchEvent(new Event('change'));void 0;");
     assert.match(await evaluate("document.getElementById('export-target-description').textContent"),/EXE/);
@@ -211,3 +224,4 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
   } finally { if (!win.isDestroyed()) win.destroy(); }
 }
 module.exports = { verifyBuilderUI };
+
