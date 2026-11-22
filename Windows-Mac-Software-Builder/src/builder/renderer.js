@@ -1507,6 +1507,11 @@ async function pickForCurrentEditor(pick, type) {
 
 function bindFilePicker(boundType) {
   const input = dyn[boundType].file;
+  input.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (!event.repeat) input.click();
+  });
   input.addEventListener('click', async (e) => {
     e.preventDefault();
     const type = boundType === 'download-vault' && moduleType.value === 'archive-download' ? 'archive-download' : boundType;
