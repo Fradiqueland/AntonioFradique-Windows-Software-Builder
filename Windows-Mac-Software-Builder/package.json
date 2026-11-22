@@ -95,6 +95,7 @@
       "entitlements": "build-configs/entitlements.mac.plist",
       "entitlementsInherit": "build-configs/entitlements.mac.plist",
       "mergeASARs": true,
+      "identity": "-",
       "sign": "./scripts/sign-mac-adhoc.cjs"
     },
     "dmg": {
