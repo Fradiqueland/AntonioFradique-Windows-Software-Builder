@@ -39,11 +39,15 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
       addEventListener('error',e=>qa.errors.push(String(e.error||e.message)));
       addEventListener('unhandledrejection',e=>qa.errors.push(String(e.reason)));
       window.viewer={resolveAssetPath:async()=>${JSON.stringify(gifPath)},openExternal:async url=>qa.opened.push(url),
+        openTutorial:async()=>{qa.manual=(qa.manual||0)+1;},
         saveState:async()=>qa.writes++,loadLocale:async()=>({dict:${JSON.stringify(dict)}})};void 0;`);
     await run(renderer);
     await until("document.querySelector('.author-photo').complete && document.querySelector('.author-photo').naturalWidth>0");
     // The full shipped renderer already wires its links at top level.
     await run("document.querySelector('.author-card a').click();void 0;");
+    assert.deepEqual(await run('qa.opened'),['https://AntonioFradique.net']);
+    await run("document.querySelector('.tutorial-link').click();void 0;");
+    assert.equal(await run('qa.manual'),1);
     assert.deepEqual(await run('qa.opened'),['https://AntonioFradique.net']);
     await run('qa.opened=[];void 0;');
     await run(`i18nDict=${JSON.stringify(dict)};config={brand:{},content:[]};
@@ -106,3 +110,4 @@ async function verifyViewerBanners({ BrowserWindow, applicationRoot }) {
   } finally {if(!win.isDestroyed())win.destroy();fs.rmSync(temporary,{recursive:true,force:true});}
 }
 module.exports={verifyViewerBanners};
+

@@ -225,6 +225,20 @@ test('Windows ZIP keeps the Viewer, configuration and nested Unicode assets', as
   assert.equal(progress.at(-1).completed, progress.at(-1).total);
 });
 
+test('Windows and Mac ZIPs can replace a valid long output filename', async t => {
+  const f = fixture(t);
+  f.outputPath = path.join(f.root, 'a'.repeat(240) + '.zip');
+  for (const target of ['windows', 'mac']) {
+    fs.writeFileSync(f.outputPath, 'previous export');
+    await writeTemplate(f.templatePath, target === 'windows' ? WINDOWS : MAC);
+    await exportProject({ ...f, target });
+    const entries = await readZip(f.outputPath);
+    const base = target === 'windows' ? 'resources' : f.projectName + '.data';
+    assert.deepEqual(JSON.parse(entries.get(base + '/data/project-config.json').data), f.config);
+    assert.ok(!fs.readdirSync(f.root).some(file => file.endsWith('.tmp')));
+  }
+});
+
 test('Windows and Mac exports preserve animated banner bytes and independent close permissions', async t => {
   const f = fixture(t), gif = fs.readFileSync(path.join(__dirname, 'fixtures/banner-animated.gif'));
   fs.writeFileSync(path.join(f.assetsDir, 'banner.gif'), gif);
@@ -940,3 +954,4 @@ test('fast Windows ZIP transports long paths under short names and restores them
   assert.equal(fs.readFileSync(path.toNamespacedPath(path.join(resources,'dist-assets',...relative.split('/'))),'utf8'),'LONG DATA');
   assert.equal((await transport.restoreAssets(resources)).reused,true);
 });
+

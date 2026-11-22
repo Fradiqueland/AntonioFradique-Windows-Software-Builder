@@ -23,7 +23,7 @@ typedef struct Bundle {
   uint64_t stubBytes, extractorBytes, archiveBytes, payloadRead;
   wchar_t key[65];
   DWORD error, prepareMs;
-  BOOL cacheHit;
+  BOOL cacheHit, extractorStillRunning;
   volatile LONG cancel;
 } Bundle;
 static wchar_t *allocate_path(void) { return (wchar_t *)calloc(PATH_CHARS,sizeof(wchar_t)); }
@@ -60,8 +60,8 @@ static BOOL remove_tree_namespaced(const wchar_t *p) {
   DWORD a=GetFileAttributesW(p);BOOL ok=TRUE;WIN32_FIND_DATAW data;HANDLE find;
   wchar_t *pattern,*child;
   if(a==INVALID_FILE_ATTRIBUTES)return GetLastError()==ERROR_FILE_NOT_FOUND||GetLastError()==ERROR_PATH_NOT_FOUND;
+  if(a&FILE_ATTRIBUTE_REPARSE_POINT)return (a&FILE_ATTRIBUTE_DIRECTORY)?RemoveDirectoryW(p):DeleteFileW(p);
   if(!(a&FILE_ATTRIBUTE_DIRECTORY)){SetFileAttributesW(p,FILE_ATTRIBUTE_NORMAL);return DeleteFileW(p);}
-  if(a&FILE_ATTRIBUTE_REPARSE_POINT)return RemoveDirectoryW(p);
   pattern=joined(p,L"*");if(!pattern)return FALSE;
   find=FindFirstFileW(pattern,&data);free(pattern);
   if(find!=INVALID_HANDLE_VALUE){do {
@@ -104,9 +104,9 @@ static BOOL read_footer(Bundle *b) {
   for(i=0;i<32;i++)swprintf_s(b->key+2*i,65-2*i,L"%02x",(unsigned int)b->footer[80+i]);
   return TRUE;
 }
-static BOOL engine_ready(Bundle *b) {
+static BOOL engine_ready(const wchar_t *root) {
   static const unsigned char magic[16]={'W','S','M','B','-','R','U','N','T','I','M','E','-','V','1',0};
-  wchar_t *p=joined(b->root,L".wsmb-engine-files"),name[128];HANDLE file;
+  wchar_t *p=joined(root,L".wsmb-engine-files"),name[128];HANDLE file;
   unsigned char bytes[24+64*264];LARGE_INTEGER size;DWORD count,i,n;BOOL ok=FALSE;WIN32_FILE_ATTRIBUTE_DATA data;
   if(!p)return FALSE;
   file=CreateFileW(p,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,NULL);free(p);
@@ -118,7 +118,7 @@ static BOOL engine_ready(Bundle *b) {
     const unsigned char *record=bytes+24+i*264;uint64_t expected=read_u64(record+256),actual;
     memcpy(name,record,256);
     if(!name[0]||name[127]||name[0]==L'\\'||wcschr(name,L':')||wcschr(name,L'/')||wcsstr(name,L"..")||!expected)goto done;
-    p=joined(b->root,name);if(!p)goto done;
+    p=joined(root,name);if(!p)goto done;
     {BOOL found=GetFileAttributesExW(p,GetFileExInfoStandard,&data)&&!(data.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT));free(p);if(!found)goto done;}
     actual=((uint64_t)data.nFileSizeHigh<<32)|data.nFileSizeLow;
     if(actual!=expected)goto done;
@@ -127,9 +127,17 @@ static BOOL engine_ready(Bundle *b) {
 done:
   CloseHandle(file);return ok;
 }
+static BOOL runtime_files_ready(const wchar_t *root) {
+  wchar_t *p;size_t i;BOOL ok;
+  const wchar_t *required[]={L"LaunchBox Viewer.exe",L"resources\\app.asar",L"resources\\data\\project-config.json",L"resources\\project-assets.json"};
+  if(!engine_ready(root))return FALSE;
+  for(i=0;i<sizeof(required)/sizeof(required[0]);i++){p=joined(root,required[i]);if(!p)return FALSE;ok=normal_file(p);free(p);if(!ok)return FALSE;}
+  p=joined(root,L"resources\\project-assets.zip");if(!p)return FALSE;ok=normal_file(p);free(p);
+  if(!ok){p=joined(root,L"resources\\dist-assets\\.wsmb-assets-ready.json");if(!p)return FALSE;ok=normal_file(p);free(p);}
+  return ok;
+}
 static BOOL ready(Bundle *b) {
   wchar_t *p;HANDLE file;char receipt[64],expected[65];DWORD count;size_t i;BOOL ok=FALSE;
-  const wchar_t *required[]={L"LaunchBox Viewer.exe",L"resources\\app.asar",L"resources\\data\\project-config.json",L"resources\\project-assets.json"};
   if(!normal_directory(b->root))return FALSE;
   p=joined(b->root,L".wsmb-runtime-ready");if(!p)return FALSE;
   file=CreateFileW(p,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,NULL);free(p);
@@ -137,11 +145,7 @@ static BOOL ready(Bundle *b) {
   if(ReadFile(file,receipt,64,&count,NULL)&&count==64)ok=TRUE;CloseHandle(file);
   for(i=0;i<64;i++)expected[i]=(char)b->key[i];expected[64]=0;
   if(!ok||memcmp(receipt,expected,64))return FALSE;
-  if(!engine_ready(b))return FALSE;
-  for(i=0;i<sizeof(required)/sizeof(required[0]);i++){p=joined(b->root,required[i]);if(!p)return FALSE;ok=normal_file(p);free(p);if(!ok)return FALSE;}
-  p=joined(b->root,L"resources\\project-assets.zip");if(!p)return FALSE;ok=normal_file(p);free(p);
-  if(!ok){p=joined(b->root,L"resources\\dist-assets\\.wsmb-assets-ready.json");if(!p)return FALSE;ok=normal_file(p);free(p);}
-  return ok;
+  return runtime_files_ready(b->root);
 }
 static BOOL copy_region(Bundle *b,HANDLE input,uint64_t offset,uint64_t bytes,const wchar_t *destination,const unsigned char expected[32]) {
   HANDLE output=INVALID_HANDLE_VALUE;BCRYPT_ALG_HANDLE algorithm=NULL;BCRYPT_HASH_HANDLE hash=NULL;
@@ -163,48 +167,163 @@ done:
   if(hash)BCryptDestroyHash(hash);if(algorithm)BCryptCloseAlgorithmProvider(algorithm,0);
   if(output!=INVALID_HANDLE_VALUE)CloseHandle(output);free(buffer);return ok;
 }
-static BOOL extract(Bundle *b,const wchar_t *extractor,const wchar_t *archive) {
-  STARTUPINFOW start;PROCESS_INFORMATION process;wchar_t *command=allocate_path();DWORD result=1,wait;BOOL ok=FALSE;
-  if(!command)return FALSE;
+// Let the verified extractor retain the same file lock if its parent dies.
+// The explicit list excludes every other inheritable handle of the launcher.
+static BOOL start_extractor(const wchar_t *extractor,wchar_t *command,const wchar_t *directory,HANDLE cacheLock,PROCESS_INFORMATION *process) {
+  STARTUPINFOEXW start;SIZE_T size=0;HANDLE lockForChild=NULL;BOOL initialized=FALSE,ok=FALSE;DWORD error;
+  ZeroMemory(&start,sizeof(start));start.StartupInfo.cb=sizeof(start);
+  if(!DuplicateHandle(GetCurrentProcess(),cacheLock,GetCurrentProcess(),&lockForChild,0,TRUE,DUPLICATE_SAME_ACCESS))return FALSE;
+  InitializeProcThreadAttributeList(NULL,1,0,&size);
+  if(!size)goto done;
+  start.lpAttributeList=malloc(size);if(!start.lpAttributeList){SetLastError(ERROR_OUTOFMEMORY);goto done;}
+  if(!InitializeProcThreadAttributeList(start.lpAttributeList,1,0,&size))goto done;
+  initialized=TRUE;
+  if(!UpdateProcThreadAttribute(start.lpAttributeList,0,PROC_THREAD_ATTRIBUTE_HANDLE_LIST,&lockForChild,sizeof(lockForChild),NULL,NULL))goto done;
+  ok=CreateProcessW(extractor,command,NULL,NULL,TRUE,CREATE_NO_WINDOW|EXTENDED_STARTUPINFO_PRESENT,NULL,directory,&start.StartupInfo,process);
+done:
+  error=GetLastError();
+  if(initialized)DeleteProcThreadAttributeList(start.lpAttributeList);
+  free(start.lpAttributeList);CloseHandle(lockForChild);if(!ok)SetLastError(error);
+  return ok;
+}
+static BOOL extract(Bundle *b,const wchar_t *extractor,const wchar_t *archive,HANDLE cacheLock) {
+  PROCESS_INFORMATION process;wchar_t *command=allocate_path();DWORD result=1,wait;BOOL ok=FALSE;
+  if(!command){SetLastError(ERROR_OUTOFMEMORY);return FALSE;}
   if(swprintf_s(command,PATH_CHARS,L"\"%s\" x \"%s\" -o\"%s\" -y -bso0 -bsp0 -bse0",extractor,archive,b->stage)<0){free(command);return FALSE;}
-  ZeroMemory(&start,sizeof(start));start.cb=sizeof(start);ZeroMemory(&process,sizeof(process));
-  if(!CreateProcessW(extractor,command,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,b->stage,&start,&process)){free(command);return FALSE;}free(command);
-  do {wait=WaitForSingleObject(process.hProcess,100);if(InterlockedCompareExchange(&b->cancel,0,0)){TerminateProcess(process.hProcess,ERROR_CANCELLED);WaitForSingleObject(process.hProcess,10000);SetLastError(ERROR_CANCELLED);break;}}while(wait==WAIT_TIMEOUT);
+  ZeroMemory(&process,sizeof(process));
+  if(!start_extractor(extractor,command,b->stage,cacheLock,&process)){b->error=GetLastError();free(command);return FALSE;}free(command);
+  do {
+    wait=WaitForSingleObject(process.hProcess,100);
+    if(InterlockedCompareExchange(&b->cancel,0,0)){
+      TerminateProcess(process.hProcess,ERROR_CANCELLED);wait=WaitForSingleObject(process.hProcess,10000);break;
+    }
+  }while(wait==WAIT_TIMEOUT);
+  b->extractorStillRunning=wait!=WAIT_OBJECT_0;
   if(wait==WAIT_OBJECT_0&&GetExitCodeProcess(process.hProcess,&result)&&result==0)ok=TRUE;
   if(!ok)b->error=InterlockedCompareExchange(&b->cancel,0,0)?ERROR_CANCELLED:ERROR_INVALID_DATA;
   CloseHandle(process.hThread);CloseHandle(process.hProcess);return ok;
 }
+static BOOL write_receipt(const wchar_t *directory,const wchar_t *key) {
+  wchar_t *marker=joined(directory,L".wsmb-runtime-ready");char text[64];HANDLE file;DWORD count,error;BOOL ok;size_t i;
+  if(!marker){SetLastError(ERROR_OUTOFMEMORY);return FALSE;}
+  file=CreateFileW(marker,GENERIC_WRITE,0,NULL,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,NULL);
+  if(file==INVALID_HANDLE_VALUE){error=GetLastError();free(marker);SetLastError(error);return FALSE;}
+  free(marker);
+  for(i=0;i<sizeof(text);i++)text[i]=(char)key[i];
+  ok=WriteFile(file,text,sizeof(text),&count,NULL);
+  if(ok&&count!=sizeof(text)){SetLastError(ERROR_WRITE_FAULT);ok=FALSE;}
+  if(ok)ok=FlushFileBuffers(file);
+  error=GetLastError();CloseHandle(file);if(!ok)SetLastError(error);
+  return ok;
+}
+// Some managed volumes allow creating files but reject renaming directories.
+// The caller owns a new destination and holds the digest mutex throughout.
+static BOOL copy_runtime_tree(Bundle *b,const wchar_t *source,const wchar_t *destination,BOOL topLevel) {
+  wchar_t *pattern=joined(source,L"*");WIN32_FIND_DATAW entry;HANDLE find;DWORD error=ERROR_SUCCESS;
+  if(!pattern){SetLastError(ERROR_OUTOFMEMORY);return FALSE;}
+  find=FindFirstFileW(pattern,&entry);free(pattern);
+  if(find==INVALID_HANDLE_VALUE)return GetLastError()==ERROR_FILE_NOT_FOUND;
+  do {
+    wchar_t *from,*to;BOOL copied;
+    if(InterlockedCompareExchange(&b->cancel,0,0)){error=ERROR_CANCELLED;break;}
+    if(!wcscmp(entry.cFileName,L".")||!wcscmp(entry.cFileName,L".."))continue;
+    if(topLevel&&!_wcsicmp(entry.cFileName,L".wsmb-runtime-ready"))continue;
+    if(entry.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT){error=ERROR_INVALID_DATA;break;}
+    from=joined(source,entry.cFileName);to=joined(destination,entry.cFileName);
+    if(!from||!to){free(from);free(to);error=ERROR_OUTOFMEMORY;break;}
+    if(entry.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY){
+      copied=CreateDirectoryW(to,NULL)&&copy_runtime_tree(b,from,to,FALSE);
+    }else{
+      // Win32's optional cancellation pointer is a 32-bit BOOL, like LONG.
+      copied=CopyFileExW(from,to,NULL,NULL,(LPBOOL)&b->cancel,COPY_FILE_FAIL_IF_EXISTS);
+    }
+    if(!copied)error=InterlockedCompareExchange(&b->cancel,0,0)?ERROR_CANCELLED:GetLastError();
+    free(from);free(to);
+    if(!copied)break;
+  }while(FindNextFileW(find,&entry));
+  if(!error){error=GetLastError();if(error==ERROR_NO_MORE_FILES)error=ERROR_SUCCESS;}
+  FindClose(find);SetLastError(error);return error==ERROR_SUCCESS;
+}
+static BOOL publish_by_copy(Bundle *b) {
+  wchar_t *source,*destination;BOOL ok=FALSE;DWORD error;
+  if(!CreateDirectoryW(b->root,NULL))return FALSE;
+  source=filesystem_path(b->stage);destination=filesystem_path(b->root);
+  if(!source||!destination){error=ERROR_OUTOFMEMORY;}
+  else if(!copy_runtime_tree(b,source,destination,TRUE)){error=GetLastError();}
+  else if(!runtime_files_ready(destination)){error=ERROR_INVALID_DATA;}
+  else if(InterlockedCompareExchange(&b->cancel,0,0)){error=ERROR_CANCELLED;}
+  else{ok=write_receipt(destination,b->key);error=GetLastError();}
+  free(source);free(destination);
+  if(!ok){remove_tree(b->root);SetLastError(error);}
+  return ok;
+}
+// LocalAppData is shared by every logon session of this user. A zero-byte
+// file beside the digest directory survives cache repair; only its open
+// handle owns the lock. Windows releases it even if the launcher crashes.
+static HANDLE lock_runtime(Bundle *b) {
+  wchar_t name[84],*path;HANDLE handle=INVALID_HANDLE_VALUE;DWORD error=ERROR_SUCCESS;
+  BY_HANDLE_FILE_INFORMATION info;ULONGLONG started=GetTickCount64();
+  swprintf_s(name,84,L".wsmb-%s.lock",b->key);
+  path=joined(b->base,name);if(!path){SetLastError(ERROR_OUTOFMEMORY);return INVALID_HANDLE_VALUE;}
+  for(;;){
+    if(InterlockedCompareExchange(&b->cancel,0,0)){error=ERROR_CANCELLED;break;}
+    handle=CreateFileW(path,GENERIC_READ,0,NULL,OPEN_ALWAYS,FILE_FLAG_OPEN_REPARSE_POINT,NULL);
+    if(handle!=INVALID_HANDLE_VALUE){
+      if(!GetFileInformationByHandle(handle,&info)){error=GetLastError();}
+      else if(info.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)){error=ERROR_INVALID_DATA;}
+      else break;
+      CloseHandle(handle);handle=INVALID_HANDLE_VALUE;break;
+    }
+    error=GetLastError();
+    if(error!=ERROR_SHARING_VIOLATION&&error!=ERROR_LOCK_VIOLATION)break;
+    if(GetTickCount64()-started>=30ULL*60*1000){error=ERROR_TIMEOUT;break;}
+    Sleep(100);
+  }
+  free(path);if(handle==INVALID_HANDLE_VALUE)SetLastError(error);return handle;
+}
 static DWORD WINAPI prepare(void *argument) {
-  Bundle *b=(Bundle*)argument;HANDLE mutex=NULL,input=INVALID_HANDLE_VALUE,receipt=INVALID_HANDLE_VALUE;wchar_t mutexName[100],stageName[100];
-  wchar_t *extractor=NULL,*archive=NULL,*marker=NULL;BOOL ok=FALSE;DWORD count,start=GetTickCount(),wait,attempt;char text[64];size_t i;
+  Bundle *b=(Bundle*)argument;HANDLE mutex=NULL,cacheLock=INVALID_HANDLE_VALUE,input=INVALID_HANDLE_VALUE;wchar_t mutexName[100],stageName[100];
+  wchar_t *extractor=NULL,*archive=NULL;BOOL ok=FALSE,createdStage=FALSE;DWORD start=GetTickCount(),wait,attempt;
   swprintf_s(mutexName,100,L"Local\\WSMB-%s",b->key);mutex=CreateMutexW(NULL,FALSE,mutexName);
   if(!mutex)goto done;
   do {wait=WaitForSingleObject(mutex,100);if(InterlockedCompareExchange(&b->cancel,0,0)){b->error=ERROR_CANCELLED;goto done;}}while(wait==WAIT_TIMEOUT);
   if(wait!=WAIT_OBJECT_0&&wait!=WAIT_ABANDONED)goto done;
-  if(ready(b)){b->cacheHit=TRUE;ok=TRUE;goto done;}
+  cacheLock=lock_runtime(b);if(cacheLock==INVALID_HANDLE_VALUE)goto done;
+  swprintf_s(stageName,100,L".preparing-%s",b->key);b->stage=joined(b->base,stageName);
+  if(!b->stage){b->error=ERROR_OUTOFMEMORY;goto done;}
+  // All writers, including an extractor whose parent terminated, have now
+  // released this digest's lock. Only its private staging area is reclaimed.
+  if(ready(b)){b->cacheHit=TRUE;remove_tree(b->stage);ok=TRUE;goto done;}
+  if(!remove_tree(b->stage))goto done;
   if(GetFileAttributesW(b->root)!=INVALID_FILE_ATTRIBUTES){
     for(attempt=0;attempt<25;attempt++){if(remove_tree(b->root))break;Sleep(100);}
     if(attempt==25)goto done;
   }
-  swprintf_s(stageName,100,L".preparing-%lu-%lu",GetCurrentProcessId(),GetTickCount());b->stage=joined(b->base,stageName);
-  if(!b->stage||!CreateDirectoryW(b->stage,NULL))goto done;
-  extractor=joined(b->stage,L".wsmb-7za.exe");archive=joined(b->stage,L".wsmb-payload.7z");marker=joined(b->stage,L".wsmb-runtime-ready");
-  if(!extractor||!archive||!marker)goto done;
+  if(!CreateDirectoryW(b->stage,NULL))goto done;
+  createdStage=TRUE;
+  extractor=joined(b->stage,L".wsmb-7za.exe");archive=joined(b->stage,L".wsmb-payload.7z");
+  if(!extractor||!archive)goto done;
   input=open_bundle(b->self,TRUE);
-  if(input==INVALID_HANDLE_VALUE||!copy_region(b,input,b->stubBytes,b->extractorBytes,extractor,b->footer+48)||!copy_region(b,input,b->stubBytes+b->extractorBytes,b->archiveBytes,archive,b->footer+80)||!extract(b,extractor,archive))goto done;
-  CloseHandle(input);input=INVALID_HANDLE_VALUE;DeleteFileW(extractor);DeleteFileW(archive);
+  if(input==INVALID_HANDLE_VALUE||!copy_region(b,input,b->stubBytes,b->extractorBytes,extractor,b->footer+48)||!copy_region(b,input,b->stubBytes+b->extractorBytes,b->archiveBytes,archive,b->footer+80)||!extract(b,extractor,archive,cacheLock))goto done;
+  CloseHandle(input);input=INVALID_HANDLE_VALUE;
+  if(!DeleteFileW(extractor)||!DeleteFileW(archive))goto done;
   if(InterlockedCompareExchange(&b->cancel,0,0)){b->error=ERROR_CANCELLED;goto done;}
-  receipt=CreateFileW(marker,GENERIC_WRITE,0,NULL,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,NULL);if(receipt==INVALID_HANDLE_VALUE)goto done;
-  for(i=0;i<64;i++)text[i]=(char)b->key[i];
-  if(!WriteFile(receipt,text,64,&count,NULL)||count!=64||!FlushFileBuffers(receipt))goto done;
-  CloseHandle(receipt);receipt=INVALID_HANDLE_VALUE;
-  if(!MoveFileExW(b->stage,b->root,MOVEFILE_WRITE_THROUGH)){if(!ready(b))goto done;}
+  if(!runtime_files_ready(b->stage)){b->error=ERROR_INVALID_DATA;goto done;}
+  if(!write_receipt(b->stage,b->key))goto done;
+  if(!MoveFileExW(b->stage,b->root,MOVEFILE_WRITE_THROUGH)){
+    DWORD moveError=GetLastError();
+    if(!ready(b)){
+      if(moveError!=ERROR_ACCESS_DENIED){b->error=moveError;goto done;}
+      if(!publish_by_copy(b)){b->error=GetLastError();goto done;}
+    }
+  }
   ok=ready(b);
 done:
   if(!ok&&!b->error)b->error=GetLastError()?GetLastError():ERROR_INVALID_DATA;
-  if(input!=INVALID_HANDLE_VALUE)CloseHandle(input);if(receipt!=INVALID_HANDLE_VALUE)CloseHandle(receipt);
-  if(b->stage)remove_tree(b->stage);
-  free(extractor);free(archive);free(marker);
+  if(input!=INVALID_HANDLE_VALUE)CloseHandle(input);
+  if(createdStage&&!b->extractorStillRunning)remove_tree(b->stage);
+  free(extractor);free(archive);
+  if(cacheLock!=INVALID_HANDLE_VALUE)CloseHandle(cacheLock);
   if(mutex){ReleaseMutex(mutex);CloseHandle(mutex);}
   b->prepareMs=GetTickCount()-start;return ok?0:1;
 }

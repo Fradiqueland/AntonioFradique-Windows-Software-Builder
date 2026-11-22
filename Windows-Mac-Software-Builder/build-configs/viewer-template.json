@@ -18,6 +18,10 @@
   ],
   "extraResources": [
     {
+      "from": "docs/Windows-Mac-Software-Builder-User-Manual-10-Languages.pdf",
+      "to": "Windows-Mac-Software-Builder-User-Manual-10-Languages.pdf"
+    },
+    {
       "from": "build-configs/viewer-mode/app-mode.json",
       "to": "app-mode.json"
     }
@@ -45,3 +49,4 @@
     "sign": "./scripts/sign-mac-adhoc.cjs"
   }
 }
+

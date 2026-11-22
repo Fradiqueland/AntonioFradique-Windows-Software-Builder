@@ -283,7 +283,8 @@ input[type="text"]:focus {
 .form-group .web-import-directory { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; text-transform: none; }
 .web-import-directory input[type="checkbox"] { width: auto; flex: 0 0 auto; margin-top: 3px; }
 #dyn-local-web small { display: block; margin-top: 8px; }
-.file-btn:focus-within { outline: 2px solid #2563eb; outline-offset: 2px; }
+.file-btn:focus-visible,
+.file-btn:has(+ .file-input-hidden:focus-visible) { outline: 2px solid #2563eb; outline-offset: 2px; }
 
 /* Selected-filename label sitting next to the custom button. */
 .file-name {
@@ -1033,3 +1034,4 @@ form.autosave .form-actions { justify-content: flex-start; padding-top: 10px; mi
 .content-delete-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 260px; }
 .content-delete-confirm > span { flex-basis: 100%; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
 @media (max-width: 900px) { .portable-entry-grid { grid-template-columns: 1fr; } }
+

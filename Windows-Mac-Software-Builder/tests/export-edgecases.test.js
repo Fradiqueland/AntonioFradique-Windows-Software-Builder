@@ -52,7 +52,7 @@ async function assertStreamingMutation(t, useAlias = false) {
   await template(f.templatePath, 'windows');
   if (useAlias) {
     const alias = path.join(f.root, 'temp-alias');
-    try { fs.symlinkSync(f.root, alias, process.platform === 'win32' ? 'junction' : 'dir'); }
+    try { require('./directory-alias.cjs').createDirectoryAlias(f.root, alias); }
     catch (error) { if (error.code === 'EPERM') return t.skip('Creating a temporary directory alias is not permitted.'); throw error; }
     f.assetsDir = path.join(alias, 'dist-assets');
   }

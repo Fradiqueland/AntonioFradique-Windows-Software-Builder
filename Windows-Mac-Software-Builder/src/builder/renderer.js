@@ -142,6 +142,7 @@ function setSectionCollapsed(panelName, collapsed) {
   panel.classList.toggle('collapsed', collapsed);
   const btn = panel.querySelector('.section-toggle');
   if (btn) {
+    btn.setAttribute('aria-expanded', String(!collapsed));
     btn.setAttribute('data-i18n', collapsed ? 'section.show' : 'section.hide');
     btn.textContent = t(collapsed ? 'section.show' : 'section.hide');
   }
@@ -301,6 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
     a.addEventListener('click', (ev) => {
       ev.preventDefault();
       const url = a.getAttribute('data-ext');
+      if (a.classList.contains('tutorial-link')) {
+        window.icurator.openTutorial().catch(err => console.error(err));
+        return;
+      }
       if (url && window.icurator && window.icurator.openExternal) {
         window.icurator.openExternal(url);
       }
@@ -351,7 +356,7 @@ function setImagePreview(imgEl, emptyEl, absPath) {
     if (emptyEl) emptyEl.classList.remove('hidden');
     return;
   }
-  imgEl.src = 'file://' + absPath.replace(/\\/g, '/') + '?t=' + Date.now();
+  imgEl.src = window.icurator.fileUrl(absPath) + '?t=' + Date.now();
   imgEl.classList.add('visible');
   if (emptyEl) emptyEl.classList.add('hidden');
 }
@@ -393,8 +398,7 @@ Object.keys(colorInputs).forEach((key) => {
   });
 });
 
-const logoPickLabel = document.querySelector('label[for="brand-logo"]');
-if (logoPickLabel) logoPickLabel.addEventListener('click', async (e) => {
+logoInput.addEventListener('click', async (e) => {
   e.preventDefault();
   const picked = await pickForCurrentProject(() => window.icurator.pickFile('image'), showBrandStatus);
   if (!picked) return;
@@ -560,8 +564,7 @@ function makeBannerSlot(slotName) {
   const urlInput = document.getElementById('banner-' + slotName + '-url');
   const state = { pendingImageSourcePath: null, pendingRemoveImage: false, currentImageRelative: null };
 
-  const pickLabel = document.querySelector('label[for="banner-' + slotName + '-image"]');
-  if (pickLabel) pickLabel.addEventListener('click', async (e) => {
+  imageInput.addEventListener('click', async (e) => {
     e.preventDefault();
     const picked = await pickForCurrentProject(() => window.icurator.pickFile('image'), showBannerStatus);
     if (!picked) return;
@@ -1504,8 +1507,7 @@ async function pickForCurrentEditor(pick, type) {
 
 function bindFilePicker(boundType) {
   const input = dyn[boundType].file;
-  const label = document.querySelector('label[for="' + input.id + '"]');
-  if (label) label.addEventListener('click', async (e) => {
+  input.addEventListener('click', async (e) => {
     e.preventDefault();
     const type = boundType === 'download-vault' && moduleType.value === 'archive-download' ? 'archive-download' : boundType;
     const category = type === 'archive-download' ? 'archives' : (FILE_PICK_CATEGORY[type] || 'launch');
@@ -1826,6 +1828,13 @@ contentForm.addEventListener('submit', async (e) => {
 async function applyConfig(config) {
   for (const timer of autosaveTimers.values()) clearTimeout(timer);
   autosaveTimers.clear(); pendingSettings.clear(); settingsFailures.clear();
+  lastExportedPath = null;
+  exportOpenReleaseBtn.disabled = true;
+  exportLogEl.replaceChildren(emptyExportLog.cloneNode(true));
+  exportProgressState = null;
+  const progress = document.getElementById('export-progress');
+  progress.classList.add('hidden');
+  progress.setAttribute('aria-busy', 'false');
   editorGeneration++;
   iptvRequest++;
   portableOperation = null;
@@ -2212,6 +2221,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
 const exportSummaryEl = document.getElementById('export-summary');
 const exportBuildBtn = document.getElementById('export-build');
 const exportLogEl = document.getElementById('export-log');
+const emptyExportLog = exportLogEl.querySelector('.export-log-empty').cloneNode(true);
 const exportOpenReleaseBtn = document.getElementById('export-open-release');
 const exportTargetSelect = document.getElementById('export-target');
 const exportFormatSelect = document.getElementById('export-format');
@@ -2508,3 +2518,4 @@ exportOpenReleaseBtn.addEventListener('click', () => {
 });
 
 loadInitialConfig();
+

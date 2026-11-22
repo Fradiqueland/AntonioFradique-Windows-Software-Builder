@@ -390,6 +390,8 @@
     "iptv_folder_empty": "Empty folder.",
     "iptv_favs_save_error": "Could not save your favourites.",
     "optin_sent": "Subscription sent. Thank you!",
+    "optin_failed": "Could not send your subscription. Please try again.",
+    "optin_confirmation": "Request sent. Check your subscription with the provider before accessing the content.",
     "start_btn": "Start",
     "sidebar_collapse": "Collapse menu",
     "sidebar_expand": "Expand menu",

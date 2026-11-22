@@ -390,6 +390,8 @@
     "iptv_folder_empty": "Folder kosong.",
     "iptv_favs_save_error": "Favorit tidak dapat disimpan.",
     "optin_sent": "Pendaftaran terkirim. Terima kasih!",
+    "optin_failed": "Permintaan langganan Anda gagal dikirim. Silakan coba lagi.",
+    "optin_confirmation": "Permintaan telah dikirim. Periksa langganan Anda dengan penyedia layanan sebelum mengakses konten.",
     "start_btn": "Mulai",
     "sidebar_collapse": "Ciutkan menu",
     "sidebar_expand": "Perluas menu",

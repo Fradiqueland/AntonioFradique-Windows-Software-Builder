@@ -98,6 +98,10 @@ test('real Git fallback ignores Windows CRLF and a user archive permission mask'
   git(['update-index', '--chmod=+x', 'configure'], { cwd: repository });
   git(['-c', 'user.name=Source fixture', '-c', 'user.email=source@example.invalid', 'commit', '--quiet', '-m', 'Immutable fixture'], { cwd: repository });
   const commit = git(['rev-parse', 'HEAD'], { cwd: repository }).stdout.trim();
+  // A local Git bundle exercises fetch and archive without depending on the
+  // host's shell to launch a second upload-pack process for a local path.
+  const bundle = path.join(f.directory, 'official-source.bundle');
+  git(['bundle', 'create', bundle, '--all'], { cwd: repository });
   f.source.version = f.source.gitCommit = commit;
   f.source.directory = 'x264-' + commit;
   f.source.url = 'https://code.videolan.org/videolan/x264/-/archive/' + commit + '/' + f.source.directory + '.tar.bz2';
@@ -123,7 +127,7 @@ test('real Git fallback ignores Windows CRLF and a user archive permission mask'
     if (actualArgs.includes('fetch')) {
       assert.equal(actualArgs[actualArgs.length - 2], f.source.gitRepository);
       assert.equal(actualArgs[actualArgs.length - 1], commit);
-      actualArgs[actualArgs.length - 2] = repository;
+      actualArgs[actualArgs.length - 2] = bundle;
     }
     return spawnSync(command, actualArgs, { ...options, env });
   } };

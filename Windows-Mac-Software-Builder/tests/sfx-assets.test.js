@@ -166,7 +166,8 @@ test('cache rejects corrupt first payloads and symlink destinations without modi
   fs.writeFileSync(path.join(f.assetsDir,'value.txt'),'ORIGINAL');await sfx.packAssets(f);
   const d=JSON.parse(fs.readFileSync(path.join(f.resourcesDir,sfx.DESCRIPTOR_FILE)));
   fs.mkdirSync(cache);const unrelated=path.join(f.root,'unrelated');fs.mkdirSync(unrelated);fs.writeFileSync(path.join(unrelated,'keep'),'SAFE');
-  const link=path.join(cache,d.sha256);fs.symlinkSync(unrelated,link,process.platform==='win32'?'junction':'dir');
+  const link=path.join(cache,d.sha256);
+  require('./directory-alias.cjs').createDirectoryAlias(unrelated,link);
   await assert.rejects(sfx.restoreCachedAssets(f.resourcesDir,cache),/Cache/);
   fs.unlinkSync(link);
   fs.writeFileSync(path.join(f.resourcesDir,sfx.PACKAGE_FILE),'broken');

@@ -457,13 +457,19 @@ async function main() {
     bottom: { enabled:true, dismissible:false, image:'dist-assets/banner.gif', url:'' }
   } };
   report.exports = [];
+  const manualName = 'Windows-Mac-Software-Builder-User-Manual-10-Languages.pdf';
+  const manualHash = await fileHash(path.join(root, 'docs', manualName));
+  if (packaged) assert.equal(await fileHash(path.join(resources, manualName)), manualHash);
   let expectedWindowsAsar;
   for (const target of ['windows', 'mac']) {
     const templatePath = path.join(templates, target === 'windows' ? 'windows-x64.zip' : 'mac-universal.zip');
     const asarEntry = target === 'windows' ? 'resources/app.asar' : 'LaunchBox Viewer.app/Contents/Resources/app.asar';
     const runtimeBase = target === 'windows' ? 'resources/ffmpeg' : 'LaunchBox Viewer.data/ffmpeg';
     const sourceEntries = ffmpegSources.map(source => runtimeBase + '/sources/' + source.file);
-    const baseline = await zipIndex(templatePath, [asarEntry, ...sourceEntries]);
+    const manualEntry = path.posix.join(path.posix.dirname(asarEntry), manualName);
+    const exportedManual = exportEntry(manualEntry, target, projectName);
+    const baseline = await zipIndex(templatePath, [asarEntry, manualEntry, ...sourceEntries]);
+    assert.equal(baseline.get(manualEntry)?.sha256, manualHash, 'The template must include the complete offline manual');
     assert.ok([...baseline.keys()].some(name => name.endsWith('/')), 'Real templates must contain explicit directories');
     const runtimeExecutable = runtimeBase + '/' + (target === 'windows' ? 'ffmpeg.exe' : 'ffmpeg');
     assert.ok(baseline.has(runtimeExecutable), 'The template must contain its complete optional FFmpeg runtime');
@@ -476,7 +482,7 @@ async function main() {
     assert.equal(result.target, target);
     const outputAsar = target === 'windows' ? asarEntry : projectName + '.app/Contents/Resources/app.asar';
     const base = target === 'windows' ? 'resources' : projectName + '.data';
-    const exported = await zipIndex(outputPath, [outputAsar, base + '/data/icon-source.png', base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif',base+'/dist-assets/'+longAsset]);
+    const exported = await zipIndex(outputPath, [outputAsar, exportedManual, base + '/data/icon-source.png', base + '/data/project-config.json', base + '/dist-assets/' + webFolder + '/index.html', base + '/dist-assets/protected.zip', base + '/dist-assets/banner.gif',base+'/dist-assets/'+longAsset]);
     for (const [name, metadata] of baseline) {
       if (templateRuntime(name, target)) continue;
       const destination = exportEntry(name, target, projectName);
@@ -500,7 +506,7 @@ async function main() {
     const iptvPath = path.join(temporary, target + '-iptv.zip');
     await engine.exportProject({ target, templatePath, outputPath: iptvPath, projectName, config: iptvConfig, assetsDir, sharedRuntimeSourcesDir });
     const outputSources = sourceEntries.map(name => exportEntry(name, target, projectName));
-    const iptv = await zipIndex(iptvPath, [outputAsar, ...outputSources]);
+    const iptv = await zipIndex(iptvPath, [outputAsar, exportedManual, ...outputSources]);
     for (const [name, metadata] of baseline) {
       if (templateRuntime(name, target) === 'php' || name.endsWith('/ffmpeg/template-sources.json')) continue;
       const destination = exportEntry(name, target, projectName);
@@ -614,3 +620,4 @@ async function main() {
 }
 
 app.whenReady().then(main).then(() => finish()).catch(finish);
+

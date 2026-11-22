@@ -4,12 +4,30 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { fileURLToPath } = require('node:url');
 
 // Exercise the actual renderer functions with deferred IPC. These tests run
 // without Electron and model disk acknowledgements, rejected writes and races.
 const renderer = fs.readFileSync(path.join(__dirname, '../src/builder/renderer.js'), 'utf8');
 const mutations = renderer.slice(renderer.indexOf('async function persistContent('), renderer.indexOf('\nfunction askDeleteModule('));
 const deletion = renderer.slice(renderer.indexOf('async function deleteModule('), renderer.indexOf('\n/* ---- Editor wiring ---- */'));
+
+test('image previews round-trip native filenames containing URL delimiters', () => {
+  const preload = fs.readFileSync(path.join(__dirname, '../preload.js'), 'utf8');
+  let api;
+  const electron = { contextBridge: { exposeInMainWorld(_name, value) { api = value; } } };
+  vm.runInNewContext(preload, { process, require: name => name === 'electron' ? electron : require(name) });
+  const source = renderer.slice(renderer.indexOf('function setImagePreview('), renderer.indexOf('function uuid('));
+  const context = vm.createContext({ window: { icurator: api } });
+  vm.runInContext(source, context);
+  const nativePath = path.resolve('Assets #1', 'Ícone 50%25.png');
+  const image = { classList: { add() {} } };
+  context.setImagePreview(image, null, nativePath);
+  const url = new URL(image.src);
+  assert.equal(url.hash, '');
+  assert.ok(url.searchParams.has('t'));
+  assert.equal(fileURLToPath(url), nativePath);
+});
 function setup(saveContent) {
   const state = {
     contentModules: [{ id: 'a', title: 'A', data: {} }, { id: 'b', title: 'B', data: {} }],
@@ -108,3 +126,4 @@ test('a previous status expiry cannot erase a newer save result', () => {
   assert.equal(el.textContent,'');
   assert.equal(timers.size,0);
 });
+

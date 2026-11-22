@@ -74,7 +74,7 @@ async function publish({ applicationRoot = root, context = checkedContext() } = 
   const notes = [
     'Windows & Mac Software Builder ' + version + ' — native Windows x64 and universal Mac installers.',
     '',
-    'New in 2.6.10: the sidebar includes the PDF tutorial in all ten interface languages and nine Antonio Fradique social links. The Mac download is a universal PKG for Intel and Apple Silicon, installed and launched by the native release gate.',
+    'The tutorial opens offline in the Builder and exported Viewer. This release also improves HLS playback, form submission feedback, keyboard file selection and exports with long filenames. The Mac download is a universal PKG for Intel and Apple Silicon.',
     '',
     'Single Windows EXEs now use a small native launcher. The first start validates and prepares the complete Viewer; later starts read a fixed-size footer and use the prepared application without reading or decompressing the embedded engine or project payload again. The launcher is built from the included C source with a static CRT and requires no separate runtime or administrator permission. A first-start preparation window supports cancellation. Cache identity follows the exact payload SHA-256; missing critical runtime files trigger preparation again. Native tests measure visible-window startup against the previous SFX on identical content and require zero payload bytes and zero archive extractions on a warm start.',
     '',

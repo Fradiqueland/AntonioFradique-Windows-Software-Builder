@@ -4,9 +4,9 @@ Crie aplicações de conteúdos para **Windows e Mac**: cursos, bibliotecas, apr
 
 O **Builder** é o programa de edição instalado no seu computador. As **aplicações exportadas** são os produtos que cria e distribui; os destinatários não precisam de instalar o Builder.
 
-## Novidades da v2.6.8
+## Revisão 2.6.11
 
-O EXE único prepara a aplicação na primeira abertura e passa a arrancar diretamente nas seguintes, sem voltar a descomprimir o motor. A opção ZIP mantém-se e inclui agora o executável com o nome e o ícone escolhidos para o software. Mantém os créditos, fotografia, barra de progresso e correções anteriores. Consulte [as alterações da v2.6.8](Windows-Mac-Software-Builder/V2.6.8.md).
+O tutorial em PDF abre sem internet no Builder e no Viewer. Esta revisão melhora a reprodução HLS, a recuperação de formulários após um erro, a seleção de ficheiros pelo teclado e a exportação com nomes compridos.
 
 ## Projetos editáveis
 
@@ -20,16 +20,14 @@ Leia [as alterações e os limites da v2.5](Windows-Mac-Software-Builder/V2.5.md
 
 ## Descarregar e instalar o Builder
 
-Na [Release v2.6.8](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases/tag/v2.6.8), descarregue o instalador correspondente ao seu computador em **Assets**:
+Os instaladores já publicados estão em [Releases](https://github.com/Fradiqueland/AntonioFradique-Windows-Software-Builder/releases). Abra **Assets** na versão pretendida.
 
-| Computador | Instalador v2.6.8 |
+| Computador | Ficheiro a descarregar desde a v2.6.10 |
 | --- | --- |
-| Windows x64 | `Windows-Mac-Software-Builder-2.6.8-windows-x64-setup.exe` |
-| Mac Intel ou Apple Silicon, macOS 13+ | `Windows-Mac-Software-Builder-2.6.8-mac-universal.dmg` |
+| Windows x64 | Setup com o sufixo `-windows-x64-setup.exe` |
+| Mac Intel ou Apple Silicon | Instalador com o sufixo `-mac-universal.pkg` |
 
-A Release só é publicada depois de passarem as compilações e verificações nativas dos dois instaladores. Inclui `SHA256SUMS.txt` e relatórios dos tamanhos medidos. Enquanto o repositório for privado, os downloads requerem acesso autorizado ao GitHub. Não é necessário extrair um ZIP de artefacto. Os produtos exportados anteriormente devem ser exportados novamente para receber estas alterações.
-
-No Windows, execute o Setup. No Mac, abra o DMG e arraste **Windows & Mac Software Builder.app** para **Aplicações**. O instalador Windows não tem assinatura de editor; a aplicação Mac tem assinatura ad-hoc e não está notarizada pela Apple. O [guia de instalação](Windows-Mac-Software-Builder/BUILD-V2.md) explica a verificação dos ficheiros e as autorizações individuais do sistema.
+O ficheiro `SHA256SUMS.txt` da mesma versão permite verificar os instaladores. Para aplicar uma atualização do Viewer a um produto já distribuído, volte a exportar o projeto com o Builder atualizado.
 
 ## O que pode criar
 
@@ -71,7 +69,7 @@ Esta regra não é universal: a navegação entre páginas da mesma origem local
 - [Arquitetura e notas de manutenção](Windows-Mac-Software-Builder/NOTAS.md)
 - [README da aplicação](Windows-Mac-Software-Builder/README.md)
 
-Requisitos dos programas v2.5: Windows 10+ x64 ou macOS 13+; motor Electron 44.6.0.
+A versão do Electron utilizada na compilação está fixada no ficheiro de dependências da aplicação.
 
 Requisitos de desenvolvimento: **Node.js 22**, Git e Windows x64 ou macOS.
 
@@ -89,3 +87,4 @@ O workflow **Build Windows and Mac installers** compila os modelos e instaladore
 A versão 2.5 não exporta para iOS. Os conteúdos distribuídos são extraíveis; as palavras-passe dos módulos e a ofuscação IPTV não são proteção contra extração. A captura de contactos não confirma, por si só, a inscrição no fornecedor. Páginas importadas não mantêm cookies, `localStorage` ou IndexedDB entre aberturas do módulo.
 
 Ao atualizar o Builder, volte a exportar os projetos: os produtos anteriormente distribuídos não se atualizam automaticamente. Teste os instaladores e os produtos em computadores dos sistemas de destino antes de os distribuir.
+

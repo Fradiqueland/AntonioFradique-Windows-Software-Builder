@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { Transform } = require('stream');
 const { pipeline } = require('stream/promises');
 const yazl = require('yazl');
-const { inspectProjectAssets, archiveIO: io } = require('./project-export');
+const { inspectProjectAssets, temporaryExportPath, archiveIO: io } = require('./project-export');
 const { validateWebProject } = require('./local-web');
 const { validatePortableProject, normalizePortableLink } = require('./portable-app');
 const FORMAT = 'windows-mac-software-builder-project';
@@ -64,7 +64,7 @@ async function exportArchive({ projectRoot, outputPath, name, appVersion, readCo
   validateReferences(config, refs);
   const total = entries.reduce((sum, x) => sum + (x.kind === 'directory' ? 0 : x.kind === 'symlink' ? x.link.length : x.stat.size), 0);
   if (entries.length > io.LIMITS.entries || total > io.LIMITS.totalBytes) throw new Error('Projeto demasiado grande.');
-  const temporary = path.join(parent, '.' + path.basename(outputPath) + '.' + crypto.randomUUID() + '.tmp');
+  const temporary = temporaryExportPath(parent);
   const zip = new yazl.ZipFile();
   const out = fs.createWriteStream(temporary, { flags: 'wx', mode: 0o600 });
   const done = pipeline(zip.outputStream, out); done.catch(() => {});
@@ -252,3 +252,4 @@ async function importArchive({ archivePath, destination, readConfig, platform = 
   } finally { zip.close(); }
 }
 module.exports = { exportArchive, importArchive, validateReferences };
+

@@ -41,6 +41,12 @@ function safeProjectName(value) {
   return name;
 }
 
+// Keep staging on the destination volume for atomic replacement. A valid
+// final name can already occupy a filesystem component's full length.
+function temporaryExportPath(directory) {
+  return path.join(directory, `.wsmb-${crypto.randomUUID()}.tmp`);
+}
+
 function validPath(name) {
   if (typeof name !== 'string' || !name || /[\\:<>"|?*\x00-\x1f\x7f]/.test(name) || name.startsWith('/')) {
     throw new Error(`Caminho ZIP inválido: ${name}`);
@@ -497,7 +503,7 @@ async function exportProject({ target, templatePath, outputPath, projectName, co
     const outputParent = await fs.promises.realpath(path.dirname(outputPath));
     const relativeParent = path.relative(assets.root, outputParent);
     if (!relativeParent || (relativeParent !== '..' && !relativeParent.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeParent))) throw new Error('Guarde a exportação fora da pasta de recursos.');
-    temporary = path.join(outputParent, `.${path.basename(outputPath)}.${crypto.randomUUID()}.tmp`);
+    temporary = temporaryExportPath(outputParent);
     const archive = new yazl.ZipFile();
     const output = fs.createWriteStream(temporary, { flags: 'wx', mode: 0o600 });
     const activeStreams = new Set();
@@ -616,5 +622,6 @@ async function extractWindowsTemplate(templatePath, destination, options) {
   } finally { template.zip.close(); }
 }
 
-module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName,
+module.exports = { exportProject, extractWindowsTemplate, inspectProjectAssets, projectRuntimeRequirements, safeProjectName, temporaryExportPath,
   archiveIO: { LIMITS, validPath, registerPath, verifyStream, openZip, entryStream, assetStream, inspectAssets } };
+

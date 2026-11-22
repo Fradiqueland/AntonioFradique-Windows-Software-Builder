@@ -301,3 +301,105 @@ test('archive downloads explain password handling and save only after a click, i
   ]);
   assert.deepEqual(h.opened, [], 'Downloading must never launch or extract the archive');
 });
+
+test('subscription errors keep the form available and fast duplicate submits send once', async () => {
+  const h = harness();
+  const pending = deferred();
+  const form = h.document.createElement('form');
+  const submitter = h.document.createElement('button');
+  form.setAttribute('action', '//forms.example/sign-up?list=1#thanks');
+  submitter.setAttribute('formmethod', 'post');
+  const fields = [['email', 'example@example.invalid'], ['option', 'second']];
+  h.context.FormData = class {
+    constructor(source, clicked) {
+      assert.equal(source, form);
+      assert.equal(clicked, submitter);
+    }
+    [Symbol.iterator]() { return fields[Symbol.iterator](); }
+  };
+  const requests = [];
+  h.context.fetch = (url, options) => { requests.push({ url, options }); return pending.promise; };
+  h.run("showOptinGate({heading:'Subscribe',formHtml:'<form></form>'})");
+  const host = h.document.getElementById('optin-form-html');
+  const overlay = h.document.getElementById('optin-overlay');
+  const problem = h.document.getElementById('optin-error');
+  const event = {target:form, submitter};
+  const first = host.dispatch('submit', event);
+  await host.dispatch('submit', event);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url.protocol, 'https:');
+  assert.equal(requests[0].options.method, 'POST');
+  assert.equal(requests[0].options.body.get('option'), 'second');
+  pending.reject(new Error('offline'));
+  await first;
+  assert.equal(overlay.classList.contains('hidden'), false);
+  assert.equal(problem.classList.contains('hidden'), false);
+  h.context.fetch = async (url) => {
+    assert.equal(url.searchParams.get('list'), '1');
+    assert.equal(url.searchParams.get('email'), 'example@example.invalid');
+    return { type:'opaque' };
+  };
+  submitter.removeAttribute('formmethod');
+  await host.dispatch('submit', event);
+  assert.equal(overlay.classList.contains('hidden'), false);
+  assert.equal(problem.classList.contains('hidden'), true);
+  const confirmation = h.document.getElementById('optin-confirmation');
+  assert.equal(confirmation.classList.contains('hidden'), false);
+  await h.document.getElementById('optin-access').click();
+  assert.equal(overlay.classList.contains('hidden'), true);
+  h.run("showOptinGate({formHtml:'<form></form>'})");
+  h.context.fetch = async () => ({type:'basic', ok:false, status:503});
+  await host.dispatch('submit', event);
+  assert.equal(overlay.classList.contains('hidden'), false);
+  assert.equal(problem.classList.contains('hidden'), false);
+  h.context.fetch = async () => ({type:'basic', ok:true});
+  await host.dispatch('submit', event);
+  assert.equal(overlay.classList.contains('hidden'), true);
+});
+
+test('gallery buttons focus the modal, cycle its controls and restore their opener', async () => {
+  const h = harness();
+  await h.run("renderGallery({images:[{file:'dist-assets/photo.jpg'}]})");
+  const thumbnail = h.stage.querySelector('button.gallery-cell');
+  assert.ok(thumbnail);
+  assert.equal(thumbnail.querySelector('img').alt, 'photo.jpg');
+  await thumbnail.click();
+  const dialog = h.document.querySelector('[role="dialog"]');
+  const close = dialog.querySelector('.lightbox-close'), save = dialog.querySelector('.lightbox-dl');
+  assert.equal(h.document.activeElement, close);
+  await h.document.dispatch('keydown', {key:'Tab', shiftKey:true});
+  assert.equal(h.document.activeElement, save);
+  await h.document.dispatch('keydown', {key:'Tab'});
+  assert.equal(h.document.activeElement, close);
+  await h.document.dispatch('keydown', {key:'Escape'});
+  assert.equal(h.document.querySelector('[role="dialog"]'), null);
+  assert.equal(h.document.activeElement, thumbnail);
+});
+
+test('legacy empty menu records cannot prevent starting or resuming a valid module', async () => {
+  const id = 'part "1"]';
+  const mod = {id, type:'article-reader', title:'Working module', data:{text:'The lesson'}};
+  const h = harness({ loadConfig: async () => ({brand:{}, content:[null, 0, {}, mod]}), loadState: async () => ({lastModuleId:id}) });
+  await h.run('boot()');
+  assert.equal(h.menu.querySelectorAll('.viewer-menu-btn').length, 1);
+  assert.match(h.stage.textContent, /The lesson/);
+  h.run("renderArticle({text:'Other'})");
+  await h.document.getElementById('viewer-start').click();
+  assert.match(h.stage.textContent, /The lesson/);
+});
+test('changing the interface language preserves playing media and open web forms', async () => {
+  const h = harness();
+  await h.run("handleModuleClick({id:'audio',type:'local-audio',data:{file:'clip.wav'}},null)");
+  const audio = h.stage.querySelector('audio');
+  await audio.play();
+  audio.currentTime = 18;
+  await h.run("setLanguage('es')");
+  assert.equal(h.stage.querySelector('audio'), audio);
+  assert.equal(audio.paused, false);
+  assert.equal(audio.currentTime, 18);
+  await h.run("handleModuleClick({id:'form',type:'smart-embed',data:{url:'https://example.org/form'}},null)");
+  const guest = h.stage.querySelector('webview');
+  await h.run("setLanguage('ar')");
+  assert.equal(h.stage.querySelector('webview'), guest);
+  assert.equal(h.document.documentElement.getAttribute('dir'), 'rtl');
+});

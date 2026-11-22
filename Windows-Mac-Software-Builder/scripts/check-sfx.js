@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const expected = {
-  '7za.exe': 'fbb3dadcc29bcbc5460484d858c5f33f99e5317f5f6cd8d9c83f4dd8c39b3e30',
+  '7za.exe': 'dd3757f31c97e33776f2590317d4fb12f2da075db3dbb1e3f94d0f2a01d84ffa',
   '7zsd_All_x64.sfx': '56642f9ed03cd60fd9a69695f098957767d9570ffe1d5d970b38ba6b6b1a2936'
 };
 for (const [name, sha256] of Object.entries(expected)) {

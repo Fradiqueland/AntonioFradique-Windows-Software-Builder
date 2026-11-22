@@ -50,8 +50,10 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
         loadLocale: async () => ({lang:'pt', dict:${JSON.stringify(dict)}}), saveLanguage: async () => {},
         getExportTargets: async () => ({hostPlatform:'win32',targets:[{id:'windows',available:true,format:'exe',formats:['zip','exe']},{id:'mac',available:true,format:'zip'}]}),
         resolveAssetPath: async () => null, onExportLog: () => {},
+        fileUrl: path => { qa.previewPaths.push(path); return 'file:///chosen.png'; },
         onExportProgress: callback => { qa.progress=callback; },
         openExternal: async url => { (qa.opened ||= []).push(url); },
+        openTutorial: async () => { qa.tutorialOpens = (qa.tutorialOpens || 0) + 1; },
         saveBannerConfig: async payload => {
           qa.calls.push('banner-start'); await pause();
           if (qa.failBanner) throw new Error('Injected banner write failure');
@@ -69,7 +71,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
           return qa.buildMode==='success'?{ok:true,path:'Product.zip'}:{cancelled:true};
         },
         openViewer: async () => { qa.calls.push('preview'); },
-        pickFile: async category => { qa.lastCategory=category; return category==='archives'
+        pickFile: async category => { qa.lastCategory=category; qa.pickerCalls++; return category==='archives'
           ? {path:'protected.zip',name:'protected.zip'} : {path:'chosen.png',name:'chosen.png'}; },
         saveContent: async payload => {
           qa.config.content=payload.modules.map(mod => mod.data.sourcePath
@@ -79,7 +81,7 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
         saveIcon: async () => { qa.calls.push('icon-start'); await pause(); if(qa.failIcon)throw new Error('Injected icon failure'); qa.config.export.iconPath='data/icon-source.png'; qa.calls.push('icon-done'); return copy(qa.config); }
       }; void 0;
     `);
-    await evaluate(`qa.mouseEvents=[];document.addEventListener('click',event=>qa.mouseEvents.push({id:event.target.id,cls:event.target.className,x:event.clientX,y:event.clientY}));`);
+    await evaluate(`qa.pickerCalls=0;qa.previewPaths=[];qa.mouseEvents=[];document.addEventListener('click',event=>qa.mouseEvents.push({id:event.target.id,cls:event.target.className,x:event.clientX,y:event.clientY}));`);
     await evaluate(renderer);
     await evaluate("document.dispatchEvent(new Event('DOMContentLoaded')); void 0;");
     await until("document.querySelectorAll('.project-item').length === 2 && !projectTransition");
@@ -97,7 +99,8 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
     const destinations=await evaluate("Array.from(document.querySelectorAll('.author-resources a'),a=>a.dataset.ext)");
     assert.equal(destinations.length,10);
     await evaluate("qa.opened=[];document.querySelectorAll('.author-resources a').forEach(a=>a.click());void 0;");
-    assert.deepEqual(await evaluate('qa.opened'),destinations,'Each resource click must open its exact destination through external IPC');
+    assert.equal(await evaluate('qa.tutorialOpens'), 1, 'The tutorial opens offline through its dedicated IPC');
+    assert.deepEqual(await evaluate('qa.opened'),destinations.slice(1),'Social links open their exact external destinations');
     assert.equal(navigations.length,0,'Tutorial/social clicks must keep the editor open');
     assert.equal(await evaluate("document.getElementById('export-format').value"),'exe');
     await evaluate("goToTab('publicar');exportFormatSelect.value='exe';exportFormatSelect.dispatchEvent(new Event('change'));void 0;");
@@ -151,6 +154,11 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
       document.querySelector('label[for="dyn-download-vault-file"]').click(); void 0;`);
     await until("pendingFileName === 'protected.zip'");
     assert.equal(await evaluate('qa.lastCategory'), 'archives');
+    const mousePickerCalls = await evaluate('qa.pickerCalls');
+    await evaluate("document.getElementById('dyn-download-vault-file').focus();void 0;");
+    win.webContents.sendInputEvent({type:'keyDown',keyCode:'Enter'});
+    win.webContents.sendInputEvent({type:'keyUp',keyCode:'Enter'});
+    await until('qa.pickerCalls === ' + (mousePickerCalls + 1));
     assert.ok(await evaluate("!document.getElementById('dyn-download-vault').classList.contains('hidden')"));
     await evaluate("moduleType.value='download-vault';showDynamicGroup('download-vault');void 0;");
     assert.equal(await evaluate('pendingFileSourcePath'), null);
@@ -214,12 +222,19 @@ async function verifyBuilderUI({ BrowserWindow, applicationRoot }) {
       assert.equal(await evaluate("document.getElementById('export-progress-percent').textContent"),mode==='success'?'100%':'60%');
       assert.equal(await evaluate("document.getElementById('export-progress').dataset.status"),mode==='failure'?'error':mode);
     }
+    assert.equal(await evaluate("document.getElementById('export-open-release').disabled"),false);
+    await evaluate("openProject('alpha');void 0;");
+    await until("qa.active === 'alpha' && !projectTransition");
+    assert.equal(await evaluate("document.getElementById('export-open-release').disabled"),true);
+    assert.equal(await evaluate("document.getElementById('export-log').textContent"),dict.export.log_empty);
+    assert.equal(await evaluate("document.getElementById('export-progress').classList.contains('hidden')"),true);
+    assert.ok(await evaluate("qa.previewPaths.includes('chosen.png')"),'Icon previews must use a native file URL');
     assert.deepEqual(await evaluate('qa.errors'), []);
     assert.deepEqual(crashes, []);
     assert.deepEqual(navigations, []);
     assert.ok(await evaluate("document.querySelector('.app').isConnected && document.body.innerText.length > 1000"));
     return { bannerToggles: 8, bannerCloseToggles: 6, bannerSizeAndGifHints: true, navigationCount: navigations.length, saveFailureRecovery: true,
-      pendingSettingsPreserved: true, projectImportExport: true, archiveDownloads: true, authorPhotoAndLink:true,
+      pendingSettingsPreserved: true, projectImportExport: true, archiveDownloads: true, keyboardFilePick: true, authorPhotoAndLink:true,
       exportProgressSuccessFailureCancellation:true, renderer: 'full shipped code in Chromium' };
   } finally { if (!win.isDestroyed()) win.destroy(); }
 }

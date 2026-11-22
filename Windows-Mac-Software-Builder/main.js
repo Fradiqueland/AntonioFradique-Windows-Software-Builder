@@ -23,7 +23,7 @@ const { fileURLToPath } = require('url');
 
 // Only our own top-level UI may call privileged IPC. Embedded pages have no bridge.
 const VIEWER_CHANNELS = new Set([
-  'config:load', 'asset:resolve', 'shell:openExternal', 'shell:launchFile',
+  'config:load', 'asset:resolve', 'shell:openExternal', 'shell:launchFile', 'tutorial:open',
   'portable:launch', 'portable:configureWine', 'android:status',
   'dialog:saveFileAs', 'i18n:loadLocale', 'youtube:hostUrl', 'iptv:hosts',
   'iptv:hasFfmpeg', 'iptv:proxyUrl', 'iptv:proxyStatus', 'iptv:proxyStop',
@@ -195,16 +195,21 @@ handleTrustedIpc('favs:load', (_event, key) => {
   }
 });
 
-handleTrustedIpc('favs:save', (_event, payload) => {
-  const file = favsFilePath(payload && payload.key);
-  const clean = sanitizeFavs(payload && payload.data);
+function saveViewerData(file, data) {
   fs.mkdirSync(FAVS_DIR, { recursive: true });
-  // Escrita atómica (tmp + rename): um fecho abrupto nunca deixa o ficheiro
-  // meio-escrito, que depois falharia no JSON.parse e "perderia" tudo.
-  const tmp = file + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(clean), 'utf-8');
-  fs.renameSync(tmp, file);
-  return true;
+  // Each running copy stages its own data before replacing the shared file.
+  const temp = path.join(FAVS_DIR, crypto.randomUUID() + '.tmp');
+  const fd = fs.openSync(temp, 'wx');
+  try {
+    try { fs.writeFileSync(fd, JSON.stringify(data), 'utf8'); }
+    finally { fs.closeSync(fd); }
+    fs.renameSync(temp, file);
+    return true;
+  } finally { fs.rmSync(temp, { force: true }); }
+}
+
+handleTrustedIpc('favs:save', (_event, payload) => {
+  return saveViewerData(favsFilePath(payload && payload.key), sanitizeFavs(payload && payload.data));
 });
 
 /* Estado leve do aluno por curso (último módulo aberto). Mesmo diretório e
@@ -226,11 +231,7 @@ handleTrustedIpc('state:save', (_event, payload) => {
   let current = {};
   try { if (fs.existsSync(file)) current = sanitizeViewerState(JSON.parse(fs.readFileSync(file, 'utf-8'))); } catch (_) { current = {}; }
   const clean = sanitizeViewerState(Object.assign({}, current, payload && payload.data));
-  fs.mkdirSync(FAVS_DIR, { recursive: true });
-  const tmp = file + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(clean), 'utf-8');
-  fs.renameSync(tmp, file);
-  return true;
+  return saveViewerData(file, clean);
 });
 
 /* Multi-projeto (apenas Builder). Cada projeto tem a sua própria pasta
@@ -1940,6 +1941,39 @@ handleTrustedIpc('viewer:open', () => {
   return true;
 });
 
+const TUTORIAL_FILENAME = 'Windows-Mac-Software-Builder-User-Manual-10-Languages.pdf';
+let tutorialWindow = null;
+handleTrustedIpc('tutorial:open', async (event) => {
+  if (tutorialWindow && !tutorialWindow.isDestroyed()) {
+    if (tutorialWindow.isMinimized()) tutorialWindow.restore();
+    tutorialWindow.focus();
+    return;
+  }
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  const win = new BrowserWindow({
+    parent,
+    width: 1024,
+    height: 760,
+    show: false,
+    autoHideMenuBar: true,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, plugins: true }
+  });
+  tutorialWindow = win;
+  win.once('closed', () => { if (tutorialWindow === win) tutorialWindow = null; });
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', event => event.preventDefault());
+  const directory = app.isPackaged ? process.resourcesPath : path.join(PROJECT_ROOT, 'docs');
+  try {
+    await win.loadFile(path.join(directory, TUTORIAL_FILENAME));
+    if (!win.isDestroyed()) win.show();
+  } catch (error) {
+    if (!win.isDestroyed()) {
+      win.destroy();
+      if (!parent.isDestroyed()) await dialog.showMessageBox(parent, { type: 'error', message: TUTORIAL_FILENAME, detail: error.message });
+    }
+  }
+});
+
 handleTrustedIpc('shell:openExternal', async (_event, url) => {
   if (typeof url !== 'string' || !url.trim()) return false;
   const trimmed = url.trim();
@@ -2186,7 +2220,7 @@ async function buildWindowsExe(event, payload) {
 
     /* 6. The single-file magic: SFX stub + config + 7z payload, concatenated
      *    in that order, IS a valid Windows .exe that auto-extracts + runs. */
-    const pendingTarget = target + '.' + stamp + '.tmp';
+    const pendingTarget = projectExport.temporaryExportPath(path.dirname(target));
     progress.update(95, 'saving');
     try {
       await windowsLauncher.packBundle({stubPath:stubToUse,extractorPath:sevenZipExe,archivePath,outputPath:pendingTarget});
@@ -2371,3 +2405,4 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+

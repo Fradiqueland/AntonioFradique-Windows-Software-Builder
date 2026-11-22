@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const { pathToFileURL } = require('node:url');
 
 // Versão lida do package.json (fonte única) — deixa de haver 3 sítios para
 // actualizar (package.json, preload.js, index.html) que ficavam dessincronizados.
@@ -7,6 +8,7 @@ const APP_VERSION = (() => { try { return require('./package.json').version; } c
 contextBridge.exposeInMainWorld('icurator', {
   version: APP_VERSION,
   platform: process.platform,
+  fileUrl: absolutePath => pathToFileURL(absolutePath).href,
   loadConfig: () => ipcRenderer.invoke('config:load'),
   projectsList: () => ipcRenderer.invoke('projects:list'),
   projectsExportArchive: (id) => ipcRenderer.invoke('projects:exportArchive', { id }),
@@ -46,6 +48,8 @@ contextBridge.exposeInMainWorld('icurator', {
     return () => ipcRenderer.removeListener('export:progress', listener);
   },
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  openTutorial: () => ipcRenderer.invoke('tutorial:open'),
   loadLocale: (lang) => ipcRenderer.invoke('i18n:loadLocale', lang),
   saveLanguage: (lang) => ipcRenderer.invoke('language:save', lang)
 });
+

@@ -16,8 +16,17 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
  execFileSync(sevenZip,['a','-t7z','-mx=1',archive,stage+path.sep+'*'],{stdio:'ignore',windowsHide:true});
  const info=await packBundle({stubPath:path.resolve(__dirname,'../dist/native-launcher/windows-launcher.exe'),extractorPath:sevenZip,archivePath:archive,outputPath:output});
  const cache=path.join(process.env.LOCALAPPDATA,'WSMB/runtimes',info.archiveSha256);t.after(()=>fs.rmSync(cache,{recursive:true,force:true}));
+ const lockPath=path.join(path.dirname(cache),'.wsmb-'+info.archiveSha256+'.lock');
+ t.after(()=>fs.rmSync(lockPath,{force:true}));
+ const interruptedStage=path.join(path.dirname(cache),'.preparing-'+info.archiveSha256);
+ fs.mkdirSync(path.dirname(cache),{recursive:true});
+ fs.mkdirSync(interruptedStage);
+ t.after(()=>fs.rmSync(interruptedStage,{recursive:true,force:true}));
+ fs.writeFileSync(path.join(interruptedStage,'from-interrupted-extraction'),'stale');
  async function run(label){const report=path.join(root,label+'.json');await new Promise((resolve,reject)=>{const child=spawn(output,[],{env:{...process.env,WSMB_BOOT_REPORT:report,WSMB_BOOT_QUIET:'1'},stdio:'ignore'});const timer=setTimeout(()=>{child.kill();reject(new Error('Native bootstrap timed out'));},30000);child.once('error',reject);child.once('exit',code=>{clearTimeout(timer);if(code!==9){reject(new Error('Unexpected native bootstrap exit '+code+'; report: '+(fs.existsSync(report)?fs.readFileSync(report,'utf8'):'missing')));return;}resolve();});});return JSON.parse(fs.readFileSync(report));}
  const first=await run('first');assert.equal(first.cacheHit,false);assert.equal(first.archiveExtractions,1);assert.equal(first.payloadBytesRead,info.archiveBytes+info.extractorBytes);
+ assert.equal(fs.existsSync(interruptedStage),false);
+ assert.equal(fs.existsSync(path.join(cache,'from-interrupted-extraction')),false);
  const marker=path.join(cache,'.wsmb-runtime-ready'),before=fs.statSync(marker).mtimeMs;
  const warm=await run('warm');assert.equal(warm.cacheHit,true);assert.equal(warm.payloadBytesRead,0);assert.equal(warm.archiveExtractions,0);assert.equal(fs.statSync(marker).mtimeMs,before);
  const deep=path.join(cache,'deep',...Array(72).fill('d'),'profile.cache');fs.mkdirSync(path.toNamespacedPath(path.dirname(deep)),{recursive:true});fs.writeFileSync(path.toNamespacedPath(deep),'LONG CACHED DATA');
@@ -28,5 +37,18 @@ test('native bootstrap prepares once, skips all payload I/O on warm starts and r
  fs.truncateSync(path.join(cache,'resources.pak'),0);const truncated=await run('truncated');assert.equal(truncated.cacheHit,false);assert.equal(truncated.archiveExtractions,1);assert.ok(fs.statSync(path.join(cache,'resources.pak')).size>0);
  fs.writeFileSync(path.join(cache,'ffmpeg.dll'),'truncated but nonempty');const resized=await run('resized');assert.equal(resized.cacheHit,false);assert.equal(resized.archiveExtractions,1);
  const finalWarm=await run('final-warm');assert.equal(finalWarm.cacheHit,true);assert.equal(finalWarm.payloadBytesRead,0);assert.equal(finalWarm.archiveExtractions,0);
+ // This process holds a filesystem handle without joining the launcher's
+ // session-local mutex. Even a warm launcher must wait for that publisher.
+ const otherSession=fs.openSync(lockPath,'r');
+ const waiting=run('shared-cache');
+ let startedWhileLocked;
+ try {
+   await new Promise(resolve=>setTimeout(resolve,700));
+   startedWhileLocked=fs.existsSync(path.join(root,'shared-cache.json'));
+ } finally { fs.closeSync(otherSession); }
+ const resumed=await waiting;
+ assert.equal(startedWhileLocked,false);
+ assert.equal(resumed.cacheHit,true);
+ assert.equal(resumed.payloadBytesRead,0);
  console.log('NATIVE_BOOTSTRAP_PASS',JSON.stringify({first,warm,repaired,truncated,finalWarm}));
 });

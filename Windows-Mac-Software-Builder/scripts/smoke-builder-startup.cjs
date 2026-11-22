@@ -77,7 +77,7 @@ async function main() {
   const temporary=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'builder-installed-startup-')));
   // Use the package basename for NSIS: its assisted installer may append its
   // application folder, and its legacy /D token parser truncates spaces.
-  const installDir=path.join(temporary,mac?'Installed Builder Ant�nio':pkg.name);
+  const installDir=path.join(temporary,mac?'Installed Builder António':pkg.name);
   fs.mkdirSync(installDir);
   const name='Windows-Mac-Software-Builder-'+pkg.version+(mac?'-mac-universal.pkg':'-windows-x64-setup.exe');
   const installer=path.join(root,'dist/builder',name);
@@ -161,7 +161,7 @@ async function main() {
       const active=document.getElementById('active-project-name').textContent;
       const rendered=document.querySelectorAll('#projects-list .project-item').length;
       const photoLoaded=!!document.querySelector('.author-photo')?.naturalWidth;
-      return {ready:rendered>0&&active!=='-'&&!document.getElementById('project-new-btn').disabled&&photoLoaded,
+      return {ready:rendered>0&&active!=='—'&&!document.getElementById('project-new-btn').disabled&&photoLoaded,
         url:location.href,version:window.icurator.version,active,projectCount:state.projects.length,rendered,
         sidebarWidth:document.querySelector('.sidebar').getBoundingClientRect().width,
         authorPhotoLoaded:photoLoaded,
@@ -223,3 +223,4 @@ async function main() {
   }
 }
 main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
+

@@ -43,7 +43,7 @@ test('packaged Windows Viewer retains its real resources/app.asar archive',async
 
 test('Windows directory aliases canonicalise without changing app versus app.asar',t=>{
   const f=fixture(t),alias=path.join(f.root,'alias');
-  try{fs.symlinkSync(f.resources,alias,process.platform==='win32'?'junction':'dir');}
+  try{require('./directory-alias.cjs').createDirectoryAlias(f.resources,alias);}
   catch(error){if(['EPERM','EACCES'].includes(error.code))return t.skip('Directory links unavailable');throw error;}
   for(const name of ['app','app.asar']){
     const appPath=path.join(alias,name);

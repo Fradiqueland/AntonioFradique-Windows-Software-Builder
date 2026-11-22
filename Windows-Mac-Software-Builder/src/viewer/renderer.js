@@ -452,15 +452,16 @@ async function renderGallery(data) {
     const url = await relToFileUrl(relFile);
     if (gen !== stageGeneration) return;
     if (!url) continue;
-    const fileName = (img && img.fileName) || '';
-    const cell = document.createElement('div');
+    const fileName = img.fileName || relFile.split(/[\\/]/).pop();
+    const cell = document.createElement('button');
+    cell.type = 'button';
     cell.className = 'gallery-cell';
     const el = document.createElement('img');
     el.src = url;
     el.alt = fileName;
     el.loading = 'lazy';
     cell.appendChild(el);
-    cell.addEventListener('click', () => openLightbox(url, fileName, relFile));
+    cell.addEventListener('click', () => openLightbox(url, fileName, relFile, cell));
     grid.appendChild(cell);
   }
   stageEl.appendChild(grid);
@@ -469,16 +470,26 @@ async function renderGallery(data) {
 /* Janela ampliada (lightbox) para a galeria: clicar numa imagem abre-a em
  * grande sobre o curso, com botão para descarregar. Fecha com ×, clique no
  * fundo ou Escape. */
-function openLightbox(url, fileName, relFile) {
+function openLightbox(url, fileName, relFile, opener) {
   if (lightboxCleanup) lightboxCleanup();
   const overlay = document.createElement('div');
   overlay.className = 'lightbox-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', fileName || tr('content.type.gallery', 'Galeria de imagens'));
 
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+    if (e.key !== 'Tab') return;
+    const last = dlBtn.disabled ? closeBtn : dlBtn;
+    if (e.shiftKey && document.activeElement === closeBtn) { e.preventDefault(); last.focus(); }
+    if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); closeBtn.focus(); }
+  };
   function close() {
     document.removeEventListener('keydown', onKey);
     overlay.remove();
     if (lightboxCleanup === close) lightboxCleanup = null;
+    if (opener && stageEl.contains(opener)) opener.focus();
   }
   lightboxCleanup = close;
   document.addEventListener('keydown', onKey);
@@ -490,6 +501,7 @@ function openLightbox(url, fileName, relFile) {
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'lightbox-close';
+  closeBtn.setAttribute('aria-label', tr('common.close', 'Fechar'));
   closeBtn.textContent = '×';
   closeBtn.addEventListener('click', close);
 
@@ -525,6 +537,7 @@ function openLightbox(url, fileName, relFile) {
   box.append(closeBtn, bigImg, bar);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+  closeBtn.focus();
 }
 
 function renderArticle(data) {
@@ -771,6 +784,7 @@ function setSidebarCollapsed(collapsed) {
   document.body.classList.toggle('sidebar-collapsed', collapsed);
   const btn = document.getElementById('viewer-sidebar-toggle');
   if (btn) {
+    btn.setAttribute('aria-expanded', String(!collapsed));
     btn.textContent = collapsed ? '»' : '«';
     const key = collapsed ? 'viewer.sidebar_expand' : 'viewer.sidebar_collapse';
     btn.setAttribute('data-i18n-title', key);
@@ -794,12 +808,13 @@ function autoSidebar() {
 
 function buildMenu(modules) {
   menuEl.innerHTML = '';
+  const buttons = new Map();
   if (!modules || modules.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'viewer-menu-empty';
     empty.textContent = tr('viewer.menu_empty', 'Nenhum módulo configurado.');
     menuEl.appendChild(empty);
-    return;
+    return buttons;
   }
   modules.forEach((mod) => {
     const btn = document.createElement('button');
@@ -808,6 +823,7 @@ function buildMenu(modules) {
     btn.title = mod.title;
     const ico = document.createElement('span');
     ico.className = 'viewer-menu-ico';
+    ico.setAttribute('aria-hidden', 'true');
     ico.textContent = MODULE_ICON[mod.type] || '•';
     const lbl = document.createElement('span');
     lbl.className = 'viewer-menu-label';
@@ -825,7 +841,9 @@ function buildMenu(modules) {
     btn.dataset.id = mod.id;
     btn.addEventListener('click', () => handleModuleClick(mod, btn));
     menuEl.appendChild(btn);
+    buttons.set(mod, btn);
   });
+  return buttons;
 }
 
 /* -------- Redes sociais (menu lateral) -------- */
@@ -1181,10 +1199,6 @@ async function renderIptv(data, moduleId) {
 
   let activeItem = null;
 
-  function looksLikeHls(url) {
-    return /\.m3u8(\?|$)/i.test(url) || /(get\.php|type=m3u|\/live\/)/i.test(url);
-  }
-
   let lastPlayed = null;
   function showPlayError() {
     now.textContent = tr('viewer.iptv_play_error', 'Não foi possível reproduzir este canal.') + ' ';
@@ -1214,8 +1228,8 @@ async function renderIptv(data, moduleId) {
    * porque há canais que o servidor só serve num dos formatos. Um "watchdog"
    * deteta falta de progresso tanto no arranque como depois do primeiro frame,
    * passando ao motor seguinte em vez de deixar um canal parado a descarregar. */
-  const XTREAM_LIVE = /^(.*\/live\/[^/]+\/[^/]+\/\d+)\.(ts|m3u8)(\?.*)?$/i;
-  const FILE_EXT = /\.(mp4|m4v|webm|mkv|mov|mp3|m4a|aac|ogg|wav|flac)(\?|$)/i;
+  const XTREAM_LIVE = /^([^?#]*\/live\/[^/?#]+\/[^/?#]+\/\d+)\.(ts|m3u8)([?#].*)?$/i;
+  const FILE_EXT = /\.(mp4|m4v|webm|mkv|mov|mp3|m4a|aac|ogg|wav|flac)$/i;
   let hasFfmpeg = false;
   let ffmpegReady = Promise.resolve();
   if (window.viewer && typeof window.viewer.iptvHasFfmpeg === 'function') {
@@ -1223,15 +1237,18 @@ async function renderIptv(data, moduleId) {
   }
   function buildAttempts(url) {
     const x = XTREAM_LIVE.exec(url);
+    // Routing parameters and media fragments belong in the request, but do not
+    // change an explicit file type. In particular, /live/video.mp4 is not HLS.
+    const mediaPath = url.split(/[?#]/, 1)[0];
     let list;
     if (x) {
       const q = x[3] || '';
       // HLS primeiro (reproduz bem a maioria); depois o ffmpeg local (canais que
       // o Chromium não aceita via MSE); MPEG-TS bruto em último recurso.
       list = [{ engine: 'hls', url: x[1] + '.m3u8' + q }, { engine: 'proxy', url: x[1] + '.ts' + q }, { engine: 'ts', url: x[1] + '.ts' + q }];
-    } else if (looksLikeHls(url)) list = [{ engine: 'hls', url }, { engine: 'proxy', url }];
-    else if (FILE_EXT.test(url)) list = [{ engine: 'native', url }, { engine: 'proxy', url }];
-    else if (/\.ts(\?|$)/i.test(url)) list = [{ engine: 'proxy', url }, { engine: 'ts', url }, { engine: 'native', url }];
+    } else if (FILE_EXT.test(mediaPath)) list = [{ engine: 'native', url }, { engine: 'proxy', url }];
+    else if (/\.ts$/i.test(mediaPath)) list = [{ engine: 'proxy', url }, { engine: 'ts', url }, { engine: 'native', url }];
+    else if (/\.m3u8$|\/get\.php$|\/live\//i.test(mediaPath) || /[?&]type=m3u/i.test(url)) list = [{ engine: 'hls', url }, { engine: 'proxy', url }];
     else list = [{ engine: 'proxy', url }, { engine: 'ts', url }, { engine: 'hls', url }, { engine: 'native', url }];
     return hasFfmpeg ? list : list.filter((a) => a.engine !== 'proxy');
   }
@@ -1929,7 +1946,7 @@ function renderPasswordGate(mod, btn, pwd) {
         setActiveMenuBtn(null);
         clearStage();
         const welcome = document.createElement('div');
-        welcome.className = 'viewer-empty';
+        welcome.className = 'viewer-empty viewer-welcome';
         const heading = document.createElement('h2');
         const text = document.createElement('p');
         welcome.append(heading, text);
@@ -2021,6 +2038,8 @@ async function renderBannerSlot(position, banner, host) {
 /* -------- Opt-in gate -------- */
 
 function showOptinGate(leads) {
+  if (leads.heading) optinHeading.removeAttribute('data-i18n');
+  else optinHeading.setAttribute('data-i18n', 'viewer.optin_default_heading');
   optinHeading.textContent = leads.heading || tr('viewer.optin_default_heading', 'Insira o seu email para aceder ao conteúdo');
   // A captura de leads é EXCLUSIVAMENTE feita pelo formulário HTML do
   // fornecedor (Mailchimp, Mailwizz, E-goi, etc.), injetado tal e qual.
@@ -2036,50 +2055,66 @@ function hideOptinGate() {
   document.body.style.overflow = '';
 }
 
-/* Desbloqueio do conteúdo. Existem dois caminhos:
- *  1) Submit do <form> do fornecedor colado no HTML. BUG CORRIGIDO: o
- *     preventDefault() anterior cancelava a submissão e o email do aluno
- *     NUNCA chegava ao fornecedor (Mailchimp, E-goi, …). Deixar o submit
- *     seguir também não serve — navegava a janela do Viewer para a página de
- *     "obrigado" do fornecedor. Solução: enviar o formulário em segundo plano
- *     (fetch no-cors com a mesma codificação que o browser usaria) e só depois
- *     fechar o portão. A resposta é opaca (cross-origin), mas a inscrição
- *     fica registada no servidor do fornecedor.
- *  2) Botão "Já me inscrevi — Aceder ao conteúdo". */
-async function submitOptinForm(form) {
-  const action = (form.getAttribute('action') || '').trim();
-  if (!/^https?:\/\//i.test(action)) return false;
-  const method = (form.getAttribute('method') || 'get').toUpperCase() === 'POST' ? 'POST' : 'GET';
-  const enctype = (form.getAttribute('enctype') || '').toLowerCase();
-  const fd = new FormData(form);
-  // Inclui o botão de submit com name (alguns fornecedores exigem-no).
-  const submitter = form.querySelector('button[type=submit][name], input[type=submit][name]');
-  if (submitter && submitter.name && !fd.has(submitter.name)) fd.append(submitter.name, submitter.value || '');
-  const opts = { mode: 'no-cors', credentials: 'omit', redirect: 'follow' };
-  let url = action;
-  if (method === 'GET') {
-    const qs = new URLSearchParams();
-    fd.forEach((v, k) => { if (typeof v === 'string') qs.append(k, v); });
-    url = action + (action.includes('?') ? '&' : '?') + qs.toString();
-  } else if (enctype === 'multipart/form-data') {
-    opts.method = 'POST'; opts.body = fd;
+// Provider forms must not navigate the Viewer. A cross-origin response can
+// be opaque, so feedback reports only that the request was sent.
+async function submitOptinForm(form, submitter) {
+  const attr = (name) => submitter?.getAttribute('form' + name) ?? form.getAttribute(name) ?? '';
+  const action = attr('action').trim();
+  if (!/^(?:https?:)?\/\//i.test(action)) return false;
+  const url = new URL(action, 'https://localhost');
+  const method = attr('method').toLowerCase();
+  const enctype = attr('enctype').toLowerCase();
+  const fields = new FormData(form, submitter || undefined);
+  const options = { mode: 'no-cors', credentials: 'omit', redirect: 'follow' };
+  if (method === 'post' && enctype === 'multipart/form-data') {
+    options.method = 'POST';
+    options.body = fields;
   } else {
-    const body = new URLSearchParams();
-    fd.forEach((v, k) => { if (typeof v === 'string') body.append(k, v); });
-    opts.method = 'POST'; opts.body = body; // application/x-www-form-urlencoded (predefinição do browser)
+    const params = new URLSearchParams();
+    for (const [key, value] of fields) params.append(key, typeof value === 'string' ? value : value.name);
+    if (method === 'post') {
+      options.method = 'POST';
+      options.body = enctype === 'text/plain'
+        ? Array.from(params, ([key, value]) => key + '=' + value + '\r\n').join('')
+        : params;
+    } else {
+      for (const [key, value] of params) url.searchParams.append(key, value);
+    }
   }
-  await fetch(url, opts);
-  return true;
+  const response = await fetch(url, options);
+  if (response.type === 'opaque') return 'unconfirmed';
+  return response.ok ? 'sent' : false;
 }
 
-optinFormHtml.addEventListener('submit', (e) => {
+let sendingOptin = false;
+optinFormHtml.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const form = e.target;
-  const sending = (form && form.tagName === 'FORM') ? submitOptinForm(form) : Promise.resolve(false);
-  sending
-    .then((sent) => { if (sent) showToast(tr('viewer.optin_sent', 'Inscrição enviada. Obrigado!')); })
-    .catch((err) => { console.error('Falha a enviar o formulário de inscrição:', err); })
-    .finally(hideOptinGate);
+  if (sendingOptin || e.target.tagName !== 'FORM') return;
+  sendingOptin = true;
+  const error = document.getElementById('optin-error');
+  const confirmation = document.getElementById('optin-confirmation');
+  error.classList.add('hidden');
+  confirmation.classList.add('hidden');
+  try {
+    const result = await submitOptinForm(e.target, e.submitter);
+    if (result === 'unconfirmed') {
+      confirmation.textContent = tr('viewer.optin_confirmation', 'Verifique a inscrição junto do fornecedor antes de aceder ao conteúdo.');
+      confirmation.classList.remove('hidden');
+      optinAccess?.focus();
+      return;
+    }
+    if (result === 'sent') {
+      showToast(tr('viewer.optin_sent', 'Inscrição enviada. Obrigado!'));
+      hideOptinGate();
+      return;
+    }
+  } catch (err) {
+    console.warn('Could not send subscription form:', err);
+  } finally {
+    sendingOptin = false;
+  }
+  error.textContent = tr('viewer.optin_failed', 'Não foi possível enviar a inscrição. Tente novamente.');
+  error.classList.remove('hidden');
 });
 
 if (optinAccess) {
@@ -2133,8 +2168,10 @@ async function boot() {
   applyDynamicTexts();
 
   window.__viewerVersion = config.viewerVersion || '';
-  const modules = Array.isArray(config.content) ? config.content : [];
-  buildMenu(modules);
+  const modules = Array.isArray(config.content)
+    ? config.content.filter(mod => mod && typeof mod.type === 'string')
+    : [];
+  const menuButtons = buildMenu(modules);
   renderSocial(config.marketing && config.marketing.social);
   await renderBanner(config.marketing && config.marketing.banners);
 
@@ -2144,7 +2181,7 @@ async function boot() {
   if (startBtn) {
     startBtn.classList.toggle('hidden', !firstOpenable);
     startBtn.addEventListener('click', () => {
-      const b = firstOpenable && menuEl.querySelector('.viewer-menu-btn[data-id="' + firstOpenable.id + '"]');
+      const b = menuButtons.get(firstOpenable);
       if (b) b.click();
     });
   }
@@ -2154,7 +2191,7 @@ async function boot() {
     const st = await loadViewerState();
     const last = st && st.lastModuleId && modules.find((m) => m && m.id === st.lastModuleId);
     if (last && last.type !== 'external' && last.type !== 'launch') {
-      const b = menuEl.querySelector('.viewer-menu-btn[data-id="' + last.id + '"]');
+      const b = menuButtons.get(last);
       if (b) await handleModuleClick(last, b);
     }
   } catch (_) { /* fica na página de boas-vindas */ }
@@ -2176,8 +2213,8 @@ async function boot() {
 /* Re-aplica as traduções definidas por JS (não cobertas por data-i18n):
  * o ecrã de boas-vindas e o aviso de menu vazio. */
 function applyDynamicTexts() {
-  const emptyHeading = stageEl.querySelector('.viewer-empty h2');
-  const emptyText = stageEl.querySelector('.viewer-empty p');
+  const emptyHeading = stageEl.querySelector('.viewer-welcome h2');
+  const emptyText = stageEl.querySelector('.viewer-welcome p');
   if (emptyHeading) emptyHeading.textContent = tr('viewer.empty_heading', 'Bem-vindo');
   if (emptyText) emptyText.textContent = tr('viewer.empty_text', 'Selecione uma opção no menu para começar.');
   const menuEmpty = menuEl.querySelector('.viewer-menu-empty');
@@ -2201,6 +2238,12 @@ async function setLanguage(lang) {
   // Re-renderiza o módulo aberto para que o texto interno (ex.: "Escolha um
   // canal…" e os rótulos do IPTV) acompanhe o novo idioma.
   if (activeModuleRef && activeModuleRef.mod) {
+    const type = activeModuleRef.mod.type;
+    // Localised error and password screens can be redrawn. A running media
+    // element or web page must keep its playback position and form state.
+    if (['local-audio', 'local-video', 'local-web', 'webview', 'smart-embed', 'pdf'].includes(type)
+        && stageEl.querySelector('audio, video, webview')) return;
+    if (type === 'html' && stageEl.querySelector('.html-host')) return;
     await handleModuleClick(activeModuleRef.mod, activeModuleRef.btn);
   }
 }
@@ -2216,7 +2259,8 @@ function wireCornerLinks() {
       const url = a.getAttribute('data-ext');
       if (!url) return;
       try {
-        await window.viewer.openExternal(url);
+        if (a.classList.contains('tutorial-link')) await window.viewer.openTutorial();
+        else await window.viewer.openExternal(url);
       } catch (err) {
         console.error('Falha a abrir link promocional:', err);
       }
@@ -2236,3 +2280,4 @@ setupMarquees();
 wireCornerLinks();
 
 boot();
+

@@ -390,6 +390,8 @@
     "iptv_folder_empty": "空文件夹。",
     "iptv_favs_save_error": "无法保存收藏。",
     "optin_sent": "订阅已提交，谢谢！",
+    "optin_failed": "无法发送订阅请求，请重试。",
+    "optin_confirmation": "请求已发送。请先向服务提供商确认订阅，再访问内容。",
     "start_btn": "开始",
     "sidebar_collapse": "收起菜单",
     "sidebar_expand": "展开菜单",
