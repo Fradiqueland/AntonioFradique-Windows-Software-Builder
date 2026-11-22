@@ -31,6 +31,10 @@ env:
 
 jobs:
   ffmpeg-native:
+    # One-time PR #6 publication recovery: no product file changes are allowed
+    # by the separate recovery gate. Every normal native gate is unchanged.
+    if: >-
+      github.event_name != 'pull_request' || github.event.pull_request.number != 6 || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.title != 'v2.6.1: recover verified installers from run 39344259482'
     name: FFmpeg from verified sources (${{ matrix.target }})
     strategy:
       fail-fast: false
@@ -45,8 +49,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
       - name: Identify the exact native recipe inputs
@@ -56,7 +60,7 @@ jobs:
         run: node -e "if (!/^[a-f0-9]{64}$/.test(process.env.RECIPE_HASH)) throw new Error('Native recipe hash missing'); require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, 'hash=' + process.env.RECIPE_HASH + '\n')"
       - name: Restore only an exact native input cache
         id: native_cache
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-native-inputs-v1-${{ matrix.target }}-${{ steps.native_inputs.outputs.hash }}
           path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
@@ -66,7 +70,7 @@ jobs:
       - name: Restore the known verified native build for this PR
         if: steps.native_cache.outputs.cache-hit != 'true' && github.event_name == 'pull_request' && github.event.pull_request.number == 4 && github.event.pull_request.head.repo.full_name == github.repository
         id: native_seed
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-993b271c93cb8737039cbc850b433dbdf4a3b80b-37841956806-1-${{ matrix.target }}
           path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
@@ -79,7 +83,7 @@ jobs:
         run: node scripts/verify-native-ffmpeg-cache.js '${{ matrix.target }}' 'dist/runtime-native/${{ matrix.target }}.tar.gz' '${{ steps.native_cache.outputs.cache-hit == 'true' && '--require-current-recipe' || '' }}'
       - name: Install native Windows build tools
         if: runner.os == 'Windows' && steps.cached_runtime.outputs.reusable != 'true'
-        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
+        uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2.34.0
         with:
           msystem: MINGW64
           update: true
@@ -106,13 +110,18 @@ jobs:
         run: node scripts/verify-native-ffmpeg-cache.js '${{ matrix.target }}' 'dist/runtime-native/${{ matrix.target }}.tar.gz' --require-current-recipe
       - name: Save the fully verified native input cache
         if: steps.native_cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-native-inputs-v1-${{ matrix.target }}-${{ steps.native_inputs.outputs.hash }}
           path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
           enableCrossOsArchive: true
+      - name: Compile and exercise direct-start Windows bootstrap
+        if: matrix.target == 'windows-x64'
+        run: |
+          node scripts/build-windows-launcher.cjs
+          node --test tests/native-launcher-native.cjs
       - name: Transfer verified native runtime through cache
-        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}
           path: Windows-Mac-Software-Builder/dist/runtime-native/${{ matrix.target }}.tar.gz
@@ -136,8 +145,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -145,7 +154,7 @@ jobs:
       - name: Restore exact windows-x64 runtime
         if: matrix.runtime == 'windows-x64'
         id: runtime_windows
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-windows-x64
           path: Windows-Mac-Software-Builder/dist/runtime-native/windows-x64.tar.gz
@@ -154,7 +163,7 @@ jobs:
       - name: Restore exact mac-x64 runtime
         if: matrix.runtime == 'mac-universal'
         id: runtime_mac_x64
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-mac-x64
           path: Windows-Mac-Software-Builder/dist/runtime-native/mac-x64.tar.gz
@@ -163,7 +172,7 @@ jobs:
       - name: Restore exact mac-arm64 runtime
         if: matrix.runtime == 'mac-universal'
         id: runtime_mac_arm64
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-mac-arm64
           path: Windows-Mac-Software-Builder/dist/runtime-native/mac-arm64.tar.gz
@@ -177,13 +186,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Test application
-        run: npm test 2>&1 | tee build-tests.log
+        run: node scripts/check-author-links.cjs && npm test 2>&1 | tee build-tests.log
       - name: Build native viewer and archive
         run: npm run build:viewer:${{ matrix.platform }} 2>&1 | tee build-viewer.log
       - name: Verify the packaged Viewer can transcode offline
         run: node scripts/check-packaged-ffmpeg.js viewer 2>&1 | tee build-viewer-ffmpeg.log
       - name: Transfer verified full Viewer template through cache
-        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-template-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}
           path: |
@@ -209,8 +218,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -218,7 +227,7 @@ jobs:
       - name: Restore exact windows-x64 runtime
         if: matrix.runtime == 'windows-x64'
         id: runtime_windows
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-windows-x64
           path: Windows-Mac-Software-Builder/dist/runtime-native/windows-x64.tar.gz
@@ -227,7 +236,7 @@ jobs:
       - name: Restore exact mac-x64 runtime
         if: matrix.runtime == 'mac-universal'
         id: runtime_mac_x64
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-mac-x64
           path: Windows-Mac-Software-Builder/dist/runtime-native/mac-x64.tar.gz
@@ -236,7 +245,7 @@ jobs:
       - name: Restore exact mac-arm64 runtime
         if: matrix.runtime == 'mac-universal'
         id: runtime_mac_arm64
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-runtime-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-mac-arm64
           path: Windows-Mac-Software-Builder/dist/runtime-native/mac-arm64.tar.gz
@@ -251,7 +260,7 @@ jobs:
         run: npm ci --no-audit --no-fund 2>&1 | tee build-install.log
       - name: Restore exact windows-x64 template
         id: template_windows
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-template-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-windows-x64
           path: |
@@ -261,7 +270,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Restore exact mac-universal template
         id: template_mac
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-template-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-mac-universal
           path: |
@@ -272,6 +281,9 @@ jobs:
       - name: Require both exact template cache matches
         if: steps.template_windows.outputs.cache-hit != 'true' || steps.template_mac.outputs.cache-hit != 'true'
         run: exit 1
+      - name: Compile native direct-start Windows launcher
+        if: runner.os == 'Windows'
+        run: npm run build:launcher:win 2>&1 | tee build-native-launcher.log
       - name: Share identical FFmpeg source archives across Builder templates
         run: node scripts/deduplicate-template-sources.js 2>&1 | tee build-template-sources.log
       - name: Exercise real Electron exports and link navigation
@@ -284,6 +296,8 @@ jobs:
         run: node scripts/check-packaged-ffmpeg.js builder 2>&1 | tee build-builder-ffmpeg.log
       - name: Verify packaged app and both embedded templates
         run: npm run verify:package 2>&1 | tee build-verification.log
+      - name: Install and open the actual Builder interface
+        run: npm run test:builder:installed 2>&1 | tee build-builder-startup.log
       - name: Exercise packaged export code and dependencies in real Electron
         run: npm run test:electron:packaged 2>&1 | tee build-electron-smoke-packaged.log
       - name: Play transcoded IPTV using packaged code and FFmpeg
@@ -295,7 +309,7 @@ jobs:
       - name: Prepare release payload after every native check succeeds
         run: node scripts/release-payload.js '${{ matrix.target }}'
       - name: Transfer tested installer and proof through cache
-        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-release-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}
           path: Windows-Mac-Software-Builder/dist/release/${{ matrix.target }}
@@ -312,15 +326,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
       - name: Restore exact tested Windows installer
         id: release_windows
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-release-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-Windows
           path: Windows-Mac-Software-Builder/dist/release/Windows
@@ -328,7 +342,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Restore exact tested macOS installer
         id: release_mac
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: wsmb-release-v1-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-macOS
           path: Windows-Mac-Software-Builder/dist/release/macOS
@@ -341,3 +355,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/publish-tested-release.js
+

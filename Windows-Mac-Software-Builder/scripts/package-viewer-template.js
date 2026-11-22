@@ -29,6 +29,13 @@ async function main() {
   const appResources = path.join(source, target === 'mac-universal' ? 'Contents/Resources' : 'resources');
   const asarFile = path.join(appResources, 'app.asar');
   validateViewerDependencies(asarFile);
+  for (const filename of ['hls.min.js', 'hls.LICENSE.txt', 'mpegts.min.js', 'mpegts.LICENSE.txt', 'mpegts.js.LICENSE.txt']) {
+    const entry = path.join('src', 'viewer', 'vendor', filename);
+    const source = fs.readFileSync(path.join(root, entry));
+    if (!asar.extractFile(asarFile, entry).equals(source)) {
+      throw new Error('Viewer media library differs from the source: ' + filename);
+    }
+  }
   const packagedVersion = JSON.parse(asar.extractFile(asarFile, 'package.json').toString()).version;
   if (packagedVersion !== require('../package.json').version) throw new Error('Viewer package version mismatch: ' + packagedVersion);
   const companions = [];
@@ -84,3 +91,4 @@ async function main() {
 }
 if (require.main === module) main().catch((error) => { console.error(error.message); process.exitCode = 1; });
 module.exports = { normalizeAsarEntry, validateViewerDependencies };
+

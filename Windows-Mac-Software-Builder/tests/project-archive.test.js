@@ -44,6 +44,16 @@ test('editable archive round trip preserves settings, icons, binary bytes and HT
   assert.deepEqual(readConfig(path.join(f.data, 'project-config.json')), f.config);
 });
 
+test('a long backup filename can be replaced and restored', async t => {
+  const f = fixture(t);
+  const archivePath = path.join(f.root, 'a'.repeat(240) + '.wsmb');
+  fs.writeFileSync(archivePath, 'previous backup');
+  await exportArchive({ projectRoot: f.projectRoot, outputPath: archivePath, name: 'Long backup', appVersion: '2.6.10', readConfig });
+  const restored = await f.importIt({ archivePath });
+  assert.deepEqual(restored.config, f.config);
+  assert.ok(!fs.readdirSync(f.root).some(file => file.endsWith('.tmp')));
+});
+
 test('archive failure preserves an existing backup and does not create a partial file', async t => {
   const f = fixture(t); fs.writeFileSync(f.archivePath, 'PREVIOUS BACKUP');
   fs.unlinkSync(path.join(f.assets, 'movie.bin'));
@@ -113,8 +123,12 @@ test('archive round trip preserves portable bytes, executable permission and ind
 });
 
 test('unmanaged symlinks cannot leave the project archive', async t => {
-  if(process.platform==='win32')return t.skip('Creating symlinks requires Windows privileges');
-  const f=fixture(t);fs.symlinkSync(f.archivePath,path.join(f.assets,'escape'));
+  const f=fixture(t);
+  try { fs.symlinkSync(f.archivePath,path.join(f.assets,'escape'),'file'); }
+  catch (error) {
+    if (['EPERM','EACCES'].includes(error.code)) return t.skip('Creating file symlinks is restricted on this host');
+    throw error;
+  }
   await assert.rejects(f.exportIt(),/não permitido/);assert.equal(fs.existsSync(f.archivePath),false);
 });
 
@@ -148,3 +162,4 @@ test('escaping, dangling and cyclic portable links are rejected before extractio
     assert.equal(fs.existsSync(f.destination),false);
   }
 });
+

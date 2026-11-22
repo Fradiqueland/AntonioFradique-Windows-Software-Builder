@@ -158,7 +158,10 @@ async function exportedRuntime({ appRequire, resources, mac, sharedRuntimeSource
   report.exportedViewer = { target, engine: appRequire.resolve('./src/shared/project-export'), archiveBytes: fs.statSync(archive).size,
     runtime: runtimeBase, signatureVerified: mac, universalVerified: mac };
   report.checks.push('real native IPTV export extracted with its complete runtime' + (mac ? ', intact Mac signature and universal binaries' : ''));
-  return { ffmpeg: fs.realpathSync(ffmpeg), ffprobe: fs.realpathSync(ffprobe) };
+  const viewerRoot = mac
+    ? path.join(expanded, projectName + '.app/Contents/Resources/app.asar')
+    : path.join(expanded, 'resources/app.asar');
+  return { ffmpeg: fs.realpathSync(ffmpeg), ffprobe: fs.realpathSync(ffprobe), viewerRoot };
 }
 
 async function main() {
@@ -170,6 +173,7 @@ async function main() {
     ? `dist/builder/mac-universal/${pkg.build.productName}.app/Contents/Resources`
     : 'dist/builder/win-unpacked/resources') : null;
   const applicationRoot = packaged ? path.join(resources, mac ? 'app.asar' : 'app') : root;
+  let viewerRoot = applicationRoot;
   const appRequire = createRequire(path.join(applicationRoot, 'package.json'));
   const proxyModule = appRequire('./src/shared/iptv-proxy');
   report.proxyModule = appRequire.resolve('./src/shared/iptv-proxy');
@@ -205,7 +209,7 @@ async function main() {
 
   if (isElectron && ['win32', 'darwin'].includes(process.platform) && !option('--ffmpeg')) {
     report.builderFfmpeg = { ...report.ffmpeg };
-    ({ ffmpeg, ffprobe } = await exportedRuntime({ appRequire, resources, mac, sharedRuntimeSourcesDir: path.join(path.dirname(ffmpeg), 'sources') }));
+    ({ ffmpeg, ffprobe, viewerRoot } = await exportedRuntime({ appRequire, resources, mac, sharedRuntimeSourcesDir: path.join(path.dirname(ffmpeg), 'sources') }));
     report.ffmpeg = { path: ffmpeg, sha256: crypto.createHash('sha256').update(fs.readFileSync(ffmpeg)).digest('hex') };
     report.ffprobe = ffprobe;
   }
@@ -316,6 +320,13 @@ async function main() {
     assert.deepEqual(externalRequests, [], 'The smoke must make no external browser requests.');
     report.paints = paints;
     report.checks.push('real Electron: 60+ frame presentation callbacks and 2+ seconds of advancing playback');
+    const hlsSegment = path.join(temporary, 'hls-progressive.ts');
+    await execFileP(ffmpeg, ['-nostdin', '-v', 'error', '-i', output, '-t', '2', '-c', 'copy', '-f', 'mpegts', hlsSegment], { windowsHide: true, timeout: 30000 });
+    const transportStream = path.join(temporary, 'progressive.ts');
+    await execFileP(ffmpeg, ['-nostdin', '-v', 'error', '-i', output, '-c', 'copy', '-f', 'mpegts', transportStream], { windowsHide: true, timeout: 30000 });
+    const { verifyViewerHls } = require('./verify-viewer-hls.cjs');
+    report.hls = await verifyViewerHls({ electron, applicationRoot: viewerRoot, segment: fs.readFileSync(hlsSegment), transportStream: fs.readFileSync(transportStream) });
+    report.checks.push('Viewer plays offline HLS and raw MPEG-TS with the shipped libraries and switches back to HLS');
   }
   assert.ok(sourceRequests >= (nodeOnly ? 1 : 2), 'Both probes must traverse the HTTP input source.');
   for (const invocation of invocations) {
@@ -335,3 +346,4 @@ if (isElectron) {
   electron.app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
   electron.app.whenReady().then(main).catch(finish);
 } else main().catch(finish);
+

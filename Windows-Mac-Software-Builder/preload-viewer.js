@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('viewer', {
   closeWebModule: (token) => ipcRenderer.invoke('web:close', token),
   resolveAssetPath: (relativePath) => ipcRenderer.invoke('asset:resolve', relativePath),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  openTutorial: () => ipcRenderer.invoke('tutorial:open'),
   launchFile: (relativePath) => ipcRenderer.invoke('shell:launchFile', relativePath),
   saveFileAs: (payload) => ipcRenderer.invoke('dialog:saveFileAs', payload),
   loadLocale: (lang) => ipcRenderer.invoke('i18n:loadLocale', lang),
@@ -33,3 +34,4 @@ contextBridge.exposeInMainWorld('viewer', {
   loadState: (key) => ipcRenderer.invoke('state:load', key),
   saveState: (key, data) => ipcRenderer.invoke('state:save', { key, data })
 });
+

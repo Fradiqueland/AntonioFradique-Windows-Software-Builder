@@ -171,6 +171,25 @@ test('late errors and watchdogs from a completed module cannot interrupt a repla
   assert.equal(active.destroyed, false); assert.equal(h.hls.length, 2); assert.equal(h.ts.length, 1);
 });
 
+test('explicit media formats select the right engine even in live routes or with URL fragments', async () => {
+  const hls = playerHarness();
+  const playlist = 'https://media.invalid/station.m3u8#t=20';
+  await hls.start(playlist);
+  assert.equal(hls.hls[0].url, playlist);
+  const native = playerHarness();
+  const clip = 'https://media.invalid/live/highlights/movie.mp4?via=redirect.m3u8#t=4';
+  const video = await native.start(clip);
+  assert.equal(video.src, clip);
+  assert.equal(native.hls.length, 0);
+  const raw = playerHarness();
+  const transport = 'https://media.invalid/live/events/sport.ts#t=4';
+  await raw.start(transport);
+  assert.equal(raw.ts.length, 1);
+  const xtream = playerHarness();
+  await xtream.start(CHANNEL + '#fragment');
+  assert.equal(xtream.hls[0].url, CHANNEL.replace('.ts', '.m3u8') + '#fragment');
+});
+
 test('diagnostics and console hide URL credentials, paths, query and fragment without changing requests', async () => {
   const h = playerHarness();
   const url = 'https://demo-user:demo-password@streams.invalid:8443/live/path-user/path-password/12.ts?token=private-token#private-fragment';

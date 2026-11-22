@@ -6,7 +6,7 @@ const { sha256 } = require('./template-archive');
 
 async function main() {
   const directory = path.join(__dirname, '..', 'dist', 'builder');
-  const names = fs.readdirSync(directory).filter((name) => /^Windows-Mac-Software-Builder-.*\.(exe|dmg)$/.test(name)).sort();
+  const names = fs.readdirSync(directory).filter((name) => /^Windows-Mac-Software-Builder-.*\.(exe|pkg)$/.test(name)).sort();
   if (!names.length) throw new Error('No Windows or Mac installers found.');
   const lines = [];
   for (const name of names) lines.push(await sha256(path.join(directory, name)) + '  ' + name);
@@ -14,3 +14,4 @@ async function main() {
   console.log(lines.join('\n'));
 }
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });
+
